@@ -38,6 +38,12 @@ scratch/
 tmp/
 temp/
 
+# ── Local reference mirror (root-anchored; keeps docs/reference/ committed) ──
+# GIANTS' copyrighted SDK schemas + the user's real savegame/mod samples live
+# here for local dev only. Never redistribute them in the public repo — the
+# distilled facts go in docs/reference/ instead.
+/reference/
+
 # ── Env / secrets ──
 .env
 .env.*

@@ -71,9 +71,26 @@ Real tables with real indexes (contrast the incumbent's `LIKE 'mods_%'` KV scans
   `mod_specialization(hash, spec_name)` — normalized, indexed for conflict queries.
 - `folder(id, name, parent_id)` + `mod_tag(hash, tag)` — organization.
 - `profile(id, name)` + `profile_mod(profile_id, hash, order_index)` — loadouts.
-- `curation(hash, state, note)` — favorite/hidden/broken.
-- Index every column we filter/join on (`hash`, `spec_name`, `script_basename`,
-  `mod_id`, `LOWER(title)` via a generated/collated column — not runtime `LOWER()`).
+- `curation(hash, state, note)` — favorite/hidden/broken (Keeper/Cull/Fallow).
+- `mod_registration(hash, kind, name)` — the six namespace surfaces
+  (specialization / placeableSpecialization / handToolSpecialization / vehicleType /
+  placeableType / handToolType) + actions/brands/storeCategories, normalized so a
+  conflict is a single indexed `GROUP BY name HAVING count>1` over the active set.
+- `mod_unique_type(hash, unique_type)` — GIANTS' `<uniqueType>` conflict primitive.
+- Index every column we filter/join on (`hash`, `name`, `script_basename`,
+  `unique_type`, `mod_name`, and a collated/generated lowercased title column — not
+  runtime `LOWER()`).
+
+**Conflict engine** consumes `mod_registration` + `mod_unique_type` +
+`mod_script` for the active Field: duplicate registration `name`, shared
+`unique_type`, and overlapping script basenames each become a "weed" with severity
+and the exact two mods + element cited. See `reference/fs25-modding-notes.md` for
+the full surface list and severities.
+
+**Savegame model:** `careerSavegame.xml` `<mod modName version required fileHash>`.
+A Field generated from a save must include every `required="true"` mod; `fileHash`
+(MD5) verifies the library copy matches what the save was built on. This is the one
+place we compute **MD5** (to match GIANTS' value) rather than blake3.
 
 Decoded icons cached as PNG files under the app data dir (referenced by
 `icon_ref`), **not** as base64 blobs in SQLite rows (another incumbent mistake —
@@ -99,12 +116,17 @@ be blocked — copy-mode is the universal fallback and must be first-class.
 
 ## Frontend
 
-- Framework TBD (React or Svelte). Decide at scaffold; either is fine.
+- **Svelte 5 (runes) + Vite + TypeScript** (committed — see `DECISIONS.md`).
+  Fine-grained reactivity means no whole-store re-render storms by construction; the
+  small runtime fits "native, fast, tiny." Design language in `DESIGN.md`.
 - **Virtualized lists mandatory** — the library view must render 700+ rows without
   materializing 700 DOM subtrees.
-- Selector-based state subscriptions (no whole-store subscriptions → no re-render
-  storms). Precompute lookups (status by fileName as a Map) once, not per row.
-- Progress via Tauri events, not polling.
+- Derive, don't broadcast: `$derived` for computed views; precompute lookups (status
+  by tech-name as a `Map`) once, not per row. No global store that every card
+  subscribes to wholesale.
+- Progress via Tauri events, not polling. Heavy work is always a Rust command.
+- Styling: hand-authored CSS design tokens (`tokens.css`), in-house primitives — no
+  heavyweight UI kit.
 
 ## Explicitly rejected (from incumbent teardown)
 
