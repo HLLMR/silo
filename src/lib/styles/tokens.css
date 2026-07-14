@@ -1,0 +1,100 @@
+/* Silo design tokens — "Golden Hour on the Farm" (see docs/DESIGN.md).
+   Warm neutrals (soil/linen/loam), field green primary, harvest gold accent,
+   sky blue info, barn red danger. Light = daybreak, dark = warm dusk. */
+
+:root {
+  /* Brand — field green */
+  --green-50: #eef4e6;
+  --green-100: #d8e7c6;
+  --green-300: #9cc06e;
+  --green-500: #5c8a3a;
+  --green-600: #4a7330;
+  --green-700: #395a25;
+  --green-900: #21361a;
+
+  /* Accent — harvest gold (the scarce color) */
+  --gold-300: #f2d26b;
+  --gold-500: #e3b23c;
+  --gold-600: #c9922a;
+  --gold-700: #a5751f;
+
+  /* Info — sky */
+  --sky-500: #4a90c2;
+  --sky-600: #3b76a3;
+
+  /* Warn — squash */
+  --squash-500: #d98a1f;
+
+  /* Danger — barn red */
+  --barn-500: #b34a38;
+
+  /* Earth — soil */
+  --soil-500: #8a6a45;
+  --soil-700: #5e472e;
+
+  --radius: 10px;
+  --radius-sm: 7px;
+  --gap: 8px;
+  --font-ui: "Hanken Grotesk", "Inter", system-ui, -apple-system, Segoe UI, Roboto,
+    sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-2: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Light theme — Daybreak */
+:root,
+:root[data-theme="light"] {
+  --bg: #f6f3ec;
+  --surface: #fcfaf4;
+  --surface-raised: #ffffff;
+  --border: #e4dece;
+  --text: #2a2a22;
+  --text-muted: #6b6a5c;
+  --primary: var(--green-600);
+  --primary-hover: var(--green-700);
+  --on-primary: #ffffff;
+  --accent: var(--gold-500);
+  --info: var(--sky-600);
+  --warn: var(--squash-500);
+  --danger: var(--barn-500);
+  color-scheme: light;
+}
+
+/* Dark theme — Dusk (warm loam, not black) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #171a14;
+    --surface: #1f231c;
+    --surface-raised: #282d24;
+    --border: #39402f;
+    --text: #edebe0;
+    --text-muted: #a8a897;
+    --primary: var(--green-500);
+    --primary-hover: var(--green-300);
+    --on-primary: #12180e;
+    --accent: var(--gold-500);
+    --info: var(--sky-500);
+    --warn: var(--squash-500);
+    --danger: var(--barn-500);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #171a14;
+  --surface: #1f231c;
+  --surface-raised: #282d24;
+  --border: #39402f;
+  --text: #edebe0;
+  --text-muted: #a8a897;
+  --primary: var(--green-500);
+  --primary-hover: var(--green-300);
+  --on-primary: #12180e;
+  --accent: var(--gold-500);
+  --info: var(--sky-500);
+  --warn: var(--squash-500);
+  --danger: var(--barn-500);
+  color-scheme: dark;
+}

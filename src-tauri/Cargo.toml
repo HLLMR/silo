@@ -1,0 +1,30 @@
+[package]
+name = "silo"
+version = "0.1.0"
+description = "Silo — Farming Simulator 25 mod library manager"
+authors = ["HLLMR"]
+edition = "2021"
+rust-version = "1.77"
+
+# The library holds all logic so it's unit-testable without a running app and
+# reusable by a future CLI. main.rs is a thin entry point.
+[lib]
+name = "silo_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+walkdir = "2"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+quick-xml = "0.37"
+rayon = "1"
+dirs = "5"
+
+[profile.dev]
+# Faster incremental dev builds; the heavy work is I/O-bound anyway.
+incremental = true
