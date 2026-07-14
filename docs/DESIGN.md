@@ -94,60 +94,52 @@ are one idea at two times of day.
   one primary action, content in the center with breathing room.
 - Mod cards: image-forward, title legible, *at most* 2–3 metadata chips visible;
   everything else on the detail view. No card should look like a spreadsheet cell.
-- Empty states are a feature: warm, illustrated-ish, they teach the next step (and
-  are where the farm voice gets to sing).
+- Empty states are a feature: warm, illustrated-ish, they teach the next step in
+  plain, translatable language.
 
-## The Silo lexicon (jargon system)
+## Language & terminology
 
-A two-layer language: **thematic nouns** for the memorable, branded concepts —
-always shipped with a **plain-language subtitle/tooltip** so nobody is ever lost —
-and **plain verbs on buttons** so mid-task actions are never ambiguous. Advanced
-users get flavor; newcomers get clarity. The rule: *name things with the farm;
-label actions with plain English.*
+Follow the GIANTS in-game approach: **plain, literal words that translate cleanly
+into dozens of languages.** No invented vocabulary, no metaphor decoder ring. Use
+the obvious terms — *library, loadout, apply, clear, conflict, health check,
+updates, savegame mods, favorite, hidden, broken.* "Silo" is the app's working
+name only; it is not a term users have to learn.
 
-| Concept | Silo term | Plain meaning (always shown nearby) |
-|---|---|---|
-| Your whole collection of owned mods | **the Silo** | mod library |
-| A curated set you launch the game with | **a Field** | mod profile / loadout |
-| Applying a Field to the game folder | button: **“Plant”** | project the active set (symlink/copy) |
-| Reverting the game folder to bare | button: **“Leave Fallow”** | clear the projection |
-| Groups / tags / collections | **Bins** | folders & tags |
-| Conflict detection | **Weeds** | clashes between active mods |
-| A single detected conflict | *a weed* | one conflict |
-| Library health / validation pass | **Soil Test** | integrity & health check |
-| Update & staleness tracking | **the Almanac** | what's out of date/removed |
-| A savegame's bound mod list | **the Harvest** | mods a save depends on |
-| Curation flags | **Keeper / Cull / Fallow** | favorite / broken / hidden |
-
-Guardrails: thematic terms appear as section titles, empty-states, and headings
-with the plain meaning as a subtitle; destructive/critical actions **always** use
-plain verbs plus a confirmation that states the effect and the undo. If a metaphor
-ever fights comprehension, comprehension wins.
+Terminology is deliberately **not finalized here** — final wording (and any light
+flavor) will be refined by hand once the app is built and every string is a
+translation key. Until then, code and UI use plain descriptive names.
 
 ## Give the tinkerers things to do (power layer)
 
 The floor under the calm surface — this is what makes advanced simmers adopt it and
 evangelize it:
 
-- **Fields you can compose & compare.** Build, clone, and **diff two Fields** (what
-  mods/versions differ). Import/export a Field as a shareable `.silo` file.
-- **Weeds explorer.** Every conflict drills down to the exact `modDesc.xml` element
-  and the two mods involved (shared specialization/type/uniqueType/script), with a
-  plain-English "why this clashes."
-- **Soil Test rules engine.** User-defined rules over the library: e.g. *tag any mod
-  >200 MB "heavy," flag mods sharing a `<uniqueType>`, warn on `extraSourceFiles`
+- **XML settings, rendered as a real form.** Most mods expose tunable options only
+  as hand-edited XML. In each mod's tinkerer area, Silo reads the mod's settings
+  XML and **generates a clean, stylized, editable form** — toggles, sliders, number
+  fields, dropdowns — inferred from the values (and the XSD where one exists), then
+  writes changes back to the XML safely. See `ARCHITECTURE.md#settings-form-generator`.
+  This is the flagship tinkerer feature: it turns "open the file in Notepad" into a
+  first-class UI.
+- **Loadouts you can compose & compare.** Build, clone, and **diff two loadouts**
+  (what mods/versions differ). Import/export a loadout as a shareable file.
+- **Conflict explorer.** Every conflict drills down to the exact `modDesc.xml`
+  element and the two mods involved (shared specialization/type/uniqueType/script),
+  with a plain-English "why this clashes."
+- **Health-check rules engine.** User-defined rules over the library: e.g. *tag any
+  mod >200 MB "heavy," flag mods sharing a `<uniqueType>`, warn on `extraSourceFiles`
   overlap, surface digit-prefixed names.* Ship a strong default rule-pack; let
   power users add their own.
-- **Dependency graph.** Visualize the active Field's dependency web; highlight
+- **Dependency graph.** Visualize the active loadout's dependency web; highlight
   missing/optional deps and the `required="true"` mods a chosen save needs.
 - **Snapshots & rollback.** Snapshot the mods-folder state before any change; one-
   click restore. (Reversibility made tangible.)
-- **Savegame binding.** Generate a Field from a save's Harvest; verify a save's
+- **Savegame binding.** Generate a loadout from a save's mod list; verify a save's
   `required` mods are present and version-matched (via `fileHash`).
 - **Saved filters / queries** over the library (by author, category, size, age,
   MP-support, "has scripts," "touches shop"). Bulk actions on the result set.
-- **CLI / headless mode.** Plant a Field, run a Soil Test, export a report from a
-  script — for the automation-minded. (The Rust core makes this cheap: the GUI and
+- **CLI / headless mode.** Apply a loadout, run a health check, export a report from
+  a script — for the automation-minded. (The Rust core makes this cheap: the GUI and
   CLI call the same engine.)
 - **Per-mod notes, personal rating, and a changelog trail.** The curation memory
   the community lacks today.
