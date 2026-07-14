@@ -17,10 +17,14 @@ at launch (via symlink/junction, with a copy fallback). See [docs/](docs/):
 ## Stack & structure (planned)
 
 - **Tauri v2**: Rust core in `src-tauri/`, web frontend in `src/`.
+- **Frontend: Svelte 5 (runes) + Vite + TypeScript**, hand-authored CSS design
+  tokens, no heavyweight UI kit. Virtualized lists mandatory. Design language in
+  `docs/DESIGN.md`.
 - Rust does ALL heavy work (zip parsing, hashing, DDS/image decode, tree walks)
   on a thread pool — never block the UI. This is the #1 lesson from the incumbent.
 - SQLite (rusqlite/sqlx) with real indexes; cache keyed by path+mtime+size.
-- Frontend framework: TBD. Virtualized lists are mandatory, not optional.
+- **Cross-platform: Windows + macOS + Linux** (see `docs/CROSS-PLATFORM.md`).
+  Per-OS game-file discovery and projection; never hardcode Windows paths.
 - **No source obfuscation in builds.**
 
 ## Working principles
@@ -48,9 +52,17 @@ at launch (via symlink/junction, with a copy fallback). See [docs/](docs/):
   `../fs25-mt-mod-manager/` — Electron app. Teardown + bug list in
   `docs/reference/incumbent-teardown.md`.
 - FS25 SDK / game source: see workspace root `CLAUDE.md` and the memory index
-  (`fs25-sdk-resource-locations`).
-- Reference mod corpus: `Documents/My Games/FarmingSimulator2025/mods/` (700+
-  real mods) — the scan/conflict engine's test fixtures.
+  (`fs25-sdk-resource-locations`). Authoritative schemas live at
+  `<game install>/shared/xml/schema/*.xsd` (88 of them; `modDesc.xsd`,
+  `gameSettings.xsd`, `savegame_*.xsd` are the ones we use).
+- **Local reference mirror:** `reference/` (gitignored) holds `schema/modDesc.xsd`,
+  `schema/gameSettings.xsd`, and `samples/` — GIANTS' copyrighted files + the user's
+  real save/mod samples, kept OUT of the public repo. Distilled facts are committed
+  in `docs/reference/fs25-modding-notes.md`.
+- Reference mod corpus: `Documents/My Games/FarmingSimulator2025/mods/` (**729**
+  real mods on this machine) — the scan/conflict engine's test fixtures. NOTE:
+  `modManagerTemplates/` and `modManagerArchives/` there are the incumbent's leftover
+  folders — do not reuse those names.
 
 ## Per-change validation
 

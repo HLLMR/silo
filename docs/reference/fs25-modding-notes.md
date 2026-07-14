@@ -1,103 +1,137 @@
 # FS25 modding notes (for Silo's engine)
 
-Ground-truth facts about how FS25 loads and structures mods, that Silo's scan /
-conflict / projection engines depend on. Sourced from the game's behavior, the
-SDK, and cross-checked against the incumbent's parser
-(`../fs25-mt-mod-manager/src/main/services/modManager.js`). **Verify anything
-marked (?) against the SDK `modDesc.xsd` before relying on it in code.**
+Ground-truth facts about how FS25 structures and loads mods. **Authoritative**
+where noted: derived directly from the game's own schema
+(`shared/xml/schema/modDesc.xsd`, `descVersion` 105-era) and real files on disk.
+A local (gitignored) mirror of the schema + samples lives in `../../reference/`.
 
-## File locations (Windows)
+## File locations
 
-- **Game user dir:** `Documents/My Games/FarmingSimulator2025/`
-  - `mods/` — the flat folder FS25 actually reads. A mod is either `Foo.zip` or an
-    unpacked `Foo/` dir containing `modDesc.xml`.
-  - `gameSettings.xml` — contains `<modsDirectoryOverride active="..." directory="..."/>`
-    for a custom mods path. Silo should read this to discover the real mods root.
-  - `savegame1/` … `savegameN/` — each has `careerSavegame.xml` (+ `farms.xml`,
-    `vehicles.xml`, etc.). The save's active mod list lives here.
-  - `pdlc/` — paid DLC (separate from mods).
-- **Game install:** e.g. `E:\SteamLibrary\steamapps\common\Farming Simulator 25`.
-  May also hold a `pdlc/` for Steam/Epic DLC.
+### Windows
+- **User dir:** `Documents/My Games/FarmingSimulator2025/`
+  - `mods/` — the flat folder FS25 reads. A mod = `Foo.zip` **or** an unpacked
+    `Foo/` dir containing `modDesc.xml`.
+  - `gameSettings.xml` — `<modsDirectoryOverride active="true|false" directory="…"/>`
+    points the game at a custom mods folder. Also `<showAllMods>` toggles the
+    mod-selection filter. (Authoritative schema: `gameSettings.xsd`.)
+  - `savegame1/`…`savegameN/` — each has `careerSavegame.xml` (+ farms/vehicles/
+    placeables/etc.). The save's mod list lives in `careerSavegame.xml` (below).
+  - `modSettings/<modName>/` — per-mod settings the game persists.
+  - `pdlc/` — paid DLC (`pdlc_*`), tracked in saves like mods but not user mods.
+  - **`modManagerTemplates/` and `modManagerArchives/` are the INCUMBENT's folders**
+    (MarkThor's app), not the game's. Silo must NOT reuse those names — pick our
+    own (e.g. a single app-data dir under the OS-appropriate location).
+- **Game install (Steam):** e.g. `E:\SteamLibrary\steamapps\common\Farming Simulator 25`
+  - `sdk/debugger/scriptBinding.xml`, `sdk/debugger/gameSource.zip` — engine + game
+    Lua reference.
+  - `shared/xml/schema/*.xsd` — **88 authoritative schemas** incl. `modDesc.xsd`,
+    `gameSettings.xsd`, and `savegame_*.xsd`.
+  - `pdlc/` — installed DLC.
+
+### Cross-platform — see [../CROSS-PLATFORM.md](../CROSS-PLATFORM.md) for Mac/Linux
+paths, Steam-library discovery, and the projection strategy per OS.
 
 ## How FS25 decides what to load
 
-- It scans **only the flat `mods/` root** — no subfolder recursion. This is *why*
-  organizing means "one giant folder" today, and why Silo projects a chosen set in.
-- **Mods whose name starts with a digit are ignored by the engine.** A folder/zip
-  named `07_FooMap.zip` silently won't load. Silo must flag this as a health issue
-  (the incumbent skips them at scan with a warning — `modManager.js:940`).
-- Whether a mod is "active" for a given save is recorded in that save's
-  `careerSavegame.xml` mod list (modName + optional version/title). Loading a save
-  expects those mods present in the folder.
+- It scans **only the flat `mods/` root** — no subfolder recursion. This is why
+  "organized" today means "one giant flat folder," and why Silo projects a chosen
+  set in at launch.
+- **A mod whose name starts with a digit is ignored by the engine.** `07_Foo.zip`
+  silently won't load — Silo flags this as a health issue.
+- `.zip` and unpacked-dir forms are both valid; identity is the **tech name** =
+  the zip/dir basename (e.g. `FS25_AdjustEnginePower`).
 
-## `modDesc.xml` — the fields Silo parses
+## `careerSavegame.xml` — the save's mod list (authoritative, from real saves)
 
-Root: `<modDesc descVersion="…">`. Relevant children (parse with `quick-xml`):
+```xml
+<mod modName="FS25_precisionFarming" title="Precision Farming"
+     version="1.5.0.0" required="false"
+     fileHash="29fd0411b119c19238541475fa86dea0"/>
+```
 
-- `<author>` — text.
-- `<version>` — dotted version string (e.g. `1.0.0.0`). Use for real update compare.
-- `<title>` — localized; may be `<title><en>…</en><de>…</de></title>` or a `title=`
-  attribute. Prefer `en`, fall back to any language, then the folder name.
-- `<description>` — localized similarly.
-- `<iconFilename>` (a.k.a. iconFile) — path to the mod icon inside the archive,
-  usually a `.dds` (sometimes `.png`). 256/512 square. Silo decodes off-thread.
-- **Maps:** `<maps><map id="…" title="…" className="…" filename="…"/></maps>`, or a
-  `<map>` block. Presence of a map + a map `.i3d` reference ⇒ treat as a map mod.
-  Maps are large (100 MB+ zips) — don't load the whole archive for the icon.
-- **Dependencies:** `<dependencies><dependency modName="FS25_Foo" url="…">…</dependency>`.
-  `modName` is the required mod's tech name; `url` (when present) may embed a
-  ModHub id (`mod_id=NNN` or `storage/NNN/`). Model as a struct
-  `{ mod_name, url?, mod_id? }` — **never assume it's a bare string** (that
-  assumption is the incumbent's blank-library crash).
-- **Scripts:** `<extraSourceFiles><sourceFile filename="scripts/Foo.lua"/></extraSourceFiles>`.
-  Two active mods contributing the same script basename ⇒ conflict signal.
-- **Specializations:** `<specializations><specialization name="fooSpec" className="…" filename="…"/></specializations>`.
-  Duplicate `name` across active mods ⇒ **critical** conflict (register clash).
-- **Store items:** `<storeItems><storeItem xmlFilename="…"/></storeItems>` — points
-  at vehicle/placeable XML; source of item counts and (for vehicles) tech specs.
-- `<l10n>` — localization; filename/id collisions are a softer conflict signal.
+- `modName` — tech name (matches the folder/zip basename; `pdlc_*` for DLC).
+- `version` — the version the save was last played with. Compare to library.
+- **`required`** — `true` ⇒ the save genuinely needs this mod. **A profile derived
+  from a save MUST include every `required="true"` mod**; missing one blocks/breaks
+  the save. `required="false"` ⇒ present-but-optional (safe to omit).
+- `fileHash` — **MD5** of the mod file. Silo can verify a library mod matches what
+  the save expects (mismatch ⇒ "different version than the save was built on").
 
-The mod's **tech name** is its folder/zip basename (e.g. `FS25_RealisticFoo`) and is
-the identity the game and dependencies use — more stable than the display title.
+## `modDesc.xml` — AUTHORITATIVE field reference (from `modDesc.xsd`)
 
-## Conflict signals (for the detection engine)
+Root: `<modDesc descVersion="INT">` — `descVersion` **required** (105 in current
+FS25; gates the min game patch). Parse with `quick-xml`, never regex.
 
-Ranked rough severity — validate against the 700-mod corpus before shipping:
+**Required children:** `<author>` (string), `<version>` (string, `a.b.c.d`),
+`<iconFilename>` (path to mod icon, usually `.dds`, sometimes `.png`).
 
-| Signal | Severity | Source |
-|--------|----------|--------|
-| Duplicate `<specialization>` name across active mods | critical | modDesc |
-| Same tech name present twice (dup install / version clash) | critical | folder |
-| Explicit `<dependency>` missing from active set | high | modDesc |
-| Duplicate script basename in `<extraSourceFiles>` | warning | modDesc |
-| Same `<storeItem>`/store category id collision | warning (?) | store XML |
-| l10n / input-binding id collision | info/warning (?) | modDesc / xml |
-| Mod name starts with a digit (engine ignores it) | health-warning | folder |
-| Corrupt/unreadable zip, missing modDesc.xml | health-error | scan |
+**Core metadata:**
+- `<title>` — localized: child tags per language (`en de fr pl ru … 26 langs`).
+  Prefer `en`, fall back to any, then the tech name. May contain CDATA.
+- `<description>` — localized the same way; CDATA common.
+- `<multiplayer supported="bool" only="bool"/>` — MP support/only flags → a
+  "MP-safe" filter for free.
+- `<isSelectable>` (bool) — shows in the mod-selection screen.
+- `<uniqueType>` (string) — **GIANTS' own conflict primitive:** "only one mod of
+  this type may be selected." Two active mods sharing a `<uniqueType>` conflict by
+  design. Treat as a **critical** conflict signal.
 
-## Projection mechanics (Windows)
+**Dependencies (authoritative):** `<dependencies><dependency>` where each
+`<dependency>` is a **string** = "filename of the mod (without `.zip`) to be
+installed for this mod to be used." So a dependency is a **tech name**, not a
+struct. (Some community mods non-canonically append a URL in the text/attrs — parse
+defensively: take the tech-name token, optionally recover a `mod_id` from any URL,
+but never assume a shape. The incumbent's blank-library crash was exactly this
+assumption.)
 
-- **Directory junctions** (`fs::junction` / `mklink /J`) generally work **without**
-  admin or Developer Mode — good for unpacked mod dirs.
-- **File symlinks** (for `.zip` mods) typically need **Developer Mode or admin**.
-  This is the exact seam where the incumbent is "buggy" for some users.
-- **Hardlinks** work for files but **fail across volumes** (library on D:, game on C:).
-- ⇒ Silo detects capability per game-root once, and falls back to **copy-mode** as a
-  universal, first-class path. Track every link/copy Silo creates so cleanup only
-  ever removes Silo-owned entries — never user files.
+**Namespace-collision surfaces (the raw material for conflict detection).** Each is
+a place two mods can register the same name and clash:
 
-## Reference corpus & fixtures
+| Element | Child → key | Collision severity |
+|---|---|---|
+| `<specializations>` | `<specialization name … className filename>` | critical |
+| `<placeableSpecializations>` | `<specialization name …>` | critical |
+| `<handToolSpecializations>` | `<specialization name …>` | critical |
+| `<vehicleTypes>` | `<type name … className filename parent>` | critical |
+| `<placeableTypes>` | `<type name …>` | critical |
+| `<handToolTypes>` | `<type name …>` | critical |
+| `<extraSourceFiles>` | `<sourceFile filename>` (global Lua) | warning + safety flag |
+| `<actions>` | `<action name …>` | warning (input action clash) |
+| `<inputBinding>` | `<actionBinding action><binding …>` | info/warning |
+| `<brands>` | `<brand name title image>` | warning |
+| `<storeCategories>` | `<storeCategory name title type>` | warning |
+| `<uniqueType>` | (whole-mod) | critical (by GIANTS design) |
 
-- `Documents/My Games/FarmingSimulator2025/mods/` — 700+ real mods. Primary test
-  fixture for scan performance and conflict-detection accuracy. Good economy/complex
-  analogs to include in tests: large map mods, script mods with specializations,
-  mods with URL-form dependencies (the crash case), digit-prefixed names.
+`<extraSourceFiles>` doubles as a **safety** signal: it injects Lua into the global
+game state. High source-file counts / overlap with other mods = elevated risk.
 
-## To verify against the SDK before coding
+**Content/inventory (for library richness, not conflicts):**
+- `<storeItems><storeItem xmlFilename>` — count = # shop items the mod adds.
+- `<maps><map id className configFilename filename>` with localized `<title>` and
+  `<iconFilename>`. **Presence of `<maps>` ⇒ map mod.** Maps are huge (100 MB+);
+  stream the zip central directory, don't load the whole archive for the icon.
+- `<l10n>` (`<text name>` + langs, or external `filenamePrefix`), `<fillTypes>`,
+  `<fruitTypes>`(?), `<brands>`, `<materialHolders>`, `<materialTemplates>`,
+  `<bales>`, `<wildlife>`, `<connectionHoses>`, `<jointTypes>`, `<missionVehicles>`.
+- `<parentFile xmlFilename>` with `<set/remove/clearList>` — mod patches another
+  XML; a signal the mod extends/overrides base content.
 
-- [ ] Exact `modDesc.xsd` element/attribute names (esp. `iconFilename` vs
-      `iconFile`, `<maps>` schema, store-item attributes).
-- [ ] `careerSavegame.xml` mod-list element shape (modName/version/title fields).
-- [ ] Whether FS25 dedupes by tech name or by folder name when both `.zip` and dir
-      exist.
-- [ ] Current `gameSettings.xml` `modsDirectoryOverride` exact attributes.
+## Projection mechanics — see [../ARCHITECTURE.md](../ARCHITECTURE.md#projection)
+Symlink/junction vs copy strategy differs per OS; captured in ARCHITECTURE +
+CROSS-PLATFORM.
+
+## Reference corpus & fixtures (local, gitignored)
+- `Documents/My Games/FarmingSimulator2025/mods/` — **729 real mods** here. Primary
+  fixture for scan performance and conflict accuracy.
+- `reference/schema/modDesc.xsd`, `gameSettings.xsd` — mirrored authoritative schemas.
+- `reference/samples/sample_modDesc_script.xml` — a real script mod (global Lua
+  injection, MP-supported, localized) for parser unit tests.
+- Deliberately collect fixtures covering: a large map mod, a mod with
+  `<specializations>`, a mod with a URL-form dependency (the crash case), a
+  digit-prefixed name, a corrupt zip.
+
+## Still to verify against SDK
+- [ ] `<fruitTypes>` element name (not seen in modDesc.xsd this pass — may live in a
+      map's config, not modDesc).
+- [ ] Whether FS25 dedupes by tech name when both `Foo.zip` and `Foo/` exist.
+- [ ] `pdlc_*` discovery on Mac/Epic layouts.

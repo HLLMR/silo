@@ -25,6 +25,28 @@ v1 management works fully offline; scraping/browsing is a possible later add-on.
 **Why:** management is the sticky, defensible moat; discovery is replaceable and
 GIANTS could kill it.
 
+## 2026-07-14 — Frontend: Svelte 5 + Vite + TypeScript
+**Context:** need bespoke, beautiful UI and zero re-render-storm risk. **Decision:**
+Svelte 5 (runes) + Vite + TS, hand-authored CSS design tokens, no heavyweight UI
+kit. **Why:** smallest runtime (fits "native, fast, tiny"); fine-grained reactivity
+avoids the incumbent's whole-store re-render failure by construction; low ceremony
+frees effort for craft. See `DESIGN.md`.
+
+## 2026-07-14 — Cross-platform: Windows + macOS + Linux
+**Context:** "these are tinkerers like us" across OSes; FS25 ships Win + Mac, Linux
+via Proton. **Decision:** support all three natively (Tauri targets), with
+per-OS game-file discovery and projection strategy. **Why:** the tinkerer audience
+is cross-platform; Tauri makes it cheap; detection (Steam `libraryfolders.vdf`,
+Epic, GIANTS) + manual override covers real installs. See `CROSS-PLATFORM.md`.
+
+## 2026-07-14 — Ground the data model in the real SDK schema
+**Context:** the incumbent guessed modDesc fields via regex and shipped bugs.
+**Decision:** model straight from `modDesc.xsd` / `gameSettings.xsd` /
+`careerSavegame.xml` (mirrored locally, gitignored to respect GIANTS' IP). Key
+facts: `<dependency>` is a tech-name **string**; `<uniqueType>` is an explicit
+conflict primitive; six namespace surfaces drive conflict detection; saves carry
+`required` + `fileHash` per mod. See `reference/fs25-modding-notes.md`.
+
 ## 2026-07-14 — Working title "Silo"
 **Context:** need a name comparable-in-ambition to Nexus Mod Manager but without
 "mod manager" in it. **Decision:** working title **Silo** (a silo = organized,

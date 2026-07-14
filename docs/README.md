@@ -4,9 +4,13 @@ Planning and reference material. Read in this order:
 
 1. **[VISION.md](VISION.md)** — the problem, the insight, positioning, competitors.
 2. **[MVP.md](MVP.md)** — v0.1 scope (and what's deliberately excluded).
-3. **[ARCHITECTURE.md](ARCHITECTURE.md)** — Tauri/Rust design, data model, the
-   projection engine.
-4. **[DECISIONS.md](DECISIONS.md)** — why we chose what we chose.
+3. **[DESIGN.md](DESIGN.md)** — design language, stack picks, farm color system,
+   the Silo lexicon, and the tinkerer power-layer.
+4. **[ARCHITECTURE.md](ARCHITECTURE.md)** — Tauri/Rust design, data model, conflict
+   engine, the projection engine.
+5. **[CROSS-PLATFORM.md](CROSS-PLATFORM.md)** — Windows/macOS/Linux game-file
+   discovery and per-OS projection.
+6. **[DECISIONS.md](DECISIONS.md)** — why we chose what we chose.
 
 Reference (mined knowledge):
 
