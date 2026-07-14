@@ -25,6 +25,23 @@ v1 management works fully offline; scraping/browsing is a possible later add-on.
 **Why:** management is the sticky, defensible moat; discovery is replaceable and
 GIANTS could kill it.
 
+## 2026-07-14 — Drop the thematic lexicon; use plain, translatable language
+**Context:** an earlier pass invented a farm-metaphor vocabulary (Fields/Weeds/Soil
+Test/…). **Decision:** remove it. Follow GIANTS' in-game approach — plain literal
+words that translate cleanly into dozens of languages (library, loadout, apply,
+clear, conflict, health check, updates). Terminology is **not finalized**; final
+wording refined by hand once built and every string is a translation key. "Silo"
+remains only the app's working name. **Why:** a decoder-ring vocabulary hurts
+approachability and i18n; the user will own the language pass.
+
+## 2026-07-14 — XML settings form generator (tinkerer feature)
+**Context:** most mods expose tunable options only as hand-edited XML. **Decision:**
+each mod's tinkerer area generates a stylized, editable form from its settings XML
+(XSD-assisted where available), writing back with a minimal diff + original backup,
+with a raw-XML escape hatch. New `settings/` Rust module + generic Svelte renderer;
+MVP item 7. **Why:** turns "edit in Notepad" into first-class UI — a headline
+differentiator. Design in `ARCHITECTURE.md#settings-form-generator`.
+
 ## 2026-07-14 — Frontend: Svelte 5 + Vite + TypeScript
 **Context:** need bespoke, beautiful UI and zero re-render-storm risk. **Decision:**
 Svelte 5 (runes) + Vite + TS, hand-authored CSS design tokens, no heavyweight UI

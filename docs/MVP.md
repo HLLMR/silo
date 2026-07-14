@@ -49,9 +49,22 @@ a local library.
 - Launch the game with the projected active set.
 - Read a savegame's bound mod list (`careerSavegame.xml`) to inform/build a profile.
 
+### 7. XML settings editor (tinkerer feature)
+- In each mod's detail/tinkerer area, locate the mod's settings XML (`modSettings/
+  <modName>/`, in-archive config, or savegame-scoped) and **generate a stylized,
+  editable form** from it — toggles/sliders/number fields/dropdowns inferred from
+  values, and from the XSD where one applies.
+- Write edits back with a minimal diff, **backing up the original first**; validate
+  against the XSD when available; "reset to default"; always offer a raw-XML escape
+  hatch. Design: `ARCHITECTURE.md#settings-form-generator`.
+- Turns "edit the file in Notepad" into a first-class UI — a headline differentiator.
+  (May ship as an early fast-follow if v0.1 core runs heavy, but it's planned in.)
+
 ## Explicitly out of scope for v0.1
 - ModHub browsing/scraping/downloading.
-- In-app mod editing.
+- In-app editing of mod **content/assets** (models, scripts, balancing) — that's
+  GIANTS Editor/Studio territory. (Editing a mod's **settings** XML *is* in scope —
+  item 7.)
 - Radio, system/graphics "optimization," cloud sync, DLC management (all incumbent
   scope-creep that distracted from the core).
 - Auto-update of the app itself (add once there's something to update to).

@@ -34,14 +34,16 @@
 │  projection/      symlink/junction/copy engine │
 │  conflict/        static conflict analysis     │
 │  savegame/        careerSavegame.xml reader     │
+│  settings/        XML → form-schema ↔ XML writer │
 │  db/              rusqlite, migrations, cache   │
 │  fsgame/          path discovery, launch        │
 └───────────────────────────────────────────────┘
 ```
 
-Keep `scan`, `moddesc`, `library`, `profile`, `projection`, and `conflict` as
-**pure-ish logic modules** with their own unit tests, behind thin `commands/`
-wrappers. They should be testable against a fixture folder without a running app.
+Keep `scan`, `moddesc`, `library`, `profile`, `projection`, `conflict`, and
+`settings` as **pure-ish logic modules** with their own unit tests, behind thin
+`commands/` wrappers. They should be testable against a fixture folder without a
+running app.
 
 ## Key crates (proposed — confirm at scaffold time)
 
@@ -71,7 +73,7 @@ Real tables with real indexes (contrast the incumbent's `LIKE 'mods_%'` KV scans
   `mod_specialization(hash, spec_name)` — normalized, indexed for conflict queries.
 - `folder(id, name, parent_id)` + `mod_tag(hash, tag)` — organization.
 - `profile(id, name)` + `profile_mod(profile_id, hash, order_index)` — loadouts.
-- `curation(hash, state, note)` — favorite/hidden/broken (Keeper/Cull/Fallow).
+- `curation(hash, state, note)` — favorite/hidden/broken.
 - `mod_registration(hash, kind, name)` — the six namespace surfaces
   (specialization / placeableSpecialization / handToolSpecialization / vehicleType /
   placeableType / handToolType) + actions/brands/storeCategories, normalized so a
@@ -82,13 +84,13 @@ Real tables with real indexes (contrast the incumbent's `LIKE 'mods_%'` KV scans
   runtime `LOWER()`).
 
 **Conflict engine** consumes `mod_registration` + `mod_unique_type` +
-`mod_script` for the active Field: duplicate registration `name`, shared
-`unique_type`, and overlapping script basenames each become a "weed" with severity
-and the exact two mods + element cited. See `reference/fs25-modding-notes.md` for
-the full surface list and severities.
+`mod_script` for the active loadout: duplicate registration `name`, shared
+`unique_type`, and overlapping script basenames each become a conflict with
+severity and the exact two mods + element cited. See
+`reference/fs25-modding-notes.md` for the full surface list and severities.
 
 **Savegame model:** `careerSavegame.xml` `<mod modName version required fileHash>`.
-A Field generated from a save must include every `required="true"` mod; `fileHash`
+A loadout generated from a save must include every `required="true"` mod; `fileHash`
 (MD5) verifies the library copy matches what the save was built on. This is the one
 place we compute **MD5** (to match GIANTS' value) rather than blake3.
 
@@ -113,6 +115,46 @@ At launch, project the active profile into the primary game `mods/` folder:
 
 Cross-volume note: hardlinks fail across drives and symlinks-to-another-drive may
 be blocked — copy-mode is the universal fallback and must be first-class.
+
+## Settings form generator
+
+The flagship tinkerer feature: turn a mod's hand-edited settings XML into a clean,
+editable form, and write changes back safely. Lives in the `settings/` Rust module
+plus a generic Svelte form renderer.
+
+**Where a mod's settings live** (probe in order, all present-or-absent):
+- `Documents/My Games/FarmingSimulator2025/modSettings/<modName>/…xml` — the common
+  location the game persists per-mod user settings to.
+- A config XML shipped inside the mod archive (referenced from `modDesc.xml`, e.g.
+  `<map configFilename>` or a mod-specific `*Config.xml` / `settings.xml`).
+- Savegame-scoped mod settings under a `savegameN/` folder (some mods store state
+  per save).
+Silo shows the tinkerer which file(s) it found and which it's editing.
+
+**Pipeline (`settings/`):**
+1. **Parse** the XML with `quick-xml` into a lossless tree (preserve element order,
+   attributes, comments, CDATA, and whitespace so the rewrite is a minimal diff).
+2. **Infer a field schema** for each leaf value/attribute:
+   - `true|false` → **toggle**; integer → **number/stepper**; float → **number** (or
+     **slider** when a plausible range is known); constrained set → **select**;
+     otherwise **text**. Vectors (`g_vector_*`) → grouped numeric inputs.
+   - **Use the XSD when one exists** (`shared/xml/schema/*.xsd`) to get real types,
+     enums, defaults, ranges, and the `typeStr`/documentation annotations for
+     labels/help — far better than value-only inference. Fall back to inference when
+     no schema covers the file (most mod-specific configs).
+   - Derive a human label from the tag/attr name (de-camelCase) + XSD docs; keep the
+     raw XPath as the stable key.
+3. **Render** via one generic, stylized Svelte form component driven by the schema
+   (grouped by element, collapsible sections, search) — no per-mod code.
+4. **Write back**: apply edits onto the preserved tree and re-serialize, changing
+   **only** touched values. Always **snapshot/back up the original** first
+   (reuses the projection engine's reversibility guarantee); validate against the
+   XSD before save when available; offer "reset to default."
+
+**Safety & scope:** never invent elements the schema/mod didn't have; round-trip
+untouched files to a byte-identical (or minimal-diff) result in tests; treat unknown
+/ freeform XML as read-only-with-raw-editor rather than guessing. A "raw XML" escape
+hatch is always available beside the generated form.
 
 ## Frontend
 
