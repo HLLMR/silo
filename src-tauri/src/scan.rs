@@ -5,16 +5,17 @@
 //! mods scan cheaply. Content hashing and icon decode are deliberately deferred.
 
 use rayon::prelude::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use tauri::{AppHandle, Emitter};
 
+use crate::db::CacheEntry;
 use crate::moddesc;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ModEntry {
     /// Tech name = the zip/dir basename (mod identity the game & deps use).
@@ -57,10 +58,11 @@ pub struct ScanResult {
     pub total: usize,
 }
 
-#[derive(Clone, Serialize)]
-struct Progress {
-    done: usize,
-    total: usize,
+/// Result of a cached scan: the full list plus which paths were freshly parsed
+/// (cache misses) so the caller can persist just those.
+pub struct ScanOutput {
+    pub result: ScanResult,
+    pub fresh_paths: HashSet<String>,
 }
 
 struct Candidate {
@@ -198,10 +200,38 @@ fn build_entry(c: &Candidate) -> ModEntry {
     entry
 }
 
-/// Core scan: walk the roots and parse every candidate in parallel, reporting
-/// progress via a callback. No Tauri dependency — reusable by tests and a future
-/// CLI. The callback may be invoked from many rayon threads (hence Sync).
-pub fn scan_with<F>(roots: Vec<PathBuf>, progress: F) -> ScanResult
+/// Resolve one candidate: reuse the cached entry when mtime+size are unchanged
+/// (no archive open), otherwise parse fresh. Returns (entry, was_freshly_parsed).
+fn resolve_entry(c: &Candidate, cache: &HashMap<String, CacheEntry>) -> (ModEntry, bool) {
+    let meta = fs::metadata(&c.path).ok();
+    let size = meta.as_ref().map(|m| m.len()).unwrap_or(0);
+    let mtime_ms = meta
+        .as_ref()
+        .and_then(|m| m.modified().ok())
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+
+    if let Some(ce) = cache.get(c.path.to_string_lossy().as_ref()) {
+        if ce.mtime_ms == mtime_ms && ce.size == size {
+            // A schema change that fails deserialization simply falls through to a
+            // fresh parse — we never trust a partial decode.
+            if let Ok(entry) = serde_json::from_str::<ModEntry>(&ce.json) {
+                return (entry, false);
+            }
+        }
+    }
+    (build_entry(c), true)
+}
+
+/// Core scan: walk the roots, resolving each candidate from `cache` when possible
+/// and parsing the rest in parallel. Reports progress via a callback (invoked from
+/// many rayon threads, hence Sync). No Tauri dependency — testable / CLI-reusable.
+pub fn scan_cached<F>(
+    roots: Vec<PathBuf>,
+    cache: &HashMap<String, CacheEntry>,
+    progress: F,
+) -> ScanOutput
 where
     F: Fn(usize, usize) + Sync + Send,
 {
@@ -215,22 +245,29 @@ where
     progress(0, total);
 
     let done = AtomicUsize::new(0);
-    // Report progress roughly every 1% (min every 10 items) to avoid floods.
     let step = (total / 100).max(10);
 
-    let mut mods: Vec<ModEntry> = candidates
+    let pairs: Vec<(ModEntry, bool)> = candidates
         .par_iter()
         .map(|c| {
-            let entry = build_entry(c);
+            let resolved = resolve_entry(c, cache);
             let n = done.fetch_add(1, Ordering::Relaxed) + 1;
             if n % step == 0 || n == total {
                 progress(n, total);
             }
-            entry
+            resolved
         })
         .collect();
 
-    // Sort by display title, case-insensitive.
+    let mut fresh_paths = HashSet::new();
+    let mut mods = Vec::with_capacity(pairs.len());
+    for (entry, fresh) in pairs {
+        if fresh {
+            fresh_paths.insert(entry.path.clone());
+        }
+        mods.push(entry);
+    }
+
     mods.sort_by(|a, b| {
         let ta = a.title.as_deref().unwrap_or(&a.tech_name).to_lowercase();
         let tb = b.title.as_deref().unwrap_or(&b.tech_name).to_lowercase();
@@ -239,17 +276,21 @@ where
 
     progress(total, total);
 
-    ScanResult {
-        mods,
-        roots: roots.iter().map(|p| p.to_string_lossy().into_owned()).collect(),
-        took_ms: started.elapsed().as_millis(),
-        total,
+    ScanOutput {
+        result: ScanResult {
+            mods,
+            roots: roots.iter().map(|p| p.to_string_lossy().into_owned()).collect(),
+            took_ms: started.elapsed().as_millis(),
+            total,
+        },
+        fresh_paths,
     }
 }
 
-/// Tauri entry point: scan and emit `scan:progress` events as it goes.
-pub fn scan(app: AppHandle, roots: Vec<PathBuf>) -> ScanResult {
-    scan_with(roots, move |done, total| {
-        let _ = app.emit("scan:progress", Progress { done, total });
-    })
+/// Convenience wrapper with no cache — used by the example harness and tests.
+pub fn scan_with<F>(roots: Vec<PathBuf>, progress: F) -> ScanResult
+where
+    F: Fn(usize, usize) + Sync + Send,
+{
+    scan_cached(roots, &HashMap::new(), progress).result
 }

@@ -1,13 +1,21 @@
 //! Silo core — Tauri command surface. All heavy logic lives in sibling modules so
 //! it stays unit-testable (and reusable by a future CLI) without a running app.
 
+pub mod db;
 pub mod fsgame;
 pub mod icons;
 pub mod moddesc;
 pub mod scan;
 
+use std::collections::HashSet;
 use std::path::PathBuf;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
+
+#[derive(Clone, serde::Serialize)]
+struct Progress {
+    done: usize,
+    total: usize,
+}
 
 /// Return the auto-detected default mod root(s) as strings for the UI.
 #[tauri::command]
@@ -30,9 +38,43 @@ async fn scan_mods(
         _ => fsgame::default_mods_paths(),
     };
 
-    tauri::async_runtime::spawn_blocking(move || scan::scan(app, roots))
-        .await
-        .map_err(|e| e.to_string())
+    tauri::async_runtime::spawn_blocking(move || {
+        // Warm cache: parsed entries persist between launches, keyed by
+        // path+mtime+size, so unchanged mods skip archive parsing entirely.
+        let db_path = app
+            .path()
+            .app_data_dir()
+            .map(|d| d.join("silo.db"))
+            .map_err(|e| e.to_string())?;
+        let mut conn = db::open(&db_path)?;
+        let cache = db::load_cache(&conn);
+
+        let emitter = app.clone();
+        let out = scan::scan_cached(roots, &cache, move |done, total| {
+            let _ = emitter.emit("scan:progress", Progress { done, total });
+        });
+
+        // Persist freshly-parsed rows; prune mods that vanished from disk.
+        let fresh_rows: Vec<(String, u64, u64, String)> = out
+            .result
+            .mods
+            .iter()
+            .filter(|m| out.fresh_paths.contains(&m.path))
+            .filter_map(|m| {
+                serde_json::to_string(m)
+                    .ok()
+                    .map(|json| (m.path.clone(), m.mtime_ms, m.size, json))
+            })
+            .collect();
+        let _ = db::upsert_many(&mut conn, &fresh_rows);
+
+        let present: HashSet<String> = out.result.mods.iter().map(|m| m.path.clone()).collect();
+        let _ = db::prune_missing(&mut conn, &present);
+
+        Ok::<_, String>(out.result)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// Return a mod's icon as a cached PNG `data:` URL (or null if unavailable).
