@@ -29,6 +29,8 @@ pub struct ModEntry {
     pub author: Option<String>,
     pub version: Option<String>,
     pub desc_version: Option<i64>,
+    /// Path to the mod's icon inside the archive/dir (for lazy thumbnail loading).
+    pub icon_filename: Option<String>,
 
     pub is_map: bool,
     pub map_title: Option<String>,
@@ -101,6 +103,14 @@ fn collect_candidates(root: &Path) -> Vec<Candidate> {
     out
 }
 
+/// Read a mod's `modDesc.xml` text, whether it's a `.zip` or an unpacked dir.
+pub fn read_moddesc_xml(mod_path: &Path, kind: &str) -> Result<String, String> {
+    match kind {
+        "zip" => read_moddesc_from_zip(mod_path),
+        _ => read_moddesc_from_dir(mod_path),
+    }
+}
+
 fn read_moddesc_from_zip(path: &Path) -> Result<String, String> {
     let file = fs::File::open(path).map_err(|e| e.to_string())?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
@@ -144,6 +154,7 @@ fn build_entry(c: &Candidate) -> ModEntry {
         author: None,
         version: None,
         desc_version: None,
+        icon_filename: None,
         is_map: false,
         map_title: None,
         dependencies: Vec::new(),
@@ -168,6 +179,7 @@ fn build_entry(c: &Candidate) -> ModEntry {
             entry.author = md.author;
             entry.version = md.version;
             entry.desc_version = md.desc_version;
+            entry.icon_filename = md.icon_filename;
             entry.is_map = md.is_map;
             entry.map_title = md.map_title;
             entry.dependencies = md.dependencies;

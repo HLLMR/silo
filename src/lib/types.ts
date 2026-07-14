@@ -11,6 +11,7 @@ export interface ModEntry {
   author: string | null;
   version: string | null;
   descVersion: number | null;
+  iconFilename: string | null;
 
   isMap: boolean;
   mapTitle: string | null;
