@@ -1,0 +1,16 @@
+# Normalize line endings across Windows/macOS/Linux checkouts.
+* text=auto eol=lf
+
+# Binary/asset types Git should never touch.
+*.png binary
+*.jpg binary
+*.dds binary
+*.ico binary
+*.icns binary
+*.zip binary
+*.gar binary
+*.woff2 binary
+
+# Windows-only scripts keep CRLF.
+*.bat text eol=crlf
+*.ps1 text eol=crlf
