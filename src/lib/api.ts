@@ -13,6 +13,14 @@ export function scanMods(roots?: string[]): Promise<ScanResult> {
   return invoke<ScanResult>("scan_mods", { roots: roots ?? null });
 }
 
+export function getModIcon(
+  path: string,
+  kind: string,
+  iconFilename: string | null,
+): Promise<string | null> {
+  return invoke<string | null>("get_mod_icon", { path, kind, iconFilename });
+}
+
 export function onScanProgress(
   handler: (p: ScanProgress) => void,
 ): Promise<UnlistenFn> {

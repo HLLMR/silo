@@ -1,7 +1,38 @@
+<script lang="ts" module>
+  // Shared across all rows so scrolling back doesn't re-request an icon we've
+  // already loaded this session. (The Rust side also disk-caches decoded PNGs.)
+  const iconCache = new Map<string, string>();
+</script>
+
 <script lang="ts">
   import type { ModEntry } from "../types";
+  import { getModIcon } from "../api";
 
   let { mod }: { mod: ModEntry } = $props();
+
+  // Lazy icon: rows only mount when scrolled into view (virtualized), so this
+  // fetches on-screen icons only. Guarded so a slow response can't land on a row
+  // that's since been reused for a different mod.
+  let iconSrc = $state<string | null>(null);
+  $effect(() => {
+    const m = mod;
+    if (!m.iconFilename) {
+      iconSrc = null;
+      return;
+    }
+    const hit = iconCache.get(m.path);
+    if (hit) {
+      iconSrc = hit;
+      return;
+    }
+    iconSrc = null;
+    getModIcon(m.path, m.kind, m.iconFilename).then((url) => {
+      if (url && mod.path === m.path) {
+        iconCache.set(m.path, url);
+        iconSrc = url;
+      }
+    });
+  });
 
   const sizeLabel = $derived(formatSize(mod.size));
   function formatSize(bytes: number): string {
@@ -19,7 +50,11 @@
 </script>
 
 <div class="row" class:has-error={!!mod.error}>
-  <div class="tile" class:map={mod.isMap}>{initial}</div>
+  {#if iconSrc}
+    <img class="tile img" src={iconSrc} alt="" loading="lazy" />
+  {:else}
+    <div class="tile" class:map={mod.isMap}>{initial}</div>
+  {/if}
 
   <div class="main">
     <div class="titleline">
@@ -90,6 +125,11 @@
   }
   .tile.map {
     background: linear-gradient(135deg, var(--soil-500), var(--soil-700));
+  }
+  .tile.img {
+    object-fit: cover;
+    background: var(--surface-raised);
+    color: transparent;
   }
   .main {
     flex: 1 1 auto;
