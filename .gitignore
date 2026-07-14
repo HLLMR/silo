@@ -1,0 +1,52 @@
+# ── Node / frontend ──
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+
+# ── Rust / Tauri ──
+src-tauri/target/
+target/
+**/*.rs.bk
+*.pdb
+
+# ── Build output ──
+release/
+out/
+*.exe
+*.dmg
+*.msi
+*.app
+*.zip
+
+# ── Databases / caches (app runtime data) ──
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# ── Logs & debug artifacts ──
+# (Lesson from the incumbent: never commit scan logs, dumps, or scratch.)
+logs/
+*.log
+crash-log.txt
+detection_log.txt
+*.bin
+scratch/
+tmp/
+temp/
+
+# ── Env / secrets ──
+.env
+.env.*
+!.env.example
+
+# ── IDE / OS ──
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
