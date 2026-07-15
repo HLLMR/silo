@@ -396,6 +396,58 @@
     return list;
   });
 
+  type SortKey = "name" | "category" | "size" | "added" | "version";
+  let sortBy = $state<SortKey>("name");
+  let sortDir = $state<"asc" | "desc">("asc");
+
+  const visible = $derived.by(() => {
+    const arr = [...filtered];
+    const mul = sortDir === "desc" ? -1 : 1;
+    const name = (m: ModEntry) => (m.title ?? m.techName).toLowerCase();
+    arr.sort((a, b) => {
+      let r = 0;
+      switch (sortBy) {
+        case "name":
+          r = name(a).localeCompare(name(b));
+          break;
+        case "size":
+          r = a.size - b.size;
+          break;
+        case "added":
+          r = a.mtimeMs - b.mtimeMs;
+          break;
+        case "version":
+          r = (a.version ?? "").localeCompare(b.version ?? "", undefined, { numeric: true });
+          break;
+        case "category":
+          r =
+            a.category.localeCompare(b.category) ||
+            (a.subcategory ?? "").localeCompare(b.subcategory ?? "") ||
+            name(a).localeCompare(name(b));
+          break;
+      }
+      return r * mul || name(a).localeCompare(name(b));
+    });
+    return arr;
+  });
+
+  // Bulk activate/deactivate the currently-filtered set (fast loadout building).
+  async function setActiveForFiltered(active: boolean) {
+    const next = new Set(activeSet);
+    for (const m of filtered) {
+      if (active) next.add(m.techName);
+      else next.delete(m.techName);
+    }
+    activeSet = next;
+    busy = active ? "Activating…" : "Deactivating…";
+    try {
+      await setActive([...next]);
+    } catch (e) {
+      errorMsg = String(e);
+    }
+    busy = null;
+  }
+
   const stats = $derived.by(() => {
     let maps = 0,
       scripts = 0,
@@ -725,6 +777,47 @@
           {/if}
         </span>
         <span class="crumb-count tnum">{filtered.length} shown</span>
+
+        <div class="tb-spacer"></div>
+
+        <div class="tb-group">
+          <label class="tb-sort">
+            Sort
+            <select bind:value={sortBy}>
+              <option value="name">Name</option>
+              <option value="category">Category</option>
+              <option value="size">Size</option>
+              <option value="added">Recently added</option>
+              <option value="version">Version</option>
+            </select>
+          </label>
+          <button
+            class="tb-dir"
+            title={sortDir === "asc" ? "Ascending" : "Descending"}
+            onclick={() => (sortDir = sortDir === "asc" ? "desc" : "asc")}
+          >
+            {sortDir === "asc" ? "↑" : "↓"}
+          </button>
+        </div>
+
+        <div class="tb-group">
+          <button
+            class="tb-btn"
+            title="Activate every mod in the current view"
+            onclick={() => setActiveForFiltered(true)}
+            disabled={!!busy || filtered.length === 0}
+          >
+            Activate all
+          </button>
+          <button
+            class="tb-btn"
+            title="Deactivate every mod in the current view"
+            onclick={() => setActiveForFiltered(false)}
+            disabled={!!busy || filtered.length === 0}
+          >
+            Deactivate all
+          </button>
+        </div>
       </div>
 
       <div class="list-body">
@@ -735,7 +828,7 @@
               : "No mods match your filter."}
           </div>
         {:else}
-          <VirtualList items={filtered} rowHeight={76}>
+          <VirtualList items={visible} rowHeight={76}>
             {#snippet row(mod)}
               <ModRow
                 {mod}
@@ -1236,9 +1329,9 @@
   .crumb {
     flex: 0 0 auto;
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    padding: 8px 16px;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 16px;
     border-bottom: 1px solid var(--border);
     background: var(--bg);
   }
@@ -1250,6 +1343,59 @@
   .crumb-count {
     font-size: 12px;
     color: var(--text-muted);
+  }
+  .tb-spacer {
+    flex: 1 1 auto;
+  }
+  .tb-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .tb-sort {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .tb-sort select {
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+  }
+  .tb-dir {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+  }
+  .tb-dir:hover {
+    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  }
+  .tb-btn {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    padding: 7px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .tb-btn:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+    color: var(--primary);
+  }
+  .tb-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
   }
   .list-body {
     flex: 1 1 auto;
