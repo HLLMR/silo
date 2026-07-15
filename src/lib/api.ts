@@ -10,6 +10,7 @@ import type {
   CategoryOverride,
   ModInput,
   OrganizeReport,
+  Loadout,
 } from "./types";
 
 export function defaultModsPaths(): Promise<string[]> {
@@ -61,4 +62,21 @@ export function setActive(active: string[]): Promise<OrganizeReport> {
 
 export function flatten(): Promise<OrganizeReport> {
   return invoke<OrganizeReport>("flatten", { root: null });
+}
+
+// ── Loadouts ──
+export function getLoadouts(): Promise<Loadout[]> {
+  return invoke<Loadout[]>("get_loadouts");
+}
+
+export function saveLoadout(
+  id: number | null,
+  name: string,
+  mods: string[],
+): Promise<number> {
+  return invoke<number>("save_loadout", { id, name, mods });
+}
+
+export function deleteLoadout(id: number): Promise<void> {
+  return invoke("delete_loadout", { id });
 }

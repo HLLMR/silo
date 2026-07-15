@@ -11,12 +11,16 @@
     applyOrganize,
     setActive,
     flatten,
+    getLoadouts,
+    saveLoadout,
+    deleteLoadout,
   } from "./lib/api";
   import type {
     ModEntry,
     ScanResult,
     CurationRow,
     ModInput,
+    Loadout,
   } from "./lib/types";
 
   const CATEGORIES = [
@@ -79,6 +83,72 @@
   const isFileable = (m: ModEntry) => !m.organized && m.kind === "zip";
   const organizedCount = $derived(mods.filter((m) => m.organized).length);
   const unorganizedCount = $derived(mods.filter(isFileable).length);
+
+  let loadouts = $state<Loadout[]>([]);
+  let loadoutsOpen = $state(false);
+
+  // The loadout whose mod set exactly matches the current active set (if any).
+  const activeLoadoutId = $derived.by(() => {
+    for (const l of loadouts) {
+      if (
+        l.mods.length === activeSet.size &&
+        l.mods.every((m) => activeSet.has(m))
+      ) {
+        return l.id;
+      }
+    }
+    return null;
+  });
+
+  async function loadLoadouts() {
+    try {
+      loadouts = await getLoadouts();
+    } catch (e) {
+      errorMsg = String(e);
+    }
+  }
+
+  async function applyLoadout(l: Loadout) {
+    loadoutsOpen = false;
+    busy = `Applying loadout “${l.name}”…`;
+    activeSet = new Set(l.mods);
+    try {
+      await setActive(l.mods);
+    } catch (e) {
+      errorMsg = String(e);
+    }
+    busy = null;
+  }
+
+  async function saveCurrentLoadout() {
+    const name = prompt("Name this loadout:", "");
+    if (!name || !name.trim()) return;
+    try {
+      await saveLoadout(null, name.trim(), [...activeSet]);
+      await loadLoadouts();
+    } catch (e) {
+      errorMsg = String(e);
+    }
+  }
+
+  async function overwriteLoadout(l: Loadout) {
+    try {
+      await saveLoadout(l.id, l.name, [...activeSet]);
+      await loadLoadouts();
+    } catch (e) {
+      errorMsg = String(e);
+    }
+  }
+
+  async function removeLoadout(l: Loadout) {
+    if (!confirm(`Delete loadout “${l.name}”? (Your mods aren't affected.)`)) return;
+    try {
+      await deleteLoadout(l.id);
+      await loadLoadouts();
+    } catch (e) {
+      errorMsg = String(e);
+    }
+  }
 
   function fileName(path: string): string {
     return path.split(/[\\/]/).pop() ?? path;
@@ -292,6 +362,7 @@
         overrideMap = Object.fromEntries(
           ovs.map((o) => [o.techName, { category: o.category, subcategory: o.subcategory }]),
         );
+        await loadLoadouts();
       } catch (e) {
         errorMsg = String(e);
       }
@@ -326,6 +397,19 @@
       {/if}
     </div>
 
+    <button
+      class="btn loadout-btn"
+      class:on={loadoutsOpen}
+      onclick={() => (loadoutsOpen = !loadoutsOpen)}
+      disabled={!!busy}
+    >
+      {#if activeLoadoutId !== null}
+        ● {loadouts.find((l) => l.id === activeLoadoutId)?.name}
+      {:else}
+        Loadouts
+      {/if}
+    </button>
+
     {#if unorganizedCount > 0 && !autoFileNew}
       <button class="btn" onclick={organizeNew} disabled={!!busy || scanning}>
         Organize {unorganizedCount}
@@ -340,6 +424,42 @@
       {scanning ? "Scanning…" : "Rescan"}
     </button>
   </header>
+
+  {#if loadoutsOpen}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="backdrop" onclick={() => (loadoutsOpen = false)}></div>
+    <div class="loadouts-panel">
+      <div class="lp-head">
+        <span>Loadouts</span>
+        <span class="lp-sub tnum">{activeSet.size} active</span>
+      </div>
+      {#if loadouts.length === 0}
+        <div class="lp-empty">
+          No loadouts yet. Activate the mods you want, then save them as a set.
+        </div>
+      {/if}
+      {#each loadouts as l (l.id)}
+        <div class="lp-row" class:active={l.id === activeLoadoutId}>
+          <button class="lp-apply" onclick={() => applyLoadout(l)} title="Apply this loadout">
+            <span class="lp-dot" class:on={l.id === activeLoadoutId}></span>
+            <span class="lp-name">{l.name}</span>
+            <span class="lp-count tnum">{l.mods.length}</span>
+          </button>
+          <button
+            class="lp-icon"
+            title="Overwrite with current active set"
+            onclick={() => overwriteLoadout(l)}>⭯</button
+          >
+          <button class="lp-icon danger" title="Delete loadout" onclick={() => removeLoadout(l)}
+            >✕</button
+          >
+        </div>
+      {/each}
+      <button class="lp-save" onclick={saveCurrentLoadout} disabled={activeSet.size === 0}>
+        + Save current active set as a loadout
+      </button>
+    </div>
+  {/if}
 
   {#if scanning}
     <div class="progress">
@@ -595,6 +715,130 @@
     color: var(--gold-700);
     font-size: 13px;
     font-weight: 600;
+  }
+  .loadout-btn.on {
+    border-color: color-mix(in srgb, var(--primary) 50%, var(--border));
+    color: var(--primary);
+  }
+  .loadouts-panel {
+    position: fixed;
+    z-index: 50;
+    top: 66px;
+    right: 20px;
+    width: 320px;
+    max-height: 70vh;
+    overflow-y: auto;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-2);
+    padding: 8px;
+    scrollbar-width: thin;
+  }
+  .lp-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 8px 10px;
+    font-family: var(--font-display);
+    font-weight: 600;
+  }
+  .lp-sub {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    font-family: var(--font-ui);
+  }
+  .lp-empty {
+    padding: 10px 8px 14px;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .lp-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    border-radius: var(--radius-sm);
+  }
+  .lp-row.active {
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+  }
+  .lp-apply {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    padding: 9px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+  }
+  .lp-apply:hover {
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
+  }
+  .lp-dot {
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+  }
+  .lp-dot.on {
+    background: var(--primary);
+    border-color: var(--primary);
+  }
+  .lp-name {
+    flex: 1 1 auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+    font-weight: 600;
+  }
+  .lp-count {
+    flex: 0 0 auto;
+    font-size: 11.5px;
+    color: var(--text-muted);
+  }
+  .lp-icon {
+    flex: 0 0 auto;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    width: 28px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+  }
+  .lp-icon:hover {
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--text);
+  }
+  .lp-icon.danger:hover {
+    background: color-mix(in srgb, var(--danger) 14%, transparent);
+    color: var(--danger);
+  }
+  .lp-save {
+    display: block;
+    width: 100%;
+    margin-top: 6px;
+    border: 1px dashed var(--border);
+    background: transparent;
+    color: var(--primary);
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .lp-save:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
+  }
+  .lp-save:disabled {
+    opacity: 0.5;
+    cursor: default;
   }
   .progress {
     position: relative;
