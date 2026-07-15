@@ -107,6 +107,48 @@
   let conflictTimer: ReturnType<typeof setTimeout> | undefined;
   let settingsOpen = $state(false);
   let healthOpen = $state(false);
+  let statsOpen = $state(false);
+
+  function fmtSize(b: number): string {
+    if (b >= 1024 ** 3) return (b / 1024 ** 3).toFixed(1) + " GB";
+    if (b >= 1024 ** 2) return (b / 1024 ** 2).toFixed(0) + " MB";
+    if (b >= 1024) return (b / 1024).toFixed(0) + " KB";
+    return b + " B";
+  }
+
+  const libStats = $derived.by(() => {
+    let totalSize = 0;
+    let rated = 0;
+    let ratingSum = 0;
+    let tagged = 0;
+    const byCat: Record<string, { count: number; size: number }> = {};
+    for (const m of effectiveMods) {
+      totalSize += m.size;
+      (byCat[m.category] ??= { count: 0, size: 0 });
+      byCat[m.category].count++;
+      byCat[m.category].size += m.size;
+      const r = cur(m.techName).rating;
+      if (r > 0) {
+        rated++;
+        ratingSum += r;
+      }
+      if (tagsOf(m.techName).length > 0) tagged++;
+    }
+    const cats = Object.entries(byCat)
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => b.size - a.size);
+    const largest = [...effectiveMods].sort((a, b) => b.size - a.size).slice(0, 8);
+    const maxCatSize = cats.reduce((m, c) => Math.max(m, c.size), 1);
+    return {
+      totalSize,
+      cats,
+      maxCatSize,
+      largest,
+      rated,
+      avgRating: rated ? ratingSum / rated : 0,
+      tagged,
+    };
+  });
   let gameInfo = $state<GameInfo | null>(null);
   let settingsModsSet = $state<Set<string>>(new Set());
   let settingsMod = $state<{ techName: string; title: string } | null>(null);
@@ -902,6 +944,50 @@
     />
   {/if}
 
+  {#if statsOpen}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="backdrop" onclick={() => (statsOpen = false)}></div>
+    <div class="conflicts-panel">
+      <div class="lp-head">
+        <span>Library statistics</span>
+        <span class="lp-sub tnum">{fmtSize(libStats.totalSize)}</span>
+      </div>
+
+      <div class="st-tiles">
+        <div class="st-tile"><b class="tnum">{mods.length}</b><span>mods</span></div>
+        <div class="st-tile"><b class="tnum">{organizedCount}</b><span>organized</span></div>
+        <div class="st-tile"><b class="tnum">{activeSet.size}</b><span>active</span></div>
+        <div class="st-tile"><b class="tnum">{stats.maps}</b><span>maps</span></div>
+        <div class="st-tile"><b class="tnum">{libStats.tagged}</b><span>tagged</span></div>
+        <div class="st-tile">
+          <b class="tnum">{libStats.avgRating ? libStats.avgRating.toFixed(1) : "–"}</b>
+          <span>avg ★ ({libStats.rated})</span>
+        </div>
+      </div>
+
+      <div class="hz-group">Disk usage by category</div>
+      {#each libStats.cats as c (c.name)}
+        <div class="st-cat">
+          <div class="st-cat-top">
+            <span class="st-cat-name">{c.name}</span>
+            <span class="st-cat-size tnum">{fmtSize(c.size)} · {c.count}</span>
+          </div>
+          <div class="st-bar">
+            <div class="st-bar-fill" style="width: {(c.size / libStats.maxCatSize) * 100}%"></div>
+          </div>
+        </div>
+      {/each}
+
+      <div class="hz-group">Largest mods</div>
+      {#each libStats.largest as m (m.techName)}
+        <div class="st-big">
+          <span class="st-big-name">{m.title ?? m.techName}</span>
+          <span class="st-big-size tnum">{fmtSize(m.size)}</span>
+        </div>
+      {/each}
+    </div>
+  {/if}
+
   {#if healthOpen}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="backdrop" onclick={() => (healthOpen = false)}></div>
@@ -968,10 +1054,10 @@
   {/if}
 
   <div class="statbar">
-    <div class="stat">
+    <button class="stat statbtn" title="Library statistics" onclick={() => (statsOpen = !statsOpen)}>
       <span class="stat-num tnum">{mods.length}</span>
       <span class="stat-label">mods</span>
-    </div>
+    </button>
     <div class="stat">
       <span class="stat-num tnum">{stats.maps}</span>
       <span class="stat-label">maps</span>
@@ -1672,6 +1758,61 @@
   .hz-dep {
     color: var(--warn);
     font-weight: 600;
+  }
+  .st-tiles {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 8px 0 4px;
+  }
+  .st-tile {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    text-align: center;
+  }
+  .st-tile b {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 20px;
+  }
+  .st-tile span {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .st-cat {
+    padding: 5px 8px;
+  }
+  .st-cat-top {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.5px;
+    margin-bottom: 3px;
+  }
+  .st-cat-size {
+    color: var(--text-muted);
+    font-size: 11.5px;
+  }
+  .st-bar {
+    height: 6px;
+    background: var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .st-bar-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 999px;
+  }
+  .st-big {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.5px;
+    padding: 4px 8px;
+  }
+  .st-big-size {
+    color: var(--text-muted);
   }
   .took {
     font-size: 11px;
