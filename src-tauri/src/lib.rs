@@ -242,6 +242,33 @@ fn delete_loadout(app: tauri::AppHandle, id: i64) -> Result<(), String> {
     db::delete_loadout(&mut conn, id)
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+struct LoadoutFile {
+    silo: u32,
+    name: String,
+    mods: Vec<String>,
+}
+
+#[tauri::command]
+fn export_loadout(app: tauri::AppHandle, id: i64, path: String) -> Result<(), String> {
+    let conn = db::open(&db_path(&app)?)?;
+    let lo = db::load_loadouts(&conn)
+        .into_iter()
+        .find(|l| l.id == id)
+        .ok_or_else(|| "Loadout not found".to_string())?;
+    let file = LoadoutFile { silo: 1, name: lo.name, mods: lo.mods };
+    let json = serde_json::to_string_pretty(&file).map_err(|e| e.to_string())?;
+    std::fs::write(&path, json).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn import_loadout(app: tauri::AppHandle, path: String) -> Result<i64, String> {
+    let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let file: LoadoutFile = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+    let mut conn = db::open(&db_path(&app)?)?;
+    db::save_loadout(&mut conn, None, &file.name, &file.mods)
+}
+
 // ── Conflict detection (over the active set) ──
 #[tauri::command]
 async fn detect_conflicts(
@@ -304,6 +331,7 @@ fn get_savegames() -> Result<Vec<savegame::Savegame>, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             default_mods_paths,
             scan_mods,
@@ -322,6 +350,8 @@ pub fn run() {
             get_loadouts,
             save_loadout,
             delete_loadout,
+            export_loadout,
+            import_loadout,
             get_savegames,
             detect_conflicts,
             detect_game,

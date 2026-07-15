@@ -3,6 +3,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { save, open } from "@tauri-apps/plugin-dialog";
 import type {
   ScanResult,
   ScanProgress,
@@ -94,6 +95,27 @@ export function saveLoadout(
 
 export function deleteLoadout(id: number): Promise<void> {
   return invoke("delete_loadout", { id });
+}
+
+/** Prompt for a path and export the loadout as a .silo file. Returns false if cancelled. */
+export async function exportLoadoutFile(id: number, name: string): Promise<boolean> {
+  const path = await save({
+    defaultPath: `${name}.silo`,
+    filters: [{ name: "Silo loadout", extensions: ["silo"] }],
+  });
+  if (!path) return false;
+  await invoke("export_loadout", { id, path });
+  return true;
+}
+
+/** Prompt for a .silo file and import it as a new loadout. Returns the new id or null. */
+export async function importLoadoutFile(): Promise<number | null> {
+  const path = await open({
+    multiple: false,
+    filters: [{ name: "Silo loadout", extensions: ["silo", "json"] }],
+  });
+  if (!path || Array.isArray(path)) return null;
+  return await invoke<number>("import_loadout", { path });
 }
 
 export function getSavegames(): Promise<Savegame[]> {
