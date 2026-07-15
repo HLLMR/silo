@@ -7,6 +7,7 @@
     revealInFolder,
     setModRepo,
     checkModUpdate,
+    downloadUpdate,
     openExternal,
   } from "../api";
 
@@ -29,6 +30,7 @@
     onFilterTag: (tag: string) => void;
     repo: { owner: string; repo: string } | null;
     onRepoChange: (r: { owner: string; repo: string } | null) => void;
+    onInstalled: () => void;
   }
   let {
     mod,
@@ -48,7 +50,24 @@
     onFilterTag,
     repo,
     onRepoChange,
+    onInstalled,
   }: Props = $props();
+
+  let installing = $state(false);
+  async function installUpdate() {
+    if (!update?.release.assetUrl) return;
+    if (!confirm(`Download and install ${update.release.tag}? The current file is backed up to .bak.`))
+      return;
+    installing = true;
+    ghError = null;
+    try {
+      await downloadUpdate(mod.path, update.release.assetUrl);
+      onInstalled();
+    } catch (e) {
+      ghError = String(e);
+    }
+    installing = false;
+  }
 
   let repoInput = $state("");
   let update = $state<UpdateInfo | null>(null);
@@ -257,6 +276,11 @@
         {#if update.release.htmlUrl}
           <button class="gh-open" onclick={() => openExternal(update!.release.htmlUrl!)}>
             View release ↗
+          </button>
+        {/if}
+        {#if update.hasUpdate && update.release.assetUrl}
+          <button class="gh-btn" onclick={installUpdate} disabled={installing}>
+            {installing ? "Installing…" : "Download & install"}
           </button>
         {/if}
       </div>

@@ -185,6 +185,11 @@ export function ghLogout(): Promise<void> {
   return invoke("gh_logout");
 }
 
+/** Download a release .zip and install it in place (backs up the old file). */
+export function downloadUpdate(path: string, assetUrl: string): Promise<void> {
+  return invoke("download_update", { path, assetUrl });
+}
+
 export function detectGame(): Promise<GameInfo | null> {
   return invoke<GameInfo | null>("detect_game");
 }
