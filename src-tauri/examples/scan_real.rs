@@ -65,6 +65,21 @@ fn main() {
         warm.fresh_paths.len()
     );
 
+    let mut by_cat: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
+    for m in &r.mods {
+        let key = match &m.subcategory {
+            Some(s) => format!("{} \u{203a} {}", m.category, s),
+            None => m.category.clone(),
+        };
+        *by_cat.entry(key).or_insert(0) += 1;
+    }
+    println!("\ncategories (category \u{203a} subcategory):");
+    let mut cats: Vec<_> = by_cat.into_iter().collect();
+    cats.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+    for (cat, n) in cats {
+        println!("  {n:>4}  {cat}");
+    }
+
     println!("\nfirst 6 by title:");
     for m in r.mods.iter().take(6) {
         println!(

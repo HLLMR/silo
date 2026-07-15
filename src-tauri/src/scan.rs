@@ -35,6 +35,10 @@ pub struct ModEntry {
 
     pub is_map: bool,
     pub map_title: Option<String>,
+    /// Best-effort category folder bucket (see `category` module).
+    pub category: String,
+    /// Optional second-level bucket (e.g. Tractors › Medium).
+    pub subcategory: Option<String>,
 
     pub dependencies: Vec<String>,
     pub script_count: usize,
@@ -159,6 +163,8 @@ fn build_entry(c: &Candidate) -> ModEntry {
         icon_filename: None,
         is_map: false,
         map_title: None,
+        category: "Other".to_string(),
+        subcategory: None,
         dependencies: Vec::new(),
         script_count: 0,
         registration_count: 0,
@@ -177,7 +183,19 @@ fn build_entry(c: &Candidate) -> ModEntry {
     match xml {
         Ok(xml) => {
             let md = moddesc::parse(&xml);
-            entry.title = md.title.or_else(|| Some(c.tech_name.clone()));
+            // Compute category while `md` is still whole (before we move fields out).
+            // Read the authoritative FS store category when the mod has store items.
+            let store_cat = if md.store_item_files.is_empty() {
+                None
+            } else {
+                crate::store::first_store_category(&c.path, c.kind, &md.store_item_files)
+            };
+            let title = md.title.clone().or_else(|| Some(c.tech_name.clone()));
+            let (category, subcategory) =
+                crate::category::categorize(&md, store_cat.as_deref(), &c.tech_name, title.as_deref());
+            entry.category = category;
+            entry.subcategory = subcategory;
+            entry.title = title;
             entry.author = md.author;
             entry.version = md.version;
             entry.desc_version = md.desc_version;

@@ -44,6 +44,9 @@ pub struct ModDesc {
     pub unique_type: Option<String>,
 
     pub store_item_count: u32,
+    /// `xmlFilename`s of `<storeItem>`s — used to read the authoritative FS store
+    /// `<category>` for accurate vehicle/tool sub-categorization.
+    pub store_item_files: Vec<String>,
     pub mp_supported: bool,
     pub mp_only: bool,
 }
@@ -138,7 +141,12 @@ fn handle_open(md: &mut ModDesc, e: &quick_xml::events::BytesStart, name: &str, 
                 md.scripts.push(f.replace('\\', "/"));
             }
         }
-        "storeItem" if parent == "storeItems" => md.store_item_count += 1,
+        "storeItem" if parent == "storeItems" => {
+            md.store_item_count += 1;
+            if let Some(f) = attr(e, b"xmlFilename") {
+                md.store_item_files.push(f.replace('\\', "/"));
+            }
+        }
         "multiplayer" => {
             md.mp_supported = attr(e, b"supported").as_deref() == Some("true");
             md.mp_only = attr(e, b"only").as_deref() == Some("true");
