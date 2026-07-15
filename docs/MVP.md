@@ -85,13 +85,24 @@ searchable within seconds, builds two profiles, gets warned about a real conflic
 switches profiles, and launches — with their original files untouched and every
 action reversible.
 
-## Post-MVP backlog (deferred, not scoped into v0.1)
-- **User-defined tags** — a `mod_tag` table, tag chips on rows, and a tag filter in
-  the library toolbar (alongside sort + select-all). Deferred 2026-07-14 to keep
-  MVP moving; the filter bar was shipped without it.
-- **Conflict false-positive refinement** — down-rank clashes where the colliding
-  content is identical (same file hash) or mods share an author/pack, so the
-  critical list stays high-signal.
-- **ModHub integration** — update-checking against a real version source, and
-  optional browsing/downloading (fragile scraping; only if we choose to take it on).
-- **Dependency graph** visualization; per-mod notes/rating; app self-update.
+## Post-MVP — shipped (2026-07-14, iteration pass)
+- ✅ **Conflict false-positive refinement** — same-author + byte-identical-script
+  clashes down-ranked (new "info" severity); critical 22→11 on the real library.
+- ✅ **Mod detail drawer** — metadata, dependencies (in-library/missing), uniqueType,
+  conflicts involving the mod, and all per-mod actions.
+- ✅ **Per-mod notes + star rating**; ✅ **user-defined tags** (mod_tag table, chips,
+  tag filter) — completes the filter bar.
+- ✅ **Loadout export/import** (`.silo` files via dialog).
+- ✅ **Library statistics dashboard** (totals, disk by category, largest mods).
+- ✅ **Reveal-in-folder / open mods+game folders** (opener plugin).
+- ✅ **Savegame backup** (safe copy).
+- ✅ **Theme toggle** (system/light/dark); ✅ **diagnostics report export**.
+
+## Post-MVP — still open (need the user / network / infra)
+- **ModHub integration** — update-checking + optional browsing/downloading. Fragile
+  HTML scraping, ToS-gray; only if we deliberately take it on (not done autonomously).
+- **System/graphics "optimization"** (game.xml tuning) — risky config edits; validate
+  with the user before touching.
+- **App self-update** — needs GitHub releases + signing.
+- **Interactive dependency graph** — nice-to-have beyond the drawer's dep list.
+- **Bulk curate/tag** the filtered set; toasts; keyboard shortcuts.
