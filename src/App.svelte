@@ -25,6 +25,7 @@
     getTags,
     setTags,
     openFolder,
+    saveTextFile,
   } from "./lib/api";
   import type {
     ModEntry,
@@ -252,6 +253,44 @@
   async function loadSavegames() {
     try {
       savegames = await getSavegames();
+    } catch (e) {
+      errorMsg = String(e);
+    }
+  }
+
+  function buildReport(): string {
+    const L: string[] = [];
+    L.push("# Silo diagnostics report");
+    L.push(`Generated: ${new Date().toISOString()}`, "");
+    L.push("## Environment");
+    L.push(`- Mods folder: ${roots[0] ?? "not detected"}`);
+    L.push(`- Game: ${gameInfo ? gameInfo.installDir : "not detected"}`, "");
+    L.push("## Library");
+    L.push(`- Mods: ${mods.length}  (organized ${organizedCount}, active ${activeSet.size})`);
+    L.push(`- Total size: ${fmtSize(libStats.totalSize)}`);
+    L.push(`- Maps: ${stats.maps}  ·  Script mods: ${stats.scripts}  ·  Tagged: ${libStats.tagged}`, "");
+    L.push("### By category");
+    for (const c of libStats.cats) L.push(`- ${c.name}: ${c.count}  (${fmtSize(c.size)})`);
+    L.push("");
+    const al = loadouts.find((l) => l.id === activeLoadoutId);
+    L.push(`## Active set${al ? ` — loadout “${al.name}”` : ""} (${activeSet.size} mods)`, "");
+    L.push(`## Conflicts (${criticalCount} critical, ${conflicts.length} total)`);
+    for (const c of conflicts.filter((x) => x.severity !== "info")) {
+      L.push(`- [${c.severity}] ${c.kind} “${c.name}”: ${c.mods.join(", ")}`);
+    }
+    L.push("");
+    L.push(`## Health (${healthCount} issues)`);
+    for (const d of health.missingDeps) {
+      L.push(`- Missing dependency: ${d.mod.title ?? d.mod.techName} needs ${d.missing.join(", ")}`);
+    }
+    for (const m of health.ignored) L.push(`- Ignored (digit prefix): ${m.techName}`);
+    for (const m of health.corrupt) L.push(`- Corrupt: ${m.techName} — ${m.error}`);
+    return L.join("\n");
+  }
+
+  async function exportReport() {
+    try {
+      await saveTextFile("silo-report.md", buildReport());
     } catch (e) {
       errorMsg = String(e);
     }
@@ -929,6 +968,14 @@
             Farming Simulator 25 install not found. The Launch button is hidden.
           </div>
         {/if}
+      </div>
+
+      <div class="set-section">
+        <div class="set-row">
+          <div class="set-label">Diagnostics</div>
+          <button class="set-link" onclick={exportReport}>Export report ↗</button>
+        </div>
+        <div class="set-hint">A shareable summary of your library, conflicts, and health issues.</div>
       </div>
 
       <div class="set-section">
