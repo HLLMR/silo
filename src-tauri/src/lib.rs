@@ -26,6 +26,22 @@ struct Progress {
     total: usize,
 }
 
+/// Silo's own GitHub OAuth App client id, baked in so end users get one-click
+/// "Connect GitHub" (device flow) with no manual setup. Register ONE OAuth App
+/// under the HLLMR account (github.com/settings/applications/new), enable
+/// "Device Flow", and paste its Client ID (Iv1.…/Ov23…) here. Client ids are
+/// public — safe to embed; device flow needs no secret. Empty = fall back to a
+/// user-provided id from Settings.
+const SILO_GH_CLIENT_ID: &str = "";
+
+fn effective_client_id(conn: &rusqlite::Connection) -> Option<String> {
+    if !SILO_GH_CLIENT_ID.is_empty() {
+        Some(SILO_GH_CLIENT_ID.to_string())
+    } else {
+        db::get_app_setting(conn, "gh_client_id")
+    }
+}
+
 fn db_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     app.path()
         .app_data_dir()
@@ -160,14 +176,17 @@ async fn check_mod_update(
 struct GhStatus {
     client_id: Option<String>,
     user: Option<String>,
+    /// True when a client id is baked into the app (no user setup needed).
+    builtin: bool,
 }
 
 #[tauri::command]
 fn gh_status(app: tauri::AppHandle) -> Result<GhStatus, String> {
     let conn = db::open(&db_path(&app)?)?;
     Ok(GhStatus {
-        client_id: db::get_app_setting(&conn, "gh_client_id"),
+        client_id: effective_client_id(&conn),
         user: db::get_app_setting(&conn, "gh_user"),
+        builtin: !SILO_GH_CLIENT_ID.is_empty(),
     })
 }
 
@@ -183,8 +202,8 @@ async fn gh_device_start(app: tauri::AppHandle) -> Result<github::DeviceCode, St
     let db = db_path(&app)?;
     tauri::async_runtime::spawn_blocking(move || -> Result<github::DeviceCode, String> {
         let conn = db::open(&db)?;
-        let cid = db::get_app_setting(&conn, "gh_client_id")
-            .ok_or_else(|| "Set a GitHub OAuth App Client ID in Settings first".to_string())?;
+        let cid = effective_client_id(&conn)
+            .ok_or_else(|| "No GitHub OAuth App Client ID configured".to_string())?;
         github::device_start(&cid)
     })
     .await
@@ -199,7 +218,7 @@ async fn gh_device_poll(
     let db = db_path(&app)?;
     tauri::async_runtime::spawn_blocking(move || -> Result<github::PollResult, String> {
         let conn = db::open(&db)?;
-        let cid = db::get_app_setting(&conn, "gh_client_id")
+        let cid = effective_client_id(&conn)
             .ok_or_else(|| "No client id configured".to_string())?;
         let res = github::device_poll(&cid, &device_code)?;
         if res.status == "ok" {

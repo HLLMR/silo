@@ -164,6 +164,7 @@ export interface UpdateInfo {
 export interface GhStatus {
   clientId: string | null;
   user: string | null;
+  builtin: boolean;
 }
 
 export interface DeviceCode {
