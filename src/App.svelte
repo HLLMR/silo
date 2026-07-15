@@ -25,6 +25,8 @@
     getTags,
     setTags,
     getModRepos,
+    checkModUpdate,
+    downloadUpdate,
     openFolder,
     saveTextFile,
     userDirPath,
@@ -616,6 +618,63 @@
     }
   }
 
+  interface UpdateRow {
+    techName: string;
+    title: string;
+    path: string;
+    current?: string;
+    latest?: string;
+    hasUpdate?: boolean;
+    assetUrl?: string | null;
+    error?: string;
+  }
+  let updatesOpen = $state(false);
+  let updateChecking = $state(false);
+  let updateResults = $state<UpdateRow[]>([]);
+  const linkedCount = $derived(Object.keys(repoMap).length);
+
+  async function checkAllUpdates() {
+    updatesOpen = true;
+    updateChecking = true;
+    updateResults = [];
+    const byTech = new Map(mods.map((m) => [m.techName, m]));
+    const acc: UpdateRow[] = [];
+    for (const [techName, r] of Object.entries(repoMap)) {
+      const m = byTech.get(techName);
+      if (!m) continue;
+      const row: UpdateRow = { techName, title: m.title ?? techName, path: m.path };
+      try {
+        const info = await checkModUpdate(r.owner, r.repo, m.version ?? "0");
+        row.current = info.current;
+        row.latest = info.release.tag;
+        row.hasUpdate = info.hasUpdate;
+        row.assetUrl = info.release.assetUrl;
+      } catch (e) {
+        row.error = String(e);
+      }
+      acc.push(row);
+      updateResults = [...acc];
+    }
+    updateChecking = false;
+  }
+
+  async function installFromRow(row: UpdateRow) {
+    if (!row.assetUrl) return;
+    busy = `Installing ${row.title}…`;
+    try {
+      await downloadUpdate(row.path, row.assetUrl);
+      updateResults = updateResults.map((r) =>
+        r.techName === row.techName ? { ...r, hasUpdate: false, current: r.latest } : r,
+      );
+    } catch (e) {
+      errorMsg = String(e);
+    }
+    busy = null;
+    await runScan(false);
+  }
+
+  const availableUpdates = $derived(updateResults.filter((r) => r.hasUpdate));
+
   async function toggleCuration(
     techName: string,
     flag: "favorite" | "hidden" | "broken",
@@ -840,6 +899,16 @@
     {#if unorganizedCount > 0 && !autoFileNew}
       <button class="btn" onclick={organizeNew} disabled={!!busy || scanning}>
         Organize {unorganizedCount}
+      </button>
+    {/if}
+    {#if linkedCount > 0}
+      <button
+        class="btn"
+        title="Check GitHub for updates to linked mods"
+        onclick={checkAllUpdates}
+        disabled={!!busy || updateChecking}
+      >
+        {updateChecking ? "Checking…" : "⟳ Updates"}
       </button>
     {/if}
     <button class="btn" onclick={() => runScan()} disabled={scanning || !!busy}>
@@ -1155,6 +1224,41 @@
         runScan(false);
       }}
     />
+  {/if}
+
+  {#if updatesOpen}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="backdrop" onclick={() => (updatesOpen = false)}></div>
+    <div class="conflicts-panel">
+      <div class="lp-head">
+        <span>Mod updates</span>
+        <span class="lp-sub tnum">
+          {updateChecking ? "checking…" : `${availableUpdates.length} available`}
+        </span>
+      </div>
+      {#if updateResults.length === 0 && !updateChecking}
+        <div class="lp-empty">No linked mods to check. Link a mod to its GitHub repo in its detail panel.</div>
+      {/if}
+      {#each availableUpdates as r (r.techName)}
+        <div class="hz-row">
+          <div class="up-row">
+            <div>
+              <div class="hz-name">{r.title}</div>
+              <div class="hz-detail">{r.current} → <b class="up-new">{r.latest}</b></div>
+            </div>
+            {#if r.assetUrl}
+              <button class="sg-make" onclick={() => installFromRow(r)} disabled={!!busy}>Install</button>
+            {/if}
+          </div>
+        </div>
+      {/each}
+      {#if !updateChecking && updateResults.length > 0}
+        <div class="hz-group">
+          Up to date ({updateResults.filter((r) => r.hasUpdate === false).length}) ·
+          Errors ({updateResults.filter((r) => r.error).length})
+        </div>
+      {/if}
+    </div>
   {/if}
 
   {#if statsOpen}
@@ -2060,6 +2164,15 @@
   }
   .st-big-size {
     color: var(--text-muted);
+  }
+  .up-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .up-new {
+    color: var(--accent);
   }
   .took {
     font-size: 11px;
