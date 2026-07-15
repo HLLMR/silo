@@ -15,6 +15,7 @@
     saveLoadout,
     deleteLoadout,
     getSavegames,
+    detectConflicts,
   } from "./lib/api";
   import type {
     ModEntry,
@@ -23,6 +24,7 @@
     ModInput,
     Loadout,
     Savegame,
+    Conflict,
   } from "./lib/types";
 
   const CATEGORIES = [
@@ -90,6 +92,41 @@
   let loadoutsOpen = $state(false);
   let savegames = $state<Savegame[]>([]);
   let savesOpen = $state(false);
+  let conflicts = $state<Conflict[]>([]);
+  let conflictsOpen = $state(false);
+  let conflictTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const criticalCount = $derived(
+    conflicts.filter((c) => c.severity === "critical").length,
+  );
+
+  async function runConflictCheck() {
+    const active = mods.filter((m) => activeSet.has(m.techName));
+    if (active.length < 2) {
+      conflicts = [];
+      return;
+    }
+    try {
+      conflicts = await detectConflicts(
+        active.map((m) => ({
+          techName: m.techName,
+          title: m.title,
+          path: m.path,
+          kind: m.kind,
+        })),
+      );
+    } catch (e) {
+      errorMsg = String(e);
+    }
+  }
+
+  // Re-check conflicts (debounced) whenever the active set or library changes.
+  $effect(() => {
+    void activeSet;
+    void mods;
+    clearTimeout(conflictTimer);
+    conflictTimer = setTimeout(runConflictCheck, 400);
+  });
 
   const libraryTechNames = $derived(new Set(mods.map((m) => m.techName)));
 
@@ -555,6 +592,33 @@
     </div>
   {/if}
 
+  {#if conflictsOpen}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="backdrop" onclick={() => (conflictsOpen = false)}></div>
+    <div class="conflicts-panel">
+      <div class="lp-head">
+        <span>Conflicts in the active set</span>
+        <span class="lp-sub tnum">{criticalCount} critical</span>
+      </div>
+      {#if conflicts.length === 0}
+        <div class="lp-empty">
+          No conflicts in the {activeSet.size} active mod(s). Activate more and Silo re-checks automatically.
+        </div>
+      {/if}
+      {#each conflicts as c (c.severity + c.kind + c.name)}
+        <div class="cf-row" class:crit={c.severity === "critical"}>
+          <div class="cf-top">
+            <span class="cf-sev">{c.severity === "critical" ? "critical" : "warning"}</span>
+            <span class="cf-kind">{c.kind}</span>
+            <span class="cf-name">{c.name}</span>
+          </div>
+          <div class="cf-mods">{c.mods.join("  ·  ")}</div>
+          <div class="cf-why">{c.explanation}</div>
+        </div>
+      {/each}
+    </div>
+  {/if}
+
   {#if scanning}
     <div class="progress">
       <div class="bar" style="width: {pct}%"></div>
@@ -591,6 +655,16 @@
       <span class="stat-num tnum">{activeSet.size}</span>
       <span class="stat-label">active</span>
     </div>
+    <button
+      class="stat statbtn"
+      class:flag={conflicts.length > 0}
+      class:crit={criticalCount > 0}
+      title="Conflicts within the active set"
+      onclick={() => (conflictsOpen = !conflictsOpen)}
+    >
+      <span class="stat-num tnum">{conflicts.length}</span>
+      <span class="stat-label">conflict{conflicts.length === 1 ? "" : "s"}</span>
+    </button>
     <div class="stat" class:flag={stats.issues > 0}>
       <span class="stat-num tnum">{stats.issues}</span>
       <span class="stat-label">need attention</span>
@@ -1031,6 +1105,84 @@
   }
   .stat.flag .stat-num {
     color: var(--warn);
+  }
+  .statbtn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    font: inherit;
+  }
+  .statbtn:hover {
+    opacity: 0.8;
+  }
+  .statbtn.flag .stat-num {
+    color: var(--warn);
+  }
+  .statbtn.crit .stat-num {
+    color: var(--danger);
+  }
+  .conflicts-panel {
+    position: fixed;
+    z-index: 50;
+    top: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 560px;
+    max-width: calc(100vw - 40px);
+    max-height: 70vh;
+    overflow-y: auto;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-2);
+    padding: 10px;
+    scrollbar-width: thin;
+  }
+  .cf-row {
+    padding: 10px 10px 12px;
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--warn);
+    background: color-mix(in srgb, var(--warn) 6%, transparent);
+    margin-bottom: 8px;
+  }
+  .cf-row.crit {
+    border-left-color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 6%, transparent);
+  }
+  .cf-top {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .cf-sev {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--warn);
+  }
+  .cf-row.crit .cf-sev {
+    color: var(--danger);
+  }
+  .cf-kind {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .cf-name {
+    font-weight: 600;
+    font-family: var(--font-display);
+  }
+  .cf-mods {
+    margin-top: 5px;
+    font-size: 12.5px;
+    color: var(--text);
+  }
+  .cf-why {
+    margin-top: 5px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
   }
   .took {
     font-size: 11px;
