@@ -71,6 +71,7 @@
   import ModSettings from "./lib/components/ModSettings.svelte";
   import ModDetail from "./lib/components/ModDetail.svelte";
   import ConfigEditor from "./lib/components/ConfigEditor.svelte";
+  import GitHubAuth from "./lib/components/GitHubAuth.svelte";
 
   let roots = $state<string[]>([]);
   let mods = $state<ModEntry[]>([]);
@@ -1044,6 +1045,11 @@
           </div>
         </div>
       {/if}
+
+      <div class="set-section">
+        <div class="set-label">GitHub account</div>
+        {#if settingsOpen}<GitHubAuth />{/if}
+      </div>
 
       <div class="set-section">
         <div class="set-row">

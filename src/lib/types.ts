@@ -160,3 +160,21 @@ export interface UpdateInfo {
   current: string;
   release: ReleaseInfo;
 }
+
+export interface GhStatus {
+  clientId: string | null;
+  user: string | null;
+}
+
+export interface DeviceCode {
+  deviceCode: string;
+  userCode: string;
+  verificationUri: string;
+  interval: number;
+  expiresIn: number;
+}
+
+export interface PollResult {
+  status: "ok" | "pending" | "slow_down" | "expired" | "denied" | "error";
+  error: string | null;
+}

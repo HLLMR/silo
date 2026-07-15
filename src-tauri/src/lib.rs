@@ -140,13 +140,88 @@ fn set_mod_repo(
 
 #[tauri::command]
 async fn check_mod_update(
+    app: tauri::AppHandle,
     owner: String,
     repo: String,
     current: String,
 ) -> Result<github::UpdateInfo, String> {
-    tauri::async_runtime::spawn_blocking(move || github::check(&owner, &repo, &current))
-        .await
-        .map_err(|e| e.to_string())?
+    let db = db_path(&app)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<github::UpdateInfo, String> {
+        let conn = db::open(&db)?;
+        let token = db::get_app_setting(&conn, "gh_token");
+        github::check(&owner, &repo, &current, token.as_deref())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GhStatus {
+    client_id: Option<String>,
+    user: Option<String>,
+}
+
+#[tauri::command]
+fn gh_status(app: tauri::AppHandle) -> Result<GhStatus, String> {
+    let conn = db::open(&db_path(&app)?)?;
+    Ok(GhStatus {
+        client_id: db::get_app_setting(&conn, "gh_client_id"),
+        user: db::get_app_setting(&conn, "gh_user"),
+    })
+}
+
+#[tauri::command]
+fn gh_set_client_id(app: tauri::AppHandle, client_id: String) -> Result<(), String> {
+    let conn = db::open(&db_path(&app)?)?;
+    let v = client_id.trim();
+    db::set_app_setting(&conn, "gh_client_id", if v.is_empty() { None } else { Some(v) })
+}
+
+#[tauri::command]
+async fn gh_device_start(app: tauri::AppHandle) -> Result<github::DeviceCode, String> {
+    let db = db_path(&app)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<github::DeviceCode, String> {
+        let conn = db::open(&db)?;
+        let cid = db::get_app_setting(&conn, "gh_client_id")
+            .ok_or_else(|| "Set a GitHub OAuth App Client ID in Settings first".to_string())?;
+        github::device_start(&cid)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn gh_device_poll(
+    app: tauri::AppHandle,
+    device_code: String,
+) -> Result<github::PollResult, String> {
+    let db = db_path(&app)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<github::PollResult, String> {
+        let conn = db::open(&db)?;
+        let cid = db::get_app_setting(&conn, "gh_client_id")
+            .ok_or_else(|| "No client id configured".to_string())?;
+        let res = github::device_poll(&cid, &device_code)?;
+        if res.status == "ok" {
+            if let Some(tok) = &res.token {
+                let user = github::whoami(tok).unwrap_or_default();
+                db::set_app_setting(&conn, "gh_token", Some(tok))?;
+                db::set_app_setting(&conn, "gh_user", Some(&user))?;
+            }
+        }
+        // Never expose the raw token to the frontend.
+        Ok(github::PollResult { token: None, ..res })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+fn gh_logout(app: tauri::AppHandle) -> Result<(), String> {
+    let conn = db::open(&db_path(&app)?)?;
+    db::set_app_setting(&conn, "gh_token", None)?;
+    db::set_app_setting(&conn, "gh_user", None)?;
+    Ok(())
 }
 
 // ── Tags ──
@@ -412,6 +487,11 @@ pub fn run() {
             get_mod_repos,
             set_mod_repo,
             check_mod_update,
+            gh_status,
+            gh_set_client_id,
+            gh_device_start,
+            gh_device_poll,
+            gh_logout,
             get_overrides,
             set_override,
             plan_organize,

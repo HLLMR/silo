@@ -22,6 +22,9 @@ import type {
   SettingsEdit,
   RepoRow,
   UpdateInfo,
+  GhStatus,
+  DeviceCode,
+  PollResult,
 } from "./types";
 
 export function defaultModsPaths(): Promise<string[]> {
@@ -163,6 +166,23 @@ export function checkModUpdate(
   current: string,
 ): Promise<UpdateInfo> {
   return invoke<UpdateInfo>("check_mod_update", { owner, repo, current });
+}
+
+// ── GitHub OAuth (device flow) ──
+export function ghStatus(): Promise<GhStatus> {
+  return invoke<GhStatus>("gh_status");
+}
+export function ghSetClientId(clientId: string): Promise<void> {
+  return invoke("gh_set_client_id", { clientId });
+}
+export function ghDeviceStart(): Promise<DeviceCode> {
+  return invoke<DeviceCode>("gh_device_start");
+}
+export function ghDevicePoll(deviceCode: string): Promise<PollResult> {
+  return invoke<PollResult>("gh_device_poll", { deviceCode });
+}
+export function ghLogout(): Promise<void> {
+  return invoke("gh_logout");
 }
 
 export function detectGame(): Promise<GameInfo | null> {
