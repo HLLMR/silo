@@ -114,3 +114,22 @@ export interface GameInfo {
   exe: string;
   installDir: string;
 }
+
+export interface SettingsField {
+  id: number;
+  label: string;
+  kind: "bool" | "int" | "float" | "string";
+  value: string;
+}
+
+export interface SettingsFile {
+  path: string;
+  name: string;
+  fields: SettingsField[];
+  raw: string;
+}
+
+export interface SettingsEdit {
+  id: number;
+  value: string;
+}

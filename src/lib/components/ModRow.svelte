@@ -15,18 +15,22 @@
     onToggle,
     onEditCategory,
     onToggleActive,
+    onOpenSettings,
     overridden = false,
     organized = false,
     active = false,
+    hasSettings = false,
   }: {
     mod: ModEntry;
     curation: CurationRow;
     onToggle: (flag: Flag) => void;
     onEditCategory: (ev: MouseEvent) => void;
     onToggleActive: () => void;
+    onOpenSettings: () => void;
     overridden?: boolean;
     organized?: boolean;
     active?: boolean;
+    hasSettings?: boolean;
   } = $props();
 
   // Lazy icon: rows only mount when scrolled into view (virtualized), so this
@@ -136,6 +140,15 @@
   </div>
 
   <div class="actions">
+    {#if hasSettings}
+      <button
+        class="act on"
+        title="Edit this mod's settings"
+        onclick={onOpenSettings}
+      >
+        ⚙
+      </button>
+    {/if}
     <button
       class="act star"
       class:on={curation.favorite}

@@ -11,6 +11,7 @@ pub mod moddesc;
 pub mod organize;
 pub mod savegame;
 pub mod scan;
+pub mod settings_form;
 pub mod store;
 
 use std::collections::HashSet;
@@ -249,6 +250,35 @@ fn launch_game() -> Result<(), String> {
     gamelaunch::launch()
 }
 
+// ── Mod settings form ──
+#[tauri::command]
+fn mods_with_settings() -> Vec<String> {
+    match fsgame::user_dir() {
+        Some(dir) => settings_form::mods_with_settings(&dir),
+        None => Vec::new(),
+    }
+}
+
+#[tauri::command]
+fn get_mod_settings(mod_name: String) -> Result<Vec<settings_form::SettingsFile>, String> {
+    let dir = fsgame::user_dir().ok_or_else(|| "No FS25 user dir".to_string())?;
+    let mut files = Vec::new();
+    for path in settings_form::find_files(&dir, &mod_name) {
+        files.push(settings_form::load_file(&path)?);
+    }
+    Ok(files)
+}
+
+#[tauri::command]
+fn save_mod_settings(path: String, edits: Vec<settings_form::Edit>) -> Result<(), String> {
+    settings_form::save(std::path::Path::new(&path), &edits)
+}
+
+#[tauri::command]
+fn save_mod_settings_raw(path: String, content: String) -> Result<(), String> {
+    settings_form::save_raw(std::path::Path::new(&path), &content)
+}
+
 // ── Savegames ──
 #[tauri::command]
 fn get_savegames() -> Result<Vec<savegame::Savegame>, String> {
@@ -280,7 +310,11 @@ pub fn run() {
             get_savegames,
             detect_conflicts,
             detect_game,
-            launch_game
+            launch_game,
+            mods_with_settings,
+            get_mod_settings,
+            save_mod_settings,
+            save_mod_settings_raw
         ])
         .run(tauri::generate_context!())
         .expect("error while running Silo");

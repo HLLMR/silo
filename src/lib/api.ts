@@ -15,6 +15,8 @@ import type {
   Conflict,
   ConflictInput,
   GameInfo,
+  SettingsFile,
+  SettingsEdit,
 } from "./types";
 
 export function defaultModsPaths(): Promise<string[]> {
@@ -99,4 +101,24 @@ export function detectGame(): Promise<GameInfo | null> {
 
 export function launchGame(): Promise<void> {
   return invoke("launch_game");
+}
+
+// ── Mod settings form ──
+export function modsWithSettings(): Promise<string[]> {
+  return invoke<string[]>("mods_with_settings");
+}
+
+export function getModSettings(modName: string): Promise<SettingsFile[]> {
+  return invoke<SettingsFile[]>("get_mod_settings", { modName });
+}
+
+export function saveModSettings(
+  path: string,
+  edits: SettingsEdit[],
+): Promise<void> {
+  return invoke("save_mod_settings", { path, edits });
+}
+
+export function saveModSettingsRaw(path: string, content: string): Promise<void> {
+  return invoke("save_mod_settings_raw", { path, content });
 }
