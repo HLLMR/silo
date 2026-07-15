@@ -17,6 +17,7 @@
     exportLoadoutFile,
     importLoadoutFile,
     getSavegames,
+    backupSavegame,
     detectConflicts,
     detectGame,
     launchGame,
@@ -236,6 +237,16 @@
     } catch (e) {
       errorMsg = String(e);
     }
+  }
+
+  async function backupSave(s: Savegame) {
+    busy = `Backing up “${s.name}”…`;
+    try {
+      await backupSavegame(s.folder);
+    } catch (e) {
+      errorMsg = String(e);
+    }
+    busy = null;
   }
 
   async function loadoutFromSave(s: Savegame) {
@@ -799,6 +810,14 @@
                 >{/if}
             </div>
           </div>
+          <button
+            class="sg-make"
+            title="Back up this savegame (a safe copy — original untouched)"
+            onclick={() => backupSave(s)}
+            disabled={!!busy}
+          >
+            Back up
+          </button>
           <button
             class="sg-make"
             title={st.missing.length

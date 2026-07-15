@@ -129,6 +129,36 @@ pub fn list_savegames(user_dir: &Path) -> Vec<Savegame> {
     out
 }
 
+fn copy_dir(src: &Path, dst: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for e in std::fs::read_dir(src)? {
+        let e = e?;
+        let to = dst.join(e.file_name());
+        if e.file_type()?.is_dir() {
+            copy_dir(&e.path(), &to)?;
+        } else {
+            std::fs::copy(e.path(), &to)?;
+        }
+    }
+    Ok(())
+}
+
+/// Back up a savegame folder to `SiloBackups/<folder>_<epoch>` (a plain copy —
+/// non-destructive; the original is untouched). Returns the backup path.
+pub fn backup(user_dir: &Path, folder: &str) -> Result<String, String> {
+    let src = user_dir.join(folder);
+    if !src.is_dir() {
+        return Err(format!("savegame '{folder}' not found"));
+    }
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let dst = user_dir.join("SiloBackups").join(format!("{folder}_{secs}"));
+    copy_dir(&src, &dst).map_err(|e| e.to_string())?;
+    Ok(dst.to_string_lossy().into_owned())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -152,5 +182,18 @@ mod tests {
         assert!(pf.required && !pf.is_dlc);
         let dlc = s.mods.iter().find(|m| m.mod_name == "pdlc_vredoPack").unwrap();
         assert!(dlc.is_dlc && !dlc.required);
+    }
+
+    #[test]
+    fn backup_copies_savegame() {
+        let root = std::env::temp_dir().join("silo_sg_backup_test");
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("savegame1")).unwrap();
+        std::fs::write(root.join("savegame1/careerSavegame.xml"), "<x/>").unwrap();
+        let dst = backup(&root, "savegame1").unwrap();
+        assert!(Path::new(&dst).join("careerSavegame.xml").is_file());
+        // Original untouched.
+        assert!(root.join("savegame1/careerSavegame.xml").is_file());
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

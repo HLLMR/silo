@@ -328,6 +328,12 @@ fn get_savegames() -> Result<Vec<savegame::Savegame>, String> {
     }
 }
 
+#[tauri::command]
+fn backup_savegame(folder: String) -> Result<String, String> {
+    let dir = fsgame::user_dir().ok_or_else(|| "No FS25 user dir".to_string())?;
+    savegame::backup(&dir, &folder)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -354,6 +360,7 @@ pub fn run() {
             export_loadout,
             import_loadout,
             get_savegames,
+            backup_savegame,
             detect_conflicts,
             detect_game,
             launch_game,
