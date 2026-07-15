@@ -60,6 +60,18 @@
   let editing = $state<{ techName: string; x: number; y: number } | null>(null);
   let activeSet = $state<Set<string>>(new Set());
   let busy = $state<string | null>(null);
+  // Auto-file newly-appeared mods into the archive on load (kept active). Persisted.
+  let autoFileNew = $state(
+    typeof localStorage !== "undefined"
+      ? localStorage.getItem("silo.autoFile") !== "false"
+      : true,
+  );
+  function setAutoFile(v: boolean) {
+    autoFileNew = v;
+    try {
+      localStorage.setItem("silo.autoFile", String(v));
+    } catch {}
+  }
 
   const organizedCount = $derived(mods.filter((m) => m.organized).length);
   const unorganizedCount = $derived(mods.filter((m) => !m.organized).length);
@@ -80,10 +92,12 @@
     }
   }
 
-  async function organizeNew() {
+  // File loose (unorganized) mods into the archive. `keepActive` preserves their
+  // loaded state (used by both the auto-filer and the manual button).
+  async function fileLooseMods(keepActive: boolean) {
     const targets = effectiveMods.filter((m) => !m.organized);
     if (targets.length === 0) return;
-    busy = `Organizing ${targets.length} mods…`;
+    busy = `Filing ${targets.length} mod${targets.length > 1 ? "s" : ""} into the library…`;
     const inputs: ModInput[] = targets.map((m) => ({
       techName: m.techName,
       fileName: fileName(m.path),
@@ -93,13 +107,24 @@
     }));
     try {
       const rep = await applyOrganize(inputs);
-      if (rep.errors.length) errorMsg = rep.errors.slice(0, 3).join("; ");
+      if (rep.errors.length) {
+        errorMsg = rep.errors.slice(0, 3).join("; ");
+      } else if (keepActive) {
+        const next = new Set([...activeSet, ...targets.map((m) => m.techName)]);
+        activeSet = next;
+        await setActive([...next]);
+      }
     } catch (e) {
       errorMsg = String(e);
     }
     busy = null;
-    await runScan();
+    await runScan(false);
   }
+
+  // Auto-filer: file new mods and keep them active (transparent to the game).
+  const autoFile = () => fileLooseMods(true);
+  // Manual "Organize N" button: file new mods, keep them active too.
+  const organizeNew = () => fileLooseMods(true);
 
   async function restoreVanilla() {
     if (
@@ -228,7 +253,7 @@
     progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0,
   );
 
-  async function runScan() {
+  async function runScan(auto = true) {
     if (scanning) return;
     scanning = true;
     errorMsg = null;
@@ -242,6 +267,13 @@
       errorMsg = String(e);
     } finally {
       scanning = false;
+    }
+    // Auto-file any mods still loose in the flat root (e.g. freshly downloaded),
+    // keeping them active so filing is transparent to the game.
+    if (auto && autoFileNew) {
+      if (mods.some((m) => !m.organized)) {
+        await autoFile();
+      }
     }
   }
 
@@ -290,7 +322,7 @@
       {/if}
     </div>
 
-    {#if unorganizedCount > 0}
+    {#if unorganizedCount > 0 && !autoFileNew}
       <button class="btn" onclick={organizeNew} disabled={!!busy || scanning}>
         Organize {unorganizedCount}
       </button>
@@ -300,7 +332,7 @@
         Restore vanilla
       </button>
     {/if}
-    <button class="btn primary" onclick={runScan} disabled={scanning || !!busy}>
+    <button class="btn primary" onclick={() => runScan()} disabled={scanning || !!busy}>
       {scanning ? "Scanning…" : "Rescan"}
     </button>
   </header>
@@ -366,6 +398,14 @@
       onclick={() => (showHidden = !showHidden)}
     >
       Hidden
+    </button>
+    <button
+      class="toggle"
+      class:on={autoFileNew}
+      title="Automatically file newly-downloaded mods into the library on load (kept active)"
+      onclick={() => setAutoFile(!autoFileNew)}
+    >
+      Auto-file
     </button>
 
     <input
