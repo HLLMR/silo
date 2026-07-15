@@ -7,6 +7,7 @@
 //! that to 5000/hr later. All network stays in Rust (the webview CSP blocks it).
 
 use serde::Serialize;
+use std::io::Read;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -177,6 +178,31 @@ pub fn device_poll(client_id: &str, device_code: &str) -> Result<PollResult, Str
         _ => "error",
     };
     Ok(PollResult { status: status.into(), token: None, error: Some(err.to_string()) })
+}
+
+/// Download a release .zip asset and install it in place at `dest`, backing up the
+/// current file to `<dest>.bak` first. Overwrites the existing file (same inode) so
+/// any active hardlink projection reflects the update automatically.
+pub fn download_zip(url: &str, token: Option<&str>, dest: &std::path::Path) -> Result<(), String> {
+    let mut req = ureq::get(url).set("User-Agent", UA);
+    if let Some(t) = token {
+        req = req.set("Authorization", &format!("Bearer {t}"));
+    }
+    let resp = req.call().map_err(|e| e.to_string())?;
+
+    let mut bytes: Vec<u8> = Vec::new();
+    resp.into_reader()
+        .take(500 * 1024 * 1024) // 500 MB safety cap
+        .read_to_end(&mut bytes)
+        .map_err(|e| e.to_string())?;
+
+    if bytes.len() < 4 || &bytes[..2] != b"PK" {
+        return Err("Downloaded file is not a valid .zip".to_string());
+    }
+    if dest.exists() {
+        let _ = std::fs::copy(dest, dest.with_extension("zip.bak"));
+    }
+    std::fs::write(dest, &bytes).map_err(|e| e.to_string())
 }
 
 /// The authenticated user's login name (verifies a token).

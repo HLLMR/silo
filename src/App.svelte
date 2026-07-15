@@ -1150,6 +1150,10 @@
         else delete next[dm.techName];
         repoMap = next;
       }}
+      onInstalled={() => {
+        detailMod = null;
+        runScan(false);
+      }}
     />
   {/if}
 

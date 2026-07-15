@@ -217,6 +217,22 @@ async fn gh_device_poll(
 }
 
 #[tauri::command]
+async fn download_update(
+    app: tauri::AppHandle,
+    path: String,
+    asset_url: String,
+) -> Result<(), String> {
+    let db = db_path(&app)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
+        let conn = db::open(&db)?;
+        let token = db::get_app_setting(&conn, "gh_token");
+        github::download_zip(&asset_url, token.as_deref(), std::path::Path::new(&path))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 fn gh_logout(app: tauri::AppHandle) -> Result<(), String> {
     let conn = db::open(&db_path(&app)?)?;
     db::set_app_setting(&conn, "gh_token", None)?;
@@ -492,6 +508,7 @@ pub fn run() {
             gh_device_start,
             gh_device_poll,
             gh_logout,
+            download_update,
             get_overrides,
             set_override,
             plan_organize,
