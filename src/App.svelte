@@ -73,8 +73,12 @@
     } catch {}
   }
 
+  // Silo only organizes .zip mods (the commercial distribution format). Unpacked
+  // dir mods are left in place — that's how dev/work-in-progress mods live until
+  // they're officially packaged.
+  const isFileable = (m: ModEntry) => !m.organized && m.kind === "zip";
   const organizedCount = $derived(mods.filter((m) => m.organized).length);
-  const unorganizedCount = $derived(mods.filter((m) => !m.organized).length);
+  const unorganizedCount = $derived(mods.filter(isFileable).length);
 
   function fileName(path: string): string {
     return path.split(/[\\/]/).pop() ?? path;
@@ -95,7 +99,7 @@
   // File loose (unorganized) mods into the archive. `keepActive` preserves their
   // loaded state (used by both the auto-filer and the manual button).
   async function fileLooseMods(keepActive: boolean) {
-    const targets = effectiveMods.filter((m) => !m.organized);
+    const targets = effectiveMods.filter(isFileable);
     if (targets.length === 0) return;
     busy = `Filing ${targets.length} mod${targets.length > 1 ? "s" : ""} into the library…`;
     const inputs: ModInput[] = targets.map((m) => ({
@@ -271,7 +275,7 @@
     // Auto-file any mods still loose in the flat root (e.g. freshly downloaded),
     // keeping them active so filing is transparent to the game.
     if (auto && autoFileNew) {
-      if (mods.some((m) => !m.organized)) {
+      if (mods.some(isFileable)) {
         await autoFile();
       }
     }

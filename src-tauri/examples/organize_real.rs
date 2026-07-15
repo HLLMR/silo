@@ -53,7 +53,7 @@ fn main() {
         .result
         .mods
         .iter()
-        .filter(|m| !m.organized) // only mods still sitting in the flat root
+        .filter(|m| !m.organized && m.kind == "zip") // zip-only; dev-mod dirs stay put
         .map(|m| {
             let (category, subcategory) = overrides
                 .get(&m.tech_name)
