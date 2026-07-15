@@ -14,6 +14,8 @@
     getLoadouts,
     saveLoadout,
     deleteLoadout,
+    exportLoadoutFile,
+    importLoadoutFile,
     getSavegames,
     detectConflicts,
     detectGame,
@@ -279,6 +281,26 @@
     try {
       await deleteLoadout(l.id);
       await loadLoadouts();
+    } catch (e) {
+      errorMsg = String(e);
+    }
+  }
+
+  async function exportLoadout(l: Loadout) {
+    try {
+      await exportLoadoutFile(l.id, l.name);
+    } catch (e) {
+      errorMsg = String(e);
+    }
+  }
+
+  async function importLoadout() {
+    try {
+      const id = await importLoadoutFile();
+      if (id !== null) {
+        await loadLoadouts();
+        loadoutsOpen = true;
+      }
     } catch (e) {
       errorMsg = String(e);
     }
@@ -702,6 +724,9 @@
             title="Overwrite with current active set"
             onclick={() => overwriteLoadout(l)}>⭯</button
           >
+          <button class="lp-icon" title="Export to a .silo file" onclick={() => exportLoadout(l)}
+            >⇪</button
+          >
           <button class="lp-icon danger" title="Delete loadout" onclick={() => removeLoadout(l)}
             >✕</button
           >
@@ -710,6 +735,7 @@
       <button class="lp-save" onclick={saveCurrentLoadout} disabled={activeSet.size === 0}>
         + Save current active set as a loadout
       </button>
+      <button class="lp-import" onclick={importLoadout}>↧ Import a .silo file</button>
     </div>
   {/if}
 
@@ -1333,6 +1359,22 @@
   .lp-save:disabled {
     opacity: 0.5;
     cursor: default;
+  }
+  .lp-import {
+    display: block;
+    width: 100%;
+    margin-top: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .lp-import:hover {
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+    color: var(--text);
   }
   .loadouts-panel.saves {
     width: 380px;
