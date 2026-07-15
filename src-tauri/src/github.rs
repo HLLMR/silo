@@ -217,9 +217,48 @@ pub fn whoami(token: &str) -> Result<String, String> {
     Ok(v["login"].as_str().unwrap_or("").to_string())
 }
 
+/// Best-effort scan of arbitrary text (a modDesc.xml) for the first
+/// `github.com/owner/repo` reference. Skips non-repo GitHub paths.
+pub fn find_repo_in_text(text: &str) -> Option<(String, String)> {
+    let ident = |s: &str| {
+        s.chars()
+            .take_while(|c| c.is_alphanumeric() || *c == '-' || *c == '_' || *c == '.')
+            .collect::<String>()
+    };
+    let skip = ["sponsors", "settings", "orgs", "topics", "about", "features", "marketplace"];
+
+    let mut from = 0;
+    while let Some(i) = text[from..].find("github.com/") {
+        let after = &text[from + i + "github.com/".len()..];
+        let mut segs = after.split('/');
+        let owner = ident(segs.next().unwrap_or(""));
+        let mut repo = ident(segs.next().unwrap_or(""));
+        if let Some(stripped) = repo.strip_suffix(".git") {
+            repo = stripped.to_string();
+        }
+        if !owner.is_empty() && !repo.is_empty() && !skip.contains(&owner.as_str()) {
+            return Some((owner, repo));
+        }
+        from += i + "github.com/".len();
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn finds_repo() {
+        let t = r#"<description>Docs at https://github.com/Stephan-S/FS25_AutoDrive/wiki cool</description>"#;
+        assert_eq!(
+            find_repo_in_text(t),
+            Some(("Stephan-S".into(), "FS25_AutoDrive".into()))
+        );
+        assert_eq!(find_repo_in_text("visit github.com/loki79uk/FS25_UniversalAutoload.git"), Some(("loki79uk".into(), "FS25_UniversalAutoload".into())));
+        assert_eq!(find_repo_in_text("no links here"), None);
+        assert_eq!(find_repo_in_text("github.com/sponsors/foo then github.com/real/repo"), Some(("real".into(), "repo".into())));
+    }
 
     #[test]
     fn version_compare() {

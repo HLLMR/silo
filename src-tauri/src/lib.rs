@@ -154,6 +154,14 @@ fn set_mod_repo(
     db::set_repo(&conn, &tech_name, &owner, &repo)
 }
 
+/// Scan a mod's modDesc.xml for a github.com/owner/repo reference.
+#[tauri::command]
+fn guess_repo(path: String, kind: String) -> Option<db::RepoRow> {
+    let xml = scan::read_moddesc_xml(std::path::Path::new(&path), &kind).ok()?;
+    let (owner, repo) = github::find_repo_in_text(&xml)?;
+    Some(db::RepoRow { tech_name: String::new(), owner, repo })
+}
+
 #[tauri::command]
 async fn check_mod_update(
     app: tauri::AppHandle,
@@ -521,6 +529,7 @@ pub fn run() {
             set_tags,
             get_mod_repos,
             set_mod_repo,
+            guess_repo,
             check_mod_update,
             gh_status,
             gh_set_client_id,

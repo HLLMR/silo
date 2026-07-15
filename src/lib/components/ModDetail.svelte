@@ -6,6 +6,7 @@
     setTags,
     revealInFolder,
     setModRepo,
+    guessRepo,
     checkModUpdate,
     downloadUpdate,
     openExternal,
@@ -73,10 +74,22 @@
   let update = $state<UpdateInfo | null>(null);
   let checking = $state(false);
   let ghError = $state<string | null>(null);
+  let suggested = $state(false);
   $effect(() => {
+    const m = mod;
     repoInput = repo ? `${repo.owner}/${repo.repo}` : "";
     update = null;
     ghError = null;
+    suggested = false;
+    // Auto-suggest a repo from the mod's modDesc when none is linked yet.
+    if (!repo) {
+      guessRepo(m.path, m.kind).then((g) => {
+        if (g && mod.path === m.path && !repoInput) {
+          repoInput = `${g.owner}/${g.repo}`;
+          suggested = true;
+        }
+      });
+    }
   });
 
   async function linkRepo() {
@@ -255,6 +268,7 @@
       />
       <button class="gh-btn" onclick={linkRepo}>{repo ? "Update link" : "Link"}</button>
     </div>
+    {#if suggested && !repo}<div class="gh-suggest">Suggested from the mod's page — click Link to confirm.</div>{/if}
     {#if repo}
       <div class="gh-actions">
         <button class="gh-btn" onclick={checkUpdate} disabled={checking}>
@@ -589,6 +603,11 @@
     margin-top: 8px;
     color: var(--danger);
     font-size: 12px;
+  }
+  .gh-suggest {
+    margin-top: 6px;
+    font-size: 11.5px;
+    color: var(--info);
   }
   .gh-result {
     margin-top: 8px;
