@@ -9,10 +9,11 @@
   } from "../api";
   import type { GhStatus } from "../types";
 
-  let status = $state<GhStatus>({ clientId: null, user: null });
+  let status = $state<GhStatus>({ clientId: null, user: null, builtin: false });
   let clientIdInput = $state("");
   let flow = $state<{ userCode: string; verificationUri: string } | null>(null);
   let message = $state<string | null>(null);
+  let showAdvanced = $state(false);
   let poller: ReturnType<typeof setTimeout> | undefined;
 
   async function refresh() {
@@ -102,13 +103,25 @@
     </div>
   {:else if status.clientId}
     <div class="gha-row">
-      <div class="gha-hint">Connect your GitHub account for higher rate limits and private repos.</div>
+      <div class="gha-hint">Connect your GitHub account for faster update checks (5,000/hr) and private repos.</div>
       <button class="gha-btn primary" onclick={connect}>Connect GitHub</button>
     </div>
+    {#if !status.builtin}
+      <button class="gha-link" onclick={() => (showAdvanced = !showAdvanced)}>
+        {showAdvanced ? "Hide" : "Change OAuth App…"}
+      </button>
+      {#if showAdvanced}
+        <div class="gha-row">
+          <input class="gha-input" placeholder="OAuth App Client ID" bind:value={clientIdInput} />
+          <button class="gha-btn" onclick={saveClientId}>Save</button>
+        </div>
+      {/if}
+    {/if}
   {:else}
     <div class="gha-setup">
       <div class="gha-hint">
-        One-time setup: register a GitHub OAuth App (enable “Device Flow”), then paste its Client ID.
+        GitHub sign-in isn't configured in this build. (One-time: register a GitHub OAuth App with
+        Device Flow enabled and add its Client ID.)
         <button class="gha-link" onclick={() => openExternal("https://github.com/settings/applications/new")}>
           Register an OAuth App ↗
         </button>
