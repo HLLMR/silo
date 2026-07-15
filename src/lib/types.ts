@@ -70,3 +70,9 @@ export interface OrganizeReport {
   skipped: number;
   errors: string[];
 }
+
+export interface Loadout {
+  id: number;
+  name: string;
+  mods: string[];
+}

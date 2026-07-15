@@ -48,6 +48,15 @@ pub struct OrganizedRow {
     pub active: bool,
 }
 
+/// A named, saved set of active mods.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Loadout {
+    pub id: i64,
+    pub name: String,
+    pub mods: Vec<String>,
+}
+
 /// Open (creating if needed) the Silo database and ensure the schema exists.
 pub fn open(db_path: &Path) -> Result<Connection, String> {
     if let Some(dir) = db_path.parent() {
@@ -81,10 +90,88 @@ pub fn open(db_path: &Path) -> Result<Connection, String> {
              category    TEXT NOT NULL,
              subcategory TEXT,
              active      INTEGER NOT NULL DEFAULT 0
+         );
+         CREATE TABLE IF NOT EXISTS loadout (
+             id   INTEGER PRIMARY KEY AUTOINCREMENT,
+             name TEXT NOT NULL
+         );
+         CREATE TABLE IF NOT EXISTS loadout_mod (
+             loadout_id INTEGER NOT NULL,
+             tech_name  TEXT NOT NULL,
+             PRIMARY KEY (loadout_id, tech_name)
          );",
     )
     .map_err(|e| e.to_string())?;
     Ok(conn)
+}
+
+/// Load all saved loadouts with their mod lists.
+pub fn load_loadouts(conn: &Connection) -> Vec<Loadout> {
+    let Ok(mut stmt) = conn.prepare("SELECT id, name FROM loadout ORDER BY name COLLATE NOCASE")
+    else {
+        return Vec::new();
+    };
+    let heads: Vec<(i64, String)> = stmt
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .map(|r| r.flatten().collect())
+        .unwrap_or_default();
+
+    heads
+        .into_iter()
+        .map(|(id, name)| {
+            let mods = conn
+                .prepare("SELECT tech_name FROM loadout_mod WHERE loadout_id = ?1")
+                .and_then(|mut s| {
+                    s.query_map([id], |r| r.get::<_, String>(0))
+                        .map(|rows| rows.flatten().collect::<Vec<_>>())
+                })
+                .unwrap_or_default();
+            Loadout { id, name, mods }
+        })
+        .collect()
+}
+
+/// Create (id None) or update (id Some) a loadout; returns its id.
+pub fn save_loadout(
+    conn: &mut Connection,
+    id: Option<i64>,
+    name: &str,
+    mods: &[String],
+) -> Result<i64, String> {
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    let id = match id {
+        Some(id) => {
+            tx.execute("UPDATE loadout SET name = ?2 WHERE id = ?1", rusqlite::params![id, name])
+                .map_err(|e| e.to_string())?;
+            tx.execute("DELETE FROM loadout_mod WHERE loadout_id = ?1", [id])
+                .map_err(|e| e.to_string())?;
+            id
+        }
+        None => {
+            tx.execute("INSERT INTO loadout(name) VALUES(?1)", [name])
+                .map_err(|e| e.to_string())?;
+            tx.last_insert_rowid()
+        }
+    };
+    {
+        let mut stmt = tx
+            .prepare("INSERT OR IGNORE INTO loadout_mod(loadout_id, tech_name) VALUES(?1, ?2)")
+            .map_err(|e| e.to_string())?;
+        for m in mods {
+            stmt.execute(rusqlite::params![id, m]).map_err(|e| e.to_string())?;
+        }
+    }
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(id)
+}
+
+pub fn delete_loadout(conn: &mut Connection, id: i64) -> Result<(), String> {
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    tx.execute("DELETE FROM loadout_mod WHERE loadout_id = ?1", [id])
+        .map_err(|e| e.to_string())?;
+    tx.execute("DELETE FROM loadout WHERE id = ?1", [id])
+        .map_err(|e| e.to_string())?;
+    tx.commit().map_err(|e| e.to_string())
 }
 
 /// Load the organize manifest.

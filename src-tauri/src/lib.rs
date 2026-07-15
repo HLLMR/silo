@@ -201,6 +201,30 @@ fn get_organized(app: tauri::AppHandle) -> Result<Vec<db::OrganizedRow>, String>
     Ok(db::load_organized(&conn))
 }
 
+// ── Loadouts (named active-mod sets) ──
+#[tauri::command]
+fn get_loadouts(app: tauri::AppHandle) -> Result<Vec<db::Loadout>, String> {
+    let conn = db::open(&db_path(&app)?)?;
+    Ok(db::load_loadouts(&conn))
+}
+
+#[tauri::command]
+fn save_loadout(
+    app: tauri::AppHandle,
+    id: Option<i64>,
+    name: String,
+    mods: Vec<String>,
+) -> Result<i64, String> {
+    let mut conn = db::open(&db_path(&app)?)?;
+    db::save_loadout(&mut conn, id, &name, &mods)
+}
+
+#[tauri::command]
+fn delete_loadout(app: tauri::AppHandle, id: i64) -> Result<(), String> {
+    let mut conn = db::open(&db_path(&app)?)?;
+    db::delete_loadout(&mut conn, id)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -216,7 +240,10 @@ pub fn run() {
             apply_organize,
             set_active,
             flatten,
-            get_organized
+            get_organized,
+            get_loadouts,
+            save_loadout,
+            delete_loadout
         ])
         .run(tauri::generate_context!())
         .expect("error while running Silo");
