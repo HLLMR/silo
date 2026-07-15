@@ -118,6 +118,19 @@ fn set_curation(app: tauri::AppHandle, row: db::CurationRow) -> Result<(), Strin
     db::set_curation(&conn, &row)
 }
 
+// ── Tags ──
+#[tauri::command]
+fn get_tags(app: tauri::AppHandle) -> Result<Vec<db::TagRow>, String> {
+    let conn = db::open(&db_path(&app)?)?;
+    Ok(db::load_tags(&conn))
+}
+
+#[tauri::command]
+fn set_tags(app: tauri::AppHandle, tech_name: String, tags: Vec<String>) -> Result<(), String> {
+    let mut conn = db::open(&db_path(&app)?)?;
+    db::set_tags(&mut conn, &tech_name, &tags)
+}
+
 // ── Manual category overrides ──
 #[tauri::command]
 fn get_overrides(app: tauri::AppHandle) -> Result<Vec<db::CategoryOverride>, String> {
@@ -297,6 +310,8 @@ pub fn run() {
             get_mod_icon,
             get_curation,
             set_curation,
+            get_tags,
+            set_tags,
             get_overrides,
             set_override,
             plan_organize,

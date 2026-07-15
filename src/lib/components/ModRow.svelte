@@ -16,6 +16,8 @@
     onEditCategory,
     onToggleActive,
     onOpenSettings,
+    onOpenDetail,
+    tags = [],
     overridden = false,
     organized = false,
     active = false,
@@ -27,6 +29,8 @@
     onEditCategory: (ev: MouseEvent) => void;
     onToggleActive: () => void;
     onOpenSettings: () => void;
+    onOpenDetail: () => void;
+    tags?: string[];
     overridden?: boolean;
     organized?: boolean;
     active?: boolean;
@@ -92,15 +96,18 @@
     <div class="tile" class:map={mod.isMap}>{initial}</div>
   {/if}
 
-  <div class="main">
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+  <div class="main" onclick={onOpenDetail}>
     <div class="titleline">
       <span class="title">{mod.title ?? mod.techName}</span>
       {#if mod.version}<span class="ver tnum">v{mod.version}</span>{/if}
+      {#if curation.rating > 0}<span class="rating">{"★".repeat(curation.rating)}</span>{/if}
     </div>
     <div class="sub">
       <span class="author">{mod.author ?? "Unknown author"}</span>
       <span class="dot">·</span>
       <span class="tech">{mod.techName}</span>
+      {#each tags.slice(0, 3) as t (t)}<span class="rowtag">#{t}</span>{/each}
     </div>
   </div>
 
@@ -236,6 +243,17 @@
   .main {
     flex: 1 1 auto;
     min-width: 0;
+    cursor: pointer;
+  }
+  .rating {
+    color: var(--accent);
+    font-size: 11px;
+    letter-spacing: -1px;
+  }
+  .rowtag {
+    color: var(--info);
+    font-size: 11px;
+    opacity: 0.85;
   }
   .titleline {
     display: flex;
