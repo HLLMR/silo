@@ -123,6 +123,10 @@ export function getSavegames(): Promise<Savegame[]> {
   return invoke<Savegame[]>("get_savegames");
 }
 
+export function backupSavegame(folder: string): Promise<string> {
+  return invoke<string>("backup_savegame", { folder });
+}
+
 export function detectConflicts(mods: ConflictInput[]): Promise<Conflict[]> {
   return invoke<Conflict[]>("detect_conflicts", { mods });
 }
