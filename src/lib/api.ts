@@ -8,6 +8,7 @@ import type {
   ScanProgress,
   CurationRow,
   CategoryOverride,
+  TagRow,
   ModInput,
   OrganizeReport,
   Loadout,
@@ -47,6 +48,14 @@ export function getCuration(): Promise<CurationRow[]> {
 
 export function setCuration(row: CurationRow): Promise<void> {
   return invoke("set_curation", { row });
+}
+
+export function getTags(): Promise<TagRow[]> {
+  return invoke<TagRow[]>("get_tags");
+}
+
+export function setTags(techName: string, tags: string[]): Promise<void> {
+  return invoke("set_tags", { techName, tags });
 }
 
 export function getOverrides(): Promise<CategoryOverride[]> {

@@ -19,6 +19,8 @@
     detectGame,
     launchGame,
     modsWithSettings,
+    getTags,
+    setTags,
   } from "./lib/api";
   import type {
     ModEntry,
@@ -52,6 +54,7 @@
   import ModRow from "./lib/components/ModRow.svelte";
   import CategoryRail from "./lib/components/CategoryRail.svelte";
   import ModSettings from "./lib/components/ModSettings.svelte";
+  import ModDetail from "./lib/components/ModDetail.svelte";
 
   let roots = $state<string[]>([]);
   let mods = $state<ModEntry[]>([]);
@@ -394,9 +397,35 @@
         favorite: false,
         hidden: false,
         broken: false,
+        rating: 0,
         note: null,
       }
     );
+  }
+
+  // Tags: techName -> string[]
+  let tagMap = $state<Record<string, string[]>>({});
+  let detailMod = $state<ModEntry | null>(null);
+  let selectedTag = $state<string | null>(null);
+
+  const allTags = $derived.by(() => {
+    const s = new Set<string>();
+    for (const arr of Object.values(tagMap)) for (const t of arr) s.add(t);
+    return [...s].sort((a, b) => a.localeCompare(b));
+  });
+
+  function tagsOf(techName: string): string[] {
+    return tagMap[techName] ?? [];
+  }
+  async function loadTags() {
+    try {
+      const rows = await getTags();
+      const m: Record<string, string[]> = {};
+      for (const r of rows) (m[r.techName] ??= []).push(r.tag);
+      tagMap = m;
+    } catch (e) {
+      errorMsg = String(e);
+    }
   }
 
   async function toggleCuration(
@@ -428,6 +457,9 @@
     }
     if (favoritesOnly) {
       list = list.filter((m) => cur(m.techName).favorite);
+    }
+    if (selectedTag) {
+      list = list.filter((m) => tagsOf(m.techName).includes(selectedTag!));
     }
     if (q !== "") {
       list = list.filter(
@@ -560,6 +592,7 @@
         overrideMap = Object.fromEntries(
           ovs.map((o) => [o.techName, { category: o.category, subcategory: o.subcategory }]),
         );
+        await loadTags();
         await loadLoadouts();
         await loadSavegames();
         gameInfo = await detectGame();
@@ -818,6 +851,31 @@
     />
   {/if}
 
+  {#if detailMod}
+    {@const dm = detailMod}
+    <ModDetail
+      mod={dm}
+      curation={cur(dm.techName)}
+      tags={tagsOf(dm.techName)}
+      active={activeSet.has(dm.techName)}
+      organized={dm.organized}
+      hasSettings={settingsModsSet.has(dm.techName)}
+      {libraryTechNames}
+      {conflicts}
+      onClose={() => (detailMod = null)}
+      onToggle={(flag) => toggleCuration(dm.techName, flag)}
+      onToggleActive={() => toggleActive(dm.techName)}
+      onOpenSettings={() =>
+        (settingsMod = { techName: dm.techName, title: dm.title ?? dm.techName })}
+      onCurationChange={(row) => (curationMap = { ...curationMap, [dm.techName]: row })}
+      onTagsChange={(t) => (tagMap = { ...tagMap, [dm.techName]: t })}
+      onFilterTag={(t) => {
+        selectedTag = t;
+        detailMod = null;
+      }}
+    />
+  {/if}
+
   {#if healthOpen}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="backdrop" onclick={() => (healthOpen = false)}></div>
@@ -979,6 +1037,11 @@
             All mods
           {/if}
         </span>
+        {#if selectedTag}
+          <button class="crumb-tag" onclick={() => (selectedTag = null)} title="Clear tag filter">
+            #{selectedTag} ✕
+          </button>
+        {/if}
         <span class="crumb-count tnum">{filtered.length} shown</span>
 
         <div class="tb-spacer"></div>
@@ -1021,11 +1084,13 @@
                 organized={mod.organized}
                 active={activeSet.has(mod.techName)}
                 hasSettings={settingsModsSet.has(mod.techName)}
+                tags={tagsOf(mod.techName)}
                 onToggle={(flag) => toggleCuration(mod.techName, flag)}
                 onToggleActive={() => toggleActive(mod.techName)}
                 onEditCategory={(ev) => openEditor(mod.techName, ev)}
                 onOpenSettings={() =>
                   (settingsMod = { techName: mod.techName, title: mod.title ?? mod.techName })}
+                onOpenDetail={() => (detailMod = mod)}
               />
             {/snippet}
           </VirtualList>
@@ -1632,6 +1697,15 @@
   .crumb-count {
     font-size: 12px;
     color: var(--text-muted);
+  }
+  .crumb-tag {
+    border: 1px solid color-mix(in srgb, var(--info) 40%, var(--border));
+    background: color-mix(in srgb, var(--info) 12%, transparent);
+    color: var(--info);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 600;
   }
   .select-all {
     flex: 0 0 auto;

@@ -48,7 +48,13 @@ export interface CurationRow {
   favorite: boolean;
   hidden: boolean;
   broken: boolean;
+  rating: number;
   note: string | null;
+}
+
+export interface TagRow {
+  techName: string;
+  tag: string;
 }
 
 export interface CategoryOverride {

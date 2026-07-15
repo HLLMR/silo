@@ -23,7 +23,16 @@ pub struct CurationRow {
     pub favorite: bool,
     pub hidden: bool,
     pub broken: bool,
+    #[serde(default)]
+    pub rating: i64,
     pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TagRow {
+    pub tech_name: String,
+    pub tag: String,
 }
 
 /// A manual category reassignment, keyed by tech-name.
@@ -99,10 +108,52 @@ pub fn open(db_path: &Path) -> Result<Connection, String> {
              loadout_id INTEGER NOT NULL,
              tech_name  TEXT NOT NULL,
              PRIMARY KEY (loadout_id, tech_name)
+         );
+         CREATE TABLE IF NOT EXISTS mod_tag (
+             tech_name TEXT NOT NULL,
+             tag       TEXT NOT NULL,
+             PRIMARY KEY (tech_name, tag)
          );",
     )
     .map_err(|e| e.to_string())?;
+
+    // Additive migrations (ignore "duplicate column" on existing DBs).
+    let _ = conn.execute(
+        "ALTER TABLE curation ADD COLUMN rating INTEGER NOT NULL DEFAULT 0",
+        [],
+    );
     Ok(conn)
+}
+
+/// Load all tags, grouped later by the caller.
+pub fn load_tags(conn: &Connection) -> Vec<TagRow> {
+    let Ok(mut stmt) = conn.prepare("SELECT tech_name, tag FROM mod_tag ORDER BY tag COLLATE NOCASE")
+    else {
+        return Vec::new();
+    };
+    let rows = stmt.query_map([], |r| {
+        Ok(TagRow { tech_name: r.get(0)?, tag: r.get(1)? })
+    });
+    rows.map(|r| r.flatten().collect()).unwrap_or_default()
+}
+
+/// Replace all tags for a mod.
+pub fn set_tags(conn: &mut Connection, tech_name: &str, tags: &[String]) -> Result<(), String> {
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    tx.execute("DELETE FROM mod_tag WHERE tech_name = ?1", [tech_name])
+        .map_err(|e| e.to_string())?;
+    {
+        let mut stmt = tx
+            .prepare("INSERT OR IGNORE INTO mod_tag(tech_name, tag) VALUES(?1, ?2)")
+            .map_err(|e| e.to_string())?;
+        for t in tags {
+            let t = t.trim();
+            if !t.is_empty() {
+                stmt.execute(rusqlite::params![tech_name, t]).map_err(|e| e.to_string())?;
+            }
+        }
+    }
+    tx.commit().map_err(|e| e.to_string())
 }
 
 /// Load all saved loadouts with their mod lists.
@@ -233,7 +284,7 @@ pub fn delete_organized(conn: &Connection, tech_name: &str) -> Result<(), String
 /// Load all curation rows.
 pub fn load_curation(conn: &Connection) -> Vec<CurationRow> {
     let Ok(mut stmt) =
-        conn.prepare("SELECT tech_name, favorite, hidden, broken, note FROM curation")
+        conn.prepare("SELECT tech_name, favorite, hidden, broken, note, rating FROM curation")
     else {
         return Vec::new();
     };
@@ -244,6 +295,7 @@ pub fn load_curation(conn: &Connection) -> Vec<CurationRow> {
             hidden: r.get::<_, i64>(2)? != 0,
             broken: r.get::<_, i64>(3)? != 0,
             note: r.get(4)?,
+            rating: r.get::<_, i64>(5).unwrap_or(0),
         })
     });
     rows.map(|r| r.flatten().collect()).unwrap_or_default()
@@ -251,26 +303,32 @@ pub fn load_curation(conn: &Connection) -> Vec<CurationRow> {
 
 /// Upsert one curation row. If all flags are false and note is empty, delete it.
 pub fn set_curation(conn: &Connection, row: &CurationRow) -> Result<(), String> {
-    let empty = !row.favorite && !row.hidden && !row.broken && row.note.as_deref().unwrap_or("").is_empty();
+    let empty = !row.favorite
+        && !row.hidden
+        && !row.broken
+        && row.rating == 0
+        && row.note.as_deref().unwrap_or("").is_empty();
     if empty {
         conn.execute("DELETE FROM curation WHERE tech_name = ?1", [&row.tech_name])
             .map_err(|e| e.to_string())?;
         return Ok(());
     }
     conn.execute(
-        "INSERT INTO curation(tech_name, favorite, hidden, broken, note)
-         VALUES(?1, ?2, ?3, ?4, ?5)
+        "INSERT INTO curation(tech_name, favorite, hidden, broken, note, rating)
+         VALUES(?1, ?2, ?3, ?4, ?5, ?6)
          ON CONFLICT(tech_name) DO UPDATE SET
              favorite = excluded.favorite,
              hidden   = excluded.hidden,
              broken   = excluded.broken,
-             note     = excluded.note",
+             note     = excluded.note,
+             rating   = excluded.rating",
         rusqlite::params![
             row.tech_name,
             row.favorite as i64,
             row.hidden as i64,
             row.broken as i64,
             row.note,
+            row.rating,
         ],
     )
     .map_err(|e| e.to_string())?;
