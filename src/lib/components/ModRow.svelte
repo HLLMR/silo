@@ -13,10 +13,14 @@
     mod,
     curation,
     onToggle,
+    onEditCategory,
+    overridden = false,
   }: {
     mod: ModEntry;
     curation: CurationRow;
     onToggle: (flag: Flag) => void;
+    onEditCategory: (ev: MouseEvent) => void;
+    overridden?: boolean;
   } = $props();
 
   // Lazy icon: rows only mount when scrolled into view (virtualized), so this
@@ -83,9 +87,14 @@
   </div>
 
   <div class="badges">
-    <span class="badge cat">
+    <button
+      class="badge cat"
+      class:overridden
+      title={overridden ? "Custom category — click to change" : "Click to reassign category"}
+      onclick={(e) => onEditCategory(e)}
+    >
       {mod.category}{mod.subcategory ? " · " + mod.subcategory : ""}
-    </span>
+    </button>
     {#if mod.isMap}<span class="badge map">Map</span>{/if}
     {#if mod.mpSupported}<span class="badge mp">MP</span>{/if}
     {#if mod.scriptCount > 0}
@@ -225,6 +234,16 @@
     color: var(--primary);
     background: color-mix(in srgb, var(--primary) 12%, transparent);
     border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .badge.cat:hover {
+    background: color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+  .badge.cat.overridden {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
   }
   .badge.map {
     color: var(--soil-500);
