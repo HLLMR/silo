@@ -35,6 +35,15 @@ pub struct TagRow {
     pub tag: String,
 }
 
+/// A mod linked to its GitHub repo for update-checking.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RepoRow {
+    pub tech_name: String,
+    pub owner: String,
+    pub repo: String,
+}
+
 /// A manual category reassignment, keyed by tech-name.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -113,6 +122,11 @@ pub fn open(db_path: &Path) -> Result<Connection, String> {
              tech_name TEXT NOT NULL,
              tag       TEXT NOT NULL,
              PRIMARY KEY (tech_name, tag)
+         );
+         CREATE TABLE IF NOT EXISTS mod_repo (
+             tech_name TEXT PRIMARY KEY,
+             owner     TEXT NOT NULL,
+             repo      TEXT NOT NULL
          );",
     )
     .map_err(|e| e.to_string())?;
@@ -135,6 +149,33 @@ pub fn load_tags(conn: &Connection) -> Vec<TagRow> {
         Ok(TagRow { tech_name: r.get(0)?, tag: r.get(1)? })
     });
     rows.map(|r| r.flatten().collect()).unwrap_or_default()
+}
+
+/// Load all mod→repo links.
+pub fn load_repos(conn: &Connection) -> Vec<RepoRow> {
+    let Ok(mut stmt) = conn.prepare("SELECT tech_name, owner, repo FROM mod_repo") else {
+        return Vec::new();
+    };
+    let rows = stmt.query_map([], |r| {
+        Ok(RepoRow { tech_name: r.get(0)?, owner: r.get(1)?, repo: r.get(2)? })
+    });
+    rows.map(|r| r.flatten().collect()).unwrap_or_default()
+}
+
+/// Set (or clear, when owner is empty) a mod's GitHub repo link.
+pub fn set_repo(conn: &Connection, tech_name: &str, owner: &str, repo: &str) -> Result<(), String> {
+    if owner.trim().is_empty() || repo.trim().is_empty() {
+        conn.execute("DELETE FROM mod_repo WHERE tech_name = ?1", [tech_name])
+            .map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+    conn.execute(
+        "INSERT INTO mod_repo(tech_name, owner, repo) VALUES(?1, ?2, ?3)
+         ON CONFLICT(tech_name) DO UPDATE SET owner = excluded.owner, repo = excluded.repo",
+        rusqlite::params![tech_name, owner.trim(), repo.trim()],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 /// Replace all tags for a mod.

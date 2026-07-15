@@ -24,6 +24,7 @@
     modsWithSettings,
     getTags,
     setTags,
+    getModRepos,
     openFolder,
     saveTextFile,
     userDirPath,
@@ -603,6 +604,17 @@
     }
   }
 
+  // GitHub repo links: techName -> {owner, repo}
+  let repoMap = $state<Record<string, { owner: string; repo: string }>>({});
+  async function loadRepos() {
+    try {
+      const rows = await getModRepos();
+      repoMap = Object.fromEntries(rows.map((r) => [r.techName, { owner: r.owner, repo: r.repo }]));
+    } catch (e) {
+      errorMsg = String(e);
+    }
+  }
+
   async function toggleCuration(
     techName: string,
     flag: "favorite" | "hidden" | "broken",
@@ -768,6 +780,7 @@
           ovs.map((o) => [o.techName, { category: o.category, subcategory: o.subcategory }]),
         );
         await loadTags();
+        await loadRepos();
         await loadLoadouts();
         await loadSavegames();
         gameInfo = await detectGame();
@@ -1123,6 +1136,13 @@
       onFilterTag={(t) => {
         selectedTag = t;
         detailMod = null;
+      }}
+      repo={repoMap[dm.techName] ?? null}
+      onRepoChange={(r) => {
+        const next = { ...repoMap };
+        if (r) next[dm.techName] = r;
+        else delete next[dm.techName];
+        repoMap = next;
       }}
     />
   {/if}
