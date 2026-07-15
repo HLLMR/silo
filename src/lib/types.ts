@@ -102,7 +102,7 @@ export interface ConflictInput {
 }
 
 export interface Conflict {
-  severity: "critical" | "warning";
+  severity: "critical" | "warning" | "info";
   kind: string;
   name: string;
   explanation: string;

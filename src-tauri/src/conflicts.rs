@@ -8,13 +8,22 @@
 //! * `<extraSourceFiles>` global Lua with the same basename — they can overwrite
 //!   each other (warning)
 //!
+//! Signal refinement: a clash among mods by the **same author** is usually
+//! intentional (shared packs/utilities), and two mods shipping the **byte-identical
+//! script** aren't really fighting — both are down-ranked (critical→warning,
+//! warning→info) with a note, so the critical list stays trustworthy.
+//!
 //! Runs on demand for the active set only, so it stays cheap.
 
 use crate::moddesc;
 use crate::scan;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+use std::io::Read;
+use std::path::Path;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -28,7 +37,7 @@ pub struct ConflictInput {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Conflict {
-    pub severity: String, // "critical" | "warning"
+    pub severity: String, // "critical" | "warning" | "info"
     pub kind: String,     // "uniqueType" | "specialization" | "vehicleType" | "script" | …
     pub name: String,
     pub explanation: String,
@@ -37,6 +46,9 @@ pub struct Conflict {
 
 struct Parsed {
     label: String,
+    author: Option<String>,
+    path: String,
+    kind: String,
     md: moddesc::ModDesc,
 }
 
@@ -55,98 +67,177 @@ fn kind_label(kind: &str) -> &str {
     }
 }
 
+/// All involved mods share one non-empty author.
+fn same_author(parsed: &[Parsed], idxs: &[usize]) -> bool {
+    let mut it = idxs.iter().map(|&i| parsed[i].author.as_deref().unwrap_or(""));
+    match it.next() {
+        Some(first) if !first.is_empty() => it.all(|a| a.eq_ignore_ascii_case(first)),
+        _ => false,
+    }
+}
+
+/// Read a member file's bytes from a zip or unpacked dir.
+fn read_member(path: &str, kind: &str, member: &str) -> Option<Vec<u8>> {
+    let member = member.replace('\\', "/");
+    if kind == "zip" {
+        let f = std::fs::File::open(path).ok()?;
+        let mut ar = zip::ZipArchive::new(f).ok()?;
+        let mut e = ar.by_name(&member).ok()?;
+        let mut buf = Vec::new();
+        e.read_to_end(&mut buf).ok()?;
+        Some(buf)
+    } else {
+        std::fs::read(Path::new(path).join(&member)).ok()
+    }
+}
+
+fn hash_bytes(b: &[u8]) -> u64 {
+    let mut h = DefaultHasher::new();
+    b.hash(&mut h);
+    h.finish()
+}
+
+/// True if every involved mod ships a byte-identical file for `basename`.
+fn identical_script(parsed: &[Parsed], idxs: &[usize], basename: &str) -> bool {
+    let mut prev: Option<u64> = None;
+    for &i in idxs {
+        let p = &parsed[i];
+        let full = p.md.scripts.iter().find(|s| {
+            s.rsplit('/').next().unwrap_or(s.as_str()) == basename
+        });
+        let Some(full) = full else { return false };
+        let Some(bytes) = read_member(&p.path, &p.kind, full) else {
+            return false;
+        };
+        let h = hash_bytes(&bytes);
+        match prev {
+            Some(prev) if prev != h => return false,
+            _ => prev = Some(h),
+        }
+    }
+    prev.is_some()
+}
+
+fn labels(parsed: &[Parsed], idxs: &[usize]) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for &i in idxs {
+        if !out.contains(&parsed[i].label) {
+            out.push(parsed[i].label.clone());
+        }
+    }
+    out
+}
+
 /// Detect conflicts within the given active set.
 pub fn detect(inputs: &[ConflictInput]) -> Vec<Conflict> {
-    // Parse each active mod's modDesc in parallel.
     let parsed: Vec<Parsed> = inputs
         .par_iter()
         .filter_map(|i| {
-            let xml = scan::read_moddesc_xml(std::path::Path::new(&i.path), &i.kind).ok()?;
+            let xml = scan::read_moddesc_xml(Path::new(&i.path), &i.kind).ok()?;
+            let md = moddesc::parse(&xml);
             Some(Parsed {
                 label: i.title.clone().unwrap_or_else(|| i.tech_name.clone()),
-                md: moddesc::parse(&xml),
+                author: md.author.clone(),
+                path: i.path.clone(),
+                kind: i.kind.clone(),
+                md,
             })
         })
         .collect();
 
-    // Collision maps: key -> set of mod labels.
-    let mut registrations: HashMap<(String, String), Vec<String>> = HashMap::new();
-    let mut unique_types: HashMap<String, Vec<String>> = HashMap::new();
-    let mut scripts: HashMap<String, Vec<String>> = HashMap::new();
+    // Collision maps: key -> indices into `parsed`.
+    let mut registrations: HashMap<(String, String), Vec<usize>> = HashMap::new();
+    let mut unique_types: HashMap<String, Vec<usize>> = HashMap::new();
+    let mut scripts: HashMap<String, Vec<usize>> = HashMap::new();
 
-    for p in &parsed {
+    for (i, p) in parsed.iter().enumerate() {
         for r in &p.md.registrations {
-            push_unique(
-                registrations.entry((r.kind.clone(), r.name.clone())).or_default(),
-                &p.label,
-            );
+            registrations.entry((r.kind.clone(), r.name.clone())).or_default().push(i);
         }
         if let Some(ut) = &p.md.unique_type {
-            push_unique(unique_types.entry(ut.clone()).or_default(), &p.label);
+            unique_types.entry(ut.clone()).or_default().push(i);
         }
         for s in &p.md.scripts {
             let base = s.rsplit('/').next().unwrap_or(s).to_string();
-            push_unique(scripts.entry(base).or_default(), &p.label);
+            scripts.entry(base).or_default().push(i);
         }
     }
 
     let mut out = Vec::new();
+    let note_same_author = " These mods share an author, so this is likely intentional.";
 
-    for (ut, mods) in unique_types {
-        if mods.len() > 1 {
-            out.push(Conflict {
-                severity: "critical".into(),
-                kind: "uniqueType".into(),
-                name: ut.clone(),
-                explanation: format!(
-                    "These mods share the uniqueType \"{ut}\" — Farming Simulator loads only one mod of a given uniqueType, so the others will not take effect."
-                ),
-                mods,
-            });
+    for (ut, idxs) in unique_types {
+        let labels = labels(&parsed, &idxs);
+        if labels.len() < 2 {
+            continue;
         }
+        let sa = same_author(&parsed, &idxs);
+        out.push(Conflict {
+            severity: if sa { "warning" } else { "critical" }.into(),
+            kind: "uniqueType".into(),
+            name: ut.clone(),
+            explanation: format!(
+                "These mods share the uniqueType \"{ut}\" — FS loads only one mod of a given uniqueType, so the others will not take effect.{}",
+                if sa { note_same_author } else { "" }
+            ),
+            mods: labels,
+        });
     }
 
-    for ((kind, name), mods) in registrations {
-        if mods.len() > 1 {
-            let kl = kind_label(&kind).to_string();
-            out.push(Conflict {
-                severity: "critical".into(),
-                kind,
-                name: name.clone(),
-                explanation: format!(
-                    "Multiple mods register the {kl} \"{name}\". Only one registration wins at load — the others' behavior may break."
-                ),
-                mods,
-            });
+    for ((kind, name), idxs) in registrations {
+        let labels = labels(&parsed, &idxs);
+        if labels.len() < 2 {
+            continue;
         }
+        let sa = same_author(&parsed, &idxs);
+        let kl = kind_label(&kind).to_string();
+        out.push(Conflict {
+            severity: if sa { "warning" } else { "critical" }.into(),
+            kind,
+            name: name.clone(),
+            explanation: format!(
+                "Multiple mods register the {kl} \"{name}\". Only one registration wins at load — the others' behavior may break.{}",
+                if sa { note_same_author } else { "" }
+            ),
+            mods: labels,
+        });
     }
 
-    for (base, mods) in scripts {
-        if mods.len() > 1 {
-            out.push(Conflict {
-                severity: "warning".into(),
-                kind: "script".into(),
-                name: base.clone(),
-                explanation: format!(
-                    "These mods each inject a global Lua script named \"{base}\" via extraSourceFiles. They may override one another depending on load order."
-                ),
-                mods,
-            });
+    for (base, idxs) in scripts {
+        let labels = labels(&parsed, &idxs);
+        if labels.len() < 2 {
+            continue;
         }
+        let identical = identical_script(&parsed, &idxs, &base);
+        let sa = same_author(&parsed, &idxs);
+        let (severity, extra) = if identical {
+            ("info", " The file is byte-identical in each, so it's a shared library, not a real clash.")
+        } else if sa {
+            ("info", note_same_author)
+        } else {
+            ("warning", "")
+        };
+        out.push(Conflict {
+            severity: severity.into(),
+            kind: "script".into(),
+            name: base.clone(),
+            explanation: format!(
+                "These mods each inject a global Lua script named \"{base}\" via extraSourceFiles. They may override one another depending on load order.{extra}"
+            ),
+            mods: labels,
+        });
     }
 
-    // Critical first, then by name.
+    // critical → warning → info, then by name.
+    let rank = |s: &str| match s {
+        "critical" => 0,
+        "warning" => 1,
+        _ => 2,
+    };
     out.sort_by(|a, b| {
-        let sev = |s: &str| if s == "critical" { 0 } else { 1 };
-        sev(&a.severity)
-            .cmp(&sev(&b.severity))
+        rank(&a.severity)
+            .cmp(&rank(&b.severity))
             .then(a.name.to_lowercase().cmp(&b.name.to_lowercase()))
     });
     out
-}
-
-fn push_unique(v: &mut Vec<String>, label: &str) {
-    if !v.iter().any(|x| x == label) {
-        v.push(label.to_string());
-    }
 }
