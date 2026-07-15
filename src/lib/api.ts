@@ -160,6 +160,13 @@ export function setModRepo(
   return invoke("set_mod_repo", { techName, owner, repo });
 }
 
+export function guessRepo(
+  path: string,
+  kind: string,
+): Promise<RepoRow | null> {
+  return invoke<RepoRow | null>("guess_repo", { path, kind });
+}
+
 export function checkModUpdate(
   owner: string,
   repo: string,
