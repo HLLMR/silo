@@ -6,8 +6,28 @@
     onScanProgress,
     getCuration,
     setCuration,
+    getOverrides,
+    setOverride,
   } from "./lib/api";
   import type { ModEntry, ScanResult, CurationRow } from "./lib/types";
+
+  const CATEGORIES = [
+    "Maps",
+    "Tractors",
+    "Harvesters",
+    "Implements",
+    "Cars & Trucks",
+    "Vehicles",
+    "Placeables",
+    "Objects",
+    "Decorations",
+    "Textures",
+    "Sounds",
+    "Realism",
+    "Cheats",
+    "Scripts & Tools",
+    "Other",
+  ];
   import VirtualList from "./lib/components/VirtualList.svelte";
   import ModRow from "./lib/components/ModRow.svelte";
   import CategoryRail from "./lib/components/CategoryRail.svelte";
@@ -24,8 +44,50 @@
     subcategory: null,
   });
   let curationMap = $state<Record<string, CurationRow>>({});
+  let overrideMap = $state<
+    Record<string, { category: string; subcategory: string | null }>
+  >({});
   let showHidden = $state(false);
   let favoritesOnly = $state(false);
+  let editing = $state<{ techName: string; x: number; y: number } | null>(null);
+
+  // Overrides applied as a display layer over the scanned category.
+  const effectiveMods = $derived(
+    mods.map((m) => {
+      const o = overrideMap[m.techName];
+      return o ? { ...m, category: o.category, subcategory: o.subcategory } : m;
+    }),
+  );
+
+  function openEditor(techName: string, ev: MouseEvent) {
+    ev.stopPropagation();
+    editing = { techName, x: ev.clientX, y: ev.clientY };
+  }
+
+  async function setCategory(techName: string, category: string) {
+    overrideMap = {
+      ...overrideMap,
+      [techName]: { category, subcategory: null },
+    };
+    editing = null;
+    try {
+      await setOverride({ techName, category, subcategory: null });
+    } catch (e) {
+      errorMsg = String(e);
+    }
+  }
+
+  async function resetCategory(techName: string) {
+    const next = { ...overrideMap };
+    delete next[techName];
+    overrideMap = next;
+    editing = null;
+    try {
+      await setOverride({ techName, category: "", subcategory: null });
+    } catch (e) {
+      errorMsg = String(e);
+    }
+  }
 
   function cur(techName: string): CurationRow {
     return (
@@ -55,7 +117,7 @@
 
   const q = $derived(query.trim().toLowerCase());
   const filtered = $derived.by(() => {
-    let list = mods;
+    let list = effectiveMods;
     if (selected.category) {
       list = list.filter(
         (m) =>
@@ -121,6 +183,10 @@
       try {
         const rows = await getCuration();
         curationMap = Object.fromEntries(rows.map((r) => [r.techName, r]));
+        const ovs = await getOverrides();
+        overrideMap = Object.fromEntries(
+          ovs.map((o) => [o.techName, { category: o.category, subcategory: o.subcategory }]),
+        );
       } catch (e) {
         errorMsg = String(e);
       }
@@ -225,7 +291,7 @@
 
   <div class="body">
     <CategoryRail
-      items={mods}
+      items={effectiveMods}
       {selected}
       onSelect={(category, subcategory) => (selected = { category, subcategory })}
     />
@@ -255,7 +321,9 @@
               <ModRow
                 {mod}
                 curation={cur(mod.techName)}
+                overridden={!!overrideMap[mod.techName]}
                 onToggle={(flag) => toggleCuration(mod.techName, flag)}
+                onEditCategory={(ev) => openEditor(mod.techName, ev)}
               />
             {/snippet}
           </VirtualList>
@@ -263,6 +331,28 @@
       </div>
     </main>
   </div>
+
+  {#if editing}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="backdrop" onclick={() => (editing = null)}></div>
+    <div
+      class="menu"
+      style="left: {Math.min(editing.x, window.innerWidth - 220)}px; top: {Math.min(
+        editing.y,
+        window.innerHeight - 420,
+      )}px"
+    >
+      <div class="menu-head">Set category</div>
+      {#each CATEGORIES as c (c)}
+        <button class="menu-item" onclick={() => setCategory(editing!.techName, c)}>
+          {c}
+        </button>
+      {/each}
+      <button class="menu-item reset" onclick={() => resetCategory(editing!.techName)}>
+        ↺ Reset to auto
+      </button>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -476,6 +566,52 @@
   .list-body {
     flex: 1 1 auto;
     min-height: 0;
+  }
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+  }
+  .menu {
+    position: fixed;
+    z-index: 50;
+    width: 208px;
+    max-height: 400px;
+    overflow-y: auto;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-2);
+    padding: 6px;
+    scrollbar-width: thin;
+  }
+  .menu-head {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    padding: 6px 10px;
+  }
+  .menu-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+  }
+  .menu-item:hover {
+    background: color-mix(in srgb, var(--primary) 14%, transparent);
+    color: var(--primary);
+  }
+  .menu-item.reset {
+    margin-top: 4px;
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+    color: var(--text-muted);
   }
   .empty {
     display: grid;
