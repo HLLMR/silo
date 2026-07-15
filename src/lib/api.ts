@@ -11,6 +11,7 @@ import type {
   ModInput,
   OrganizeReport,
   Loadout,
+  Savegame,
 } from "./types";
 
 export function defaultModsPaths(): Promise<string[]> {
@@ -79,4 +80,8 @@ export function saveLoadout(
 
 export function deleteLoadout(id: number): Promise<void> {
   return invoke("delete_loadout", { id });
+}
+
+export function getSavegames(): Promise<Savegame[]> {
+  return invoke<Savegame[]>("get_savegames");
 }

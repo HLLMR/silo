@@ -7,6 +7,7 @@ pub mod fsgame;
 pub mod icons;
 pub mod moddesc;
 pub mod organize;
+pub mod savegame;
 pub mod scan;
 pub mod store;
 
@@ -225,6 +226,15 @@ fn delete_loadout(app: tauri::AppHandle, id: i64) -> Result<(), String> {
     db::delete_loadout(&mut conn, id)
 }
 
+// ── Savegames ──
+#[tauri::command]
+fn get_savegames() -> Result<Vec<savegame::Savegame>, String> {
+    match fsgame::user_dir() {
+        Some(dir) => Ok(savegame::list_savegames(&dir)),
+        None => Ok(Vec::new()),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -243,7 +253,8 @@ pub fn run() {
             get_organized,
             get_loadouts,
             save_loadout,
-            delete_loadout
+            delete_loadout,
+            get_savegames
         ])
         .run(tauri::generate_context!())
         .expect("error while running Silo");
