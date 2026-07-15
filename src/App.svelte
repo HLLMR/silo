@@ -18,6 +18,7 @@
     detectConflicts,
     detectGame,
     launchGame,
+    modsWithSettings,
   } from "./lib/api";
   import type {
     ModEntry,
@@ -50,6 +51,7 @@
   import VirtualList from "./lib/components/VirtualList.svelte";
   import ModRow from "./lib/components/ModRow.svelte";
   import CategoryRail from "./lib/components/CategoryRail.svelte";
+  import ModSettings from "./lib/components/ModSettings.svelte";
 
   let roots = $state<string[]>([]);
   let mods = $state<ModEntry[]>([]);
@@ -101,6 +103,8 @@
   let settingsOpen = $state(false);
   let healthOpen = $state(false);
   let gameInfo = $state<GameInfo | null>(null);
+  let settingsModsSet = $state<Set<string>>(new Set());
+  let settingsMod = $state<{ techName: string; title: string } | null>(null);
 
   async function launch() {
     if (
@@ -559,6 +563,7 @@
         await loadLoadouts();
         await loadSavegames();
         gameInfo = await detectGame();
+        settingsModsSet = new Set(await modsWithSettings());
       } catch (e) {
         errorMsg = String(e);
       }
@@ -805,6 +810,14 @@
     </div>
   {/if}
 
+  {#if settingsMod}
+    <ModSettings
+      modName={settingsMod.techName}
+      title={settingsMod.title}
+      onClose={() => (settingsMod = null)}
+    />
+  {/if}
+
   {#if healthOpen}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="backdrop" onclick={() => (healthOpen = false)}></div>
@@ -1007,9 +1020,12 @@
                 overridden={!!overrideMap[mod.techName]}
                 organized={mod.organized}
                 active={activeSet.has(mod.techName)}
+                hasSettings={settingsModsSet.has(mod.techName)}
                 onToggle={(flag) => toggleCuration(mod.techName, flag)}
                 onToggleActive={() => toggleActive(mod.techName)}
                 onEditCategory={(ev) => openEditor(mod.techName, ev)}
+                onOpenSettings={() =>
+                  (settingsMod = { techName: mod.techName, title: mod.title ?? mod.techName })}
               />
             {/snippet}
           </VirtualList>
