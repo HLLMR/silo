@@ -726,9 +726,9 @@
         </div>
       {/if}
       {#each conflicts as c (c.severity + c.kind + c.name)}
-        <div class="cf-row" class:crit={c.severity === "critical"}>
+        <div class="cf-row" class:crit={c.severity === "critical"} class:info={c.severity === "info"}>
           <div class="cf-top">
-            <span class="cf-sev">{c.severity === "critical" ? "critical" : "warning"}</span>
+            <span class="cf-sev">{c.severity}</span>
             <span class="cf-kind">{c.kind}</span>
             <span class="cf-name">{c.name}</span>
           </div>
@@ -1496,6 +1496,13 @@
   .cf-row.crit {
     border-left-color: var(--danger);
     background: color-mix(in srgb, var(--danger) 6%, transparent);
+  }
+  .cf-row.info {
+    border-left-color: var(--info);
+    background: color-mix(in srgb, var(--info) 5%, transparent);
+  }
+  .cf-row.info .cf-sev {
+    color: var(--info);
   }
   .cf-top {
     display: flex;
