@@ -6,6 +6,7 @@ pub mod db;
 pub mod fsgame;
 pub mod icons;
 pub mod moddesc;
+pub mod organize;
 pub mod scan;
 pub mod store;
 
@@ -126,6 +127,80 @@ fn set_override(app: tauri::AppHandle, row: db::CategoryOverride) -> Result<(), 
     db::set_override(&conn, &row)
 }
 
+// ── Organize / projection engine (writes to the game folder) ──
+fn primary_root(root: Option<String>) -> Result<PathBuf, String> {
+    match root {
+        Some(r) if !r.is_empty() => Ok(PathBuf::from(r)),
+        _ => fsgame::default_mods_paths()
+            .into_iter()
+            .next()
+            .ok_or_else(|| "No mods folder detected".to_string()),
+    }
+}
+
+/// Dry run: what organizing would move (read-only).
+#[tauri::command]
+async fn plan_organize(
+    root: Option<String>,
+    mods: Vec<organize::ModInput>,
+) -> Result<Vec<organize::PlannedMove>, String> {
+    let root = primary_root(root)?;
+    tauri::async_runtime::spawn_blocking(move || organize::plan_organize(&root, &mods))
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn apply_organize(
+    app: tauri::AppHandle,
+    root: Option<String>,
+    mods: Vec<organize::ModInput>,
+) -> Result<organize::Report, String> {
+    let db = db_path(&app)?;
+    let root = primary_root(root)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<organize::Report, String> {
+        let conn = db::open(&db)?;
+        Ok(organize::apply_organize(&conn, &root, &mods))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn set_active(
+    app: tauri::AppHandle,
+    root: Option<String>,
+    active: Vec<String>,
+) -> Result<organize::Report, String> {
+    let db = db_path(&app)?;
+    let root = primary_root(root)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<organize::Report, String> {
+        let conn = db::open(&db)?;
+        let set: HashSet<String> = active.into_iter().collect();
+        Ok(organize::set_active(&conn, &root, &set))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn flatten(app: tauri::AppHandle, root: Option<String>) -> Result<organize::Report, String> {
+    let db = db_path(&app)?;
+    let root = primary_root(root)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<organize::Report, String> {
+        let conn = db::open(&db)?;
+        Ok(organize::flatten(&conn, &root))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+fn get_organized(app: tauri::AppHandle) -> Result<Vec<db::OrganizedRow>, String> {
+    let conn = db::open(&db_path(&app)?)?;
+    Ok(db::load_organized(&conn))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -136,7 +211,12 @@ pub fn run() {
             get_curation,
             set_curation,
             get_overrides,
-            set_override
+            set_override,
+            plan_organize,
+            apply_organize,
+            set_active,
+            flatten,
+            get_organized
         ])
         .run(tauri::generate_context!())
         .expect("error while running Silo");

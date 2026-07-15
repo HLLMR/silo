@@ -35,6 +35,19 @@ pub struct CategoryOverride {
     pub subcategory: Option<String>,
 }
 
+/// Manifest row: a mod Silo has moved into `mods/archive/<category>/`. `active`
+/// means it's currently projected (linked) into the flat root for the game.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrganizedRow {
+    pub tech_name: String,
+    pub file_name: String,
+    pub kind: String,
+    pub category: String,
+    pub subcategory: Option<String>,
+    pub active: bool,
+}
+
 /// Open (creating if needed) the Silo database and ensure the schema exists.
 pub fn open(db_path: &Path) -> Result<Connection, String> {
     if let Some(dir) = db_path.parent() {
@@ -60,10 +73,74 @@ pub fn open(db_path: &Path) -> Result<Connection, String> {
              tech_name   TEXT PRIMARY KEY,
              category    TEXT NOT NULL,
              subcategory TEXT
+         );
+         CREATE TABLE IF NOT EXISTS organized (
+             tech_name   TEXT PRIMARY KEY,
+             file_name   TEXT NOT NULL,
+             kind        TEXT NOT NULL,
+             category    TEXT NOT NULL,
+             subcategory TEXT,
+             active      INTEGER NOT NULL DEFAULT 0
          );",
     )
     .map_err(|e| e.to_string())?;
     Ok(conn)
+}
+
+/// Load the organize manifest.
+pub fn load_organized(conn: &Connection) -> Vec<OrganizedRow> {
+    let Ok(mut stmt) = conn
+        .prepare("SELECT tech_name, file_name, kind, category, subcategory, active FROM organized")
+    else {
+        return Vec::new();
+    };
+    let rows = stmt.query_map([], |r| {
+        Ok(OrganizedRow {
+            tech_name: r.get(0)?,
+            file_name: r.get(1)?,
+            kind: r.get(2)?,
+            category: r.get(3)?,
+            subcategory: r.get(4)?,
+            active: r.get::<_, i64>(5)? != 0,
+        })
+    });
+    rows.map(|r| r.flatten().collect()).unwrap_or_default()
+}
+
+pub fn upsert_organized(conn: &Connection, row: &OrganizedRow) -> Result<(), String> {
+    conn.execute(
+        "INSERT INTO organized(tech_name, file_name, kind, category, subcategory, active)
+         VALUES(?1, ?2, ?3, ?4, ?5, ?6)
+         ON CONFLICT(tech_name) DO UPDATE SET
+             file_name = excluded.file_name, kind = excluded.kind,
+             category = excluded.category, subcategory = excluded.subcategory,
+             active = excluded.active",
+        rusqlite::params![
+            row.tech_name,
+            row.file_name,
+            row.kind,
+            row.category,
+            row.subcategory,
+            row.active as i64
+        ],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn set_organized_active(conn: &Connection, tech_name: &str, active: bool) -> Result<(), String> {
+    conn.execute(
+        "UPDATE organized SET active = ?2 WHERE tech_name = ?1",
+        rusqlite::params![tech_name, active as i64],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn delete_organized(conn: &Connection, tech_name: &str) -> Result<(), String> {
+    conn.execute("DELETE FROM organized WHERE tech_name = ?1", [tech_name])
+        .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 /// Load all curation rows.
