@@ -147,6 +147,20 @@ export function launchGame(): Promise<void> {
   return invoke("launch_game");
 }
 
+/** Prompt for a path and save text (used by the diagnostics report). */
+export async function saveTextFile(
+  defaultName: string,
+  content: string,
+): Promise<boolean> {
+  const path = await save({
+    defaultPath: defaultName,
+    filters: [{ name: "Report", extensions: ["md", "txt"] }],
+  });
+  if (!path) return false;
+  await invoke("save_text", { path, content });
+  return true;
+}
+
 // ── Mod settings form ──
 export function modsWithSettings(): Promise<string[]> {
   return invoke<string[]>("mods_with_settings");

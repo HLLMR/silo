@@ -290,6 +290,12 @@ fn launch_game() -> Result<(), String> {
     gamelaunch::launch()
 }
 
+/// Write text to a user-chosen path (used by the diagnostics report export).
+#[tauri::command]
+fn save_text(path: String, content: String) -> Result<(), String> {
+    std::fs::write(&path, content).map_err(|e| e.to_string())
+}
+
 // ── Mod settings form ──
 #[tauri::command]
 fn mods_with_settings() -> Vec<String> {
@@ -364,6 +370,7 @@ pub fn run() {
             detect_conflicts,
             detect_game,
             launch_game,
+            save_text,
             mods_with_settings,
             get_mod_settings,
             save_mod_settings,
