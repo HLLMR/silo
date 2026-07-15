@@ -17,6 +17,8 @@ export interface ModEntry {
   mapTitle: string | null;
   category: string;
   subcategory: string | null;
+  organized: boolean;
+  active: boolean;
 
   dependencies: string[];
   scriptCount: number;
@@ -53,4 +55,18 @@ export interface CategoryOverride {
   techName: string;
   category: string;
   subcategory: string | null;
+}
+
+export interface ModInput {
+  techName: string;
+  fileName: string;
+  kind: string;
+  category: string;
+  subcategory: string | null;
+}
+
+export interface OrganizeReport {
+  changed: number;
+  skipped: number;
+  errors: string[];
 }

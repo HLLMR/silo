@@ -8,8 +8,16 @@
     setCuration,
     getOverrides,
     setOverride,
+    applyOrganize,
+    setActive,
+    flatten,
   } from "./lib/api";
-  import type { ModEntry, ScanResult, CurationRow } from "./lib/types";
+  import type {
+    ModEntry,
+    ScanResult,
+    CurationRow,
+    ModInput,
+  } from "./lib/types";
 
   const CATEGORIES = [
     "Maps",
@@ -50,6 +58,66 @@
   let showHidden = $state(false);
   let favoritesOnly = $state(false);
   let editing = $state<{ techName: string; x: number; y: number } | null>(null);
+  let activeSet = $state<Set<string>>(new Set());
+  let busy = $state<string | null>(null);
+
+  const organizedCount = $derived(mods.filter((m) => m.organized).length);
+  const unorganizedCount = $derived(mods.filter((m) => !m.organized).length);
+
+  function fileName(path: string): string {
+    return path.split(/[\\/]/).pop() ?? path;
+  }
+
+  async function toggleActive(techName: string) {
+    const next = new Set(activeSet);
+    if (next.has(techName)) next.delete(techName);
+    else next.add(techName);
+    activeSet = next;
+    try {
+      await setActive([...next]);
+    } catch (e) {
+      errorMsg = String(e);
+    }
+  }
+
+  async function organizeNew() {
+    const targets = effectiveMods.filter((m) => !m.organized);
+    if (targets.length === 0) return;
+    busy = `Organizing ${targets.length} mods…`;
+    const inputs: ModInput[] = targets.map((m) => ({
+      techName: m.techName,
+      fileName: fileName(m.path),
+      kind: m.kind,
+      category: m.category,
+      subcategory: m.subcategory,
+    }));
+    try {
+      const rep = await applyOrganize(inputs);
+      if (rep.errors.length) errorMsg = rep.errors.slice(0, 3).join("; ");
+    } catch (e) {
+      errorMsg = String(e);
+    }
+    busy = null;
+    await runScan();
+  }
+
+  async function restoreVanilla() {
+    if (
+      !confirm(
+        "Restore a vanilla flat mods/ folder?\n\nThis moves every mod back out of archive/ and removes all links. Your mods are not deleted — this just undoes Silo's organization.",
+      )
+    )
+      return;
+    busy = "Restoring vanilla layout…";
+    try {
+      const rep = await flatten();
+      if (rep.errors.length) errorMsg = rep.errors.slice(0, 3).join("; ");
+    } catch (e) {
+      errorMsg = String(e);
+    }
+    busy = null;
+    await runScan();
+  }
 
   // Overrides applied as a display layer over the scanned category.
   const effectiveMods = $derived(
@@ -169,6 +237,7 @@
       const r = await scanMods(roots.length ? roots : undefined);
       result = r;
       mods = r.mods;
+      activeSet = new Set(r.mods.filter((m) => m.active).map((m) => m.techName));
     } catch (e) {
       errorMsg = String(e);
     } finally {
@@ -221,7 +290,17 @@
       {/if}
     </div>
 
-    <button class="btn primary" onclick={runScan} disabled={scanning}>
+    {#if unorganizedCount > 0}
+      <button class="btn" onclick={organizeNew} disabled={!!busy || scanning}>
+        Organize {unorganizedCount}
+      </button>
+    {/if}
+    {#if organizedCount > 0}
+      <button class="btn subtle" onclick={restoreVanilla} disabled={!!busy || scanning}>
+        Restore vanilla
+      </button>
+    {/if}
+    <button class="btn primary" onclick={runScan} disabled={scanning || !!busy}>
       {scanning ? "Scanning…" : "Rescan"}
     </button>
   </header>
@@ -231,6 +310,10 @@
       <div class="bar" style="width: {pct}%"></div>
       <span class="progress-text tnum">{progress.done} / {progress.total}</span>
     </div>
+  {/if}
+
+  {#if busy}
+    <div class="busy">{busy}</div>
   {/if}
 
   {#if errorMsg}
@@ -253,6 +336,10 @@
     <div class="stat">
       <span class="stat-num tnum">{stats.unique}</span>
       <span class="stat-label">uniqueType</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num tnum">{activeSet.size}</span>
+      <span class="stat-label">active</span>
     </div>
     <div class="stat" class:flag={stats.issues > 0}>
       <span class="stat-num tnum">{stats.issues}</span>
@@ -322,7 +409,10 @@
                 {mod}
                 curation={cur(mod.techName)}
                 overridden={!!overrideMap[mod.techName]}
+                organized={mod.organized}
+                active={activeSet.has(mod.techName)}
                 onToggle={(flag) => toggleCuration(mod.techName, flag)}
+                onToggleActive={() => toggleActive(mod.techName)}
                 onEditCategory={(ev) => openEditor(mod.techName, ev)}
               />
             {/snippet}
@@ -444,9 +534,23 @@
   .btn.primary:hover:not(:disabled) {
     background: var(--primary-hover);
   }
+  .btn.subtle {
+    color: var(--text-muted);
+  }
+  .btn:hover:not(:disabled):not(.primary) {
+    color: var(--text);
+    border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+  }
   .btn:disabled {
     opacity: 0.6;
     cursor: default;
+  }
+  .busy {
+    padding: 8px 20px;
+    background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+    color: var(--gold-700);
+    font-size: 13px;
+    font-weight: 600;
   }
   .progress {
     position: relative;

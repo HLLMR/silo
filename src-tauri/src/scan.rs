@@ -47,6 +47,12 @@ pub struct ModEntry {
     pub store_item_count: u32,
     pub mp_supported: bool,
 
+    /// True when the mod lives in `mods/archive/<Category>/` (Silo-managed).
+    pub organized: bool,
+    /// True when the mod is present in the flat root (i.e. the game loads it):
+    /// vanilla mods, and organized mods currently projected as links.
+    pub active: bool,
+
     /// The game IGNORES mods whose name starts with a digit — a silent footgun.
     pub ignored_digit_prefix: bool,
     /// Populated when the mod couldn't be read/parsed (still listed, flagged).
@@ -75,34 +81,62 @@ struct Candidate {
     kind: &'static str,
 }
 
-/// Enumerate mod candidates in a single flat root (the game does not recurse).
-fn collect_candidates(root: &Path) -> Vec<Candidate> {
+/// Build a Candidate from a directory entry (a `.zip` file or an unpacked mod dir),
+/// or None if it isn't a mod.
+fn candidate_from(path: PathBuf, name: &str, ft: std::fs::FileType) -> Option<Candidate> {
+    if ft.is_dir() {
+        if path.join("modDesc.xml").is_file() {
+            return Some(Candidate { tech_name: name.to_string(), path, kind: "dir" });
+        }
+    } else if ft.is_file() && name.to_lowercase().ends_with(".zip") {
+        let tech_name = name[..name.len() - 4].to_string();
+        return Some(Candidate { tech_name, path, kind: "zip" });
+    }
+    None
+}
+
+/// Mods in the flat root (what the game reads) — excluding Silo's `archive/` and
+/// any `backups/` folder.
+fn collect_root_candidates(root: &Path) -> Vec<Candidate> {
     let mut out = Vec::new();
     let Ok(rd) = fs::read_dir(root) else {
         return out;
     };
     for entry in rd.flatten() {
-        let path = entry.path();
         let name = entry.file_name().to_string_lossy().into_owned();
-        let file_type = entry.file_type();
+        let lname = name.to_lowercase();
+        if lname == "archive" || lname == "backups" {
+            continue;
+        }
+        if let Ok(ft) = entry.file_type() {
+            if let Some(c) = candidate_from(entry.path(), &name, ft) {
+                out.push(c);
+            }
+        }
+    }
+    out
+}
 
-        if let Ok(ft) = file_type {
-            if ft.is_dir() {
-                if path.join("modDesc.xml").is_file() {
-                    out.push(Candidate {
-                        tech_name: name,
-                        path,
-                        kind: "dir",
-                    });
+/// Mods parked in `mods/archive/<Category>/` (Silo-managed, one level of folders).
+fn collect_archive_candidates(root: &Path) -> Vec<Candidate> {
+    let mut out = Vec::new();
+    let archive = root.join("archive");
+    let Ok(cats) = fs::read_dir(&archive) else {
+        return out;
+    };
+    for cat in cats.flatten() {
+        if !cat.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+            continue;
+        }
+        let Ok(mods) = fs::read_dir(cat.path()) else {
+            continue;
+        };
+        for entry in mods.flatten() {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if let Ok(ft) = entry.file_type() {
+                if let Some(c) = candidate_from(entry.path(), &name, ft) {
+                    out.push(c);
                 }
-            } else if ft.is_file() && name.to_lowercase().ends_with(".zip") {
-                // Strip the .zip suffix case-insensitively to get the tech name.
-                let tech_name = name[..name.len() - 4].to_string();
-                out.push(Candidate {
-                    tech_name,
-                    path,
-                    kind: "zip",
-                });
             }
         }
     }
@@ -171,6 +205,8 @@ fn build_entry(c: &Candidate) -> ModEntry {
         unique_type: None,
         store_item_count: 0,
         mp_supported: false,
+        organized: false,
+        active: false,
         ignored_digit_prefix,
         error: None,
     };
@@ -255,25 +291,54 @@ where
 {
     let started = std::time::Instant::now();
 
-    let mut candidates: Vec<Candidate> = Vec::new();
+    let mut root_cands: Vec<Candidate> = Vec::new();
+    let mut archive_cands: Vec<Candidate> = Vec::new();
     for root in &roots {
-        candidates.extend(collect_candidates(root));
+        root_cands.extend(collect_root_candidates(root));
+        archive_cands.extend(collect_archive_candidates(root));
     }
-    let total = candidates.len();
+
+    // Tech-names present in the archive (organized) and in the flat root (loaded).
+    let archived: HashSet<String> = archive_cands.iter().map(|c| c.tech_name.clone()).collect();
+    let in_root: HashSet<String> = root_cands.iter().map(|c| c.tech_name.clone()).collect();
+
+    // Parse every archived mod, plus flat-root mods that AREN'T organized (vanilla).
+    // A flat-root entry whose tech-name is already in the archive is just an active
+    // projection (hardlink) — we don't re-parse it, only flag the archive entry.
+    let to_parse: Vec<(&Candidate, bool)> = archive_cands
+        .iter()
+        .map(|c| (c, true))
+        .chain(
+            root_cands
+                .iter()
+                .filter(|c| !archived.contains(&c.tech_name))
+                .map(|c| (c, false)),
+        )
+        .collect();
+
+    let total = to_parse.len();
     progress(0, total);
 
     let done = AtomicUsize::new(0);
     let step = (total / 100).max(10);
 
-    let pairs: Vec<(ModEntry, bool)> = candidates
+    let pairs: Vec<(ModEntry, bool)> = to_parse
         .par_iter()
-        .map(|c| {
-            let resolved = resolve_entry(c, cache);
+        .map(|(c, organized)| {
+            let (mut entry, fresh) = resolve_entry(c, cache);
+            entry.organized = *organized;
+            // Organized mods are "active" only when also linked into the flat root;
+            // vanilla (unorganized) mods sit in the root, so they're active.
+            entry.active = if *organized {
+                in_root.contains(&entry.tech_name)
+            } else {
+                true
+            };
             let n = done.fetch_add(1, Ordering::Relaxed) + 1;
             if n % step == 0 || n == total {
                 progress(n, total);
             }
-            resolved
+            (entry, fresh)
         })
         .collect();
 
