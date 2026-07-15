@@ -4,6 +4,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { save, open } from "@tauri-apps/plugin-dialog";
+import { revealItemInDir, openPath } from "@tauri-apps/plugin-opener";
 import type {
   ScanResult,
   ScanProgress,
@@ -124,6 +125,14 @@ export function getSavegames(): Promise<Savegame[]> {
 
 export function detectConflicts(mods: ConflictInput[]): Promise<Conflict[]> {
   return invoke<Conflict[]>("detect_conflicts", { mods });
+}
+
+export function revealInFolder(path: string): Promise<void> {
+  return revealItemInDir(path);
+}
+
+export function openFolder(path: string): Promise<void> {
+  return openPath(path);
 }
 
 export function detectGame(): Promise<GameInfo | null> {
