@@ -76,3 +76,20 @@ export interface Loadout {
   name: string;
   mods: string[];
 }
+
+export interface SaveMod {
+  modName: string;
+  title: string | null;
+  version: string | null;
+  required: boolean;
+  fileHash: string | null;
+  isDlc: boolean;
+}
+
+export interface Savegame {
+  index: number;
+  folder: string;
+  name: string;
+  mapTitle: string | null;
+  mods: SaveMod[];
+}

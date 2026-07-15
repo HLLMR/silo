@@ -14,6 +14,7 @@
     getLoadouts,
     saveLoadout,
     deleteLoadout,
+    getSavegames,
   } from "./lib/api";
   import type {
     ModEntry,
@@ -21,6 +22,7 @@
     CurationRow,
     ModInput,
     Loadout,
+    Savegame,
   } from "./lib/types";
 
   const CATEGORIES = [
@@ -86,6 +88,54 @@
 
   let loadouts = $state<Loadout[]>([]);
   let loadoutsOpen = $state(false);
+  let savegames = $state<Savegame[]>([]);
+  let savesOpen = $state(false);
+
+  const libraryTechNames = $derived(new Set(mods.map((m) => m.techName)));
+
+  // Cross-reference a save's user mods (non-DLC) against the library.
+  function saveStats(s: Savegame) {
+    const userMods = s.mods.filter((m) => !m.isDlc);
+    const present = userMods.filter((m) => libraryTechNames.has(m.modName));
+    const missing = userMods.filter((m) => !libraryTechNames.has(m.modName));
+    return { total: userMods.length, present, missing };
+  }
+
+  async function loadSavegames() {
+    try {
+      savegames = await getSavegames();
+    } catch (e) {
+      errorMsg = String(e);
+    }
+  }
+
+  async function loadoutFromSave(s: Savegame) {
+    const { present, missing } = saveStats(s);
+    if (present.length === 0) {
+      errorMsg = `None of “${s.name}”'s mods are in your library yet.`;
+      return;
+    }
+    const note =
+      missing.length > 0
+        ? `\n\nNote: ${missing.length} mod(s) the save used aren't in your library and will be left out.`
+        : "";
+    if (
+      !confirm(
+        `Create a loadout “${s.name}” with ${present.length} mod(s) from this save?${note}`,
+      )
+    )
+      return;
+    try {
+      await saveLoadout(null, s.name, present.map((m) => m.modName));
+      await loadLoadouts();
+      savesOpen = false;
+      // Apply it immediately.
+      const created = loadouts.find((l) => l.name === s.name);
+      if (created) await applyLoadout(created);
+    } catch (e) {
+      errorMsg = String(e);
+    }
+  }
 
   // The loadout whose mod set exactly matches the current active set (if any).
   const activeLoadoutId = $derived.by(() => {
@@ -363,6 +413,7 @@
           ovs.map((o) => [o.techName, { category: o.category, subcategory: o.subcategory }]),
         );
         await loadLoadouts();
+        await loadSavegames();
       } catch (e) {
         errorMsg = String(e);
       }
@@ -396,6 +447,17 @@
         <span class="path-label">No mods folder detected</span>
       {/if}
     </div>
+
+    {#if savegames.length > 0}
+      <button
+        class="btn"
+        class:on={savesOpen}
+        onclick={() => (savesOpen = !savesOpen)}
+        disabled={!!busy}
+      >
+        Savegames
+      </button>
+    {/if}
 
     <button
       class="btn loadout-btn"
@@ -458,6 +520,38 @@
       <button class="lp-save" onclick={saveCurrentLoadout} disabled={activeSet.size === 0}>
         + Save current active set as a loadout
       </button>
+    </div>
+  {/if}
+
+  {#if savesOpen}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="backdrop" onclick={() => (savesOpen = false)}></div>
+    <div class="loadouts-panel saves">
+      <div class="lp-head"><span>Savegames</span></div>
+      {#each savegames as s (s.folder)}
+        {@const st = saveStats(s)}
+        <div class="sg-row">
+          <div class="sg-info">
+            <div class="sg-name">{s.name}</div>
+            <div class="sg-meta">
+              slot {s.index}{s.mapTitle ? ` · ${s.mapTitle}` : ""} ·
+              <span class="tnum">{st.present.length}</span>/{st.total} mods in library{#if st.missing.length > 0}, <span
+                  class="sg-missing tnum">{st.missing.length} missing</span
+                >{/if}
+            </div>
+          </div>
+          <button
+            class="sg-make"
+            title={st.missing.length
+              ? `Build a loadout from the ${st.present.length} mods you have (${st.missing.length} missing)`
+              : "Build a loadout from this save's mods"}
+            onclick={() => loadoutFromSave(s)}
+            disabled={st.present.length === 0}
+          >
+            → Loadout
+          </button>
+        </div>
+      {/each}
     </div>
   {/if}
 
@@ -839,6 +933,56 @@
   .lp-save:disabled {
     opacity: 0.5;
     cursor: default;
+  }
+  .loadouts-panel.saves {
+    width: 380px;
+  }
+  .sg-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: var(--radius-sm);
+  }
+  .sg-row:hover {
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+  .sg-info {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .sg-name {
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sg-meta {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .sg-missing {
+    color: var(--warn);
+  }
+  .sg-make {
+    flex: 0 0 auto;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--primary);
+    padding: 7px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .sg-make:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+  }
+  .sg-make:disabled {
+    opacity: 0.5;
+    cursor: default;
+    color: var(--text-muted);
   }
   .progress {
     position: relative;
