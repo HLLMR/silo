@@ -40,3 +40,17 @@ export interface ScanProgress {
   done: number;
   total: number;
 }
+
+export interface CurationRow {
+  techName: string;
+  favorite: boolean;
+  hidden: boolean;
+  broken: boolean;
+  note: string | null;
+}
+
+export interface CategoryOverride {
+  techName: string;
+  category: string;
+  subcategory: string | null;
+}

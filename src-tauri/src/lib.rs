@@ -19,6 +19,13 @@ struct Progress {
     total: usize,
 }
 
+fn db_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    app.path()
+        .app_data_dir()
+        .map(|d| d.join("silo.db"))
+        .map_err(|e| e.to_string())
+}
+
 /// Return the auto-detected default mod root(s) as strings for the UI.
 #[tauri::command]
 fn default_mods_paths() -> Vec<String> {
@@ -43,12 +50,7 @@ async fn scan_mods(
     tauri::async_runtime::spawn_blocking(move || {
         // Warm cache: parsed entries persist between launches, keyed by
         // path+mtime+size, so unchanged mods skip archive parsing entirely.
-        let db_path = app
-            .path()
-            .app_data_dir()
-            .map(|d| d.join("silo.db"))
-            .map_err(|e| e.to_string())?;
-        let mut conn = db::open(&db_path)?;
+        let mut conn = db::open(&db_path(&app)?)?;
         let cache = db::load_cache(&conn);
 
         let emitter = app.clone();
@@ -98,13 +100,43 @@ async fn get_mod_icon(
     .flatten()
 }
 
+// ── Curation (favorite / hidden / broken) ──
+#[tauri::command]
+fn get_curation(app: tauri::AppHandle) -> Result<Vec<db::CurationRow>, String> {
+    let conn = db::open(&db_path(&app)?)?;
+    Ok(db::load_curation(&conn))
+}
+
+#[tauri::command]
+fn set_curation(app: tauri::AppHandle, row: db::CurationRow) -> Result<(), String> {
+    let conn = db::open(&db_path(&app)?)?;
+    db::set_curation(&conn, &row)
+}
+
+// ── Manual category overrides ──
+#[tauri::command]
+fn get_overrides(app: tauri::AppHandle) -> Result<Vec<db::CategoryOverride>, String> {
+    let conn = db::open(&db_path(&app)?)?;
+    Ok(db::load_overrides(&conn))
+}
+
+#[tauri::command]
+fn set_override(app: tauri::AppHandle, row: db::CategoryOverride) -> Result<(), String> {
+    let conn = db::open(&db_path(&app)?)?;
+    db::set_override(&conn, &row)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             default_mods_paths,
             scan_mods,
-            get_mod_icon
+            get_mod_icon,
+            get_curation,
+            set_curation,
+            get_overrides,
+            set_override
         ])
         .run(tauri::generate_context!())
         .expect("error while running Silo");

@@ -1,7 +1,13 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { defaultModsPaths, scanMods, onScanProgress } from "./lib/api";
-  import type { ModEntry, ScanResult } from "./lib/types";
+  import {
+    defaultModsPaths,
+    scanMods,
+    onScanProgress,
+    getCuration,
+    setCuration,
+  } from "./lib/api";
+  import type { ModEntry, ScanResult, CurationRow } from "./lib/types";
   import VirtualList from "./lib/components/VirtualList.svelte";
   import ModRow from "./lib/components/ModRow.svelte";
   import CategoryRail from "./lib/components/CategoryRail.svelte";
@@ -17,6 +23,35 @@
     category: null,
     subcategory: null,
   });
+  let curationMap = $state<Record<string, CurationRow>>({});
+  let showHidden = $state(false);
+  let favoritesOnly = $state(false);
+
+  function cur(techName: string): CurationRow {
+    return (
+      curationMap[techName] ?? {
+        techName,
+        favorite: false,
+        hidden: false,
+        broken: false,
+        note: null,
+      }
+    );
+  }
+
+  async function toggleCuration(
+    techName: string,
+    flag: "favorite" | "hidden" | "broken",
+  ) {
+    const c = cur(techName);
+    const next: CurationRow = { ...c, [flag]: !c[flag] };
+    curationMap = { ...curationMap, [techName]: next };
+    try {
+      await setCuration(next);
+    } catch (e) {
+      errorMsg = String(e);
+    }
+  }
 
   const q = $derived(query.trim().toLowerCase());
   const filtered = $derived.by(() => {
@@ -27,6 +62,12 @@
           m.category === selected.category &&
           (!selected.subcategory || m.subcategory === selected.subcategory),
       );
+    }
+    if (!showHidden) {
+      list = list.filter((m) => !cur(m.techName).hidden);
+    }
+    if (favoritesOnly) {
+      list = list.filter((m) => cur(m.techName).favorite);
     }
     if (q !== "") {
       list = list.filter(
@@ -77,6 +118,12 @@
     let unlisten: (() => void) | undefined;
     (async () => {
       unlisten = await onScanProgress((p) => (progress = p));
+      try {
+        const rows = await getCuration();
+        curationMap = Object.fromEntries(rows.map((r) => [r.techName, r]));
+      } catch (e) {
+        errorMsg = String(e);
+      }
       try {
         roots = await defaultModsPaths();
       } catch (e) {
@@ -151,6 +198,23 @@
       </div>
     {/if}
 
+    <button
+      class="toggle"
+      class:on={favoritesOnly}
+      title="Show favorites only"
+      onclick={() => (favoritesOnly = !favoritesOnly)}
+    >
+      {favoritesOnly ? "★" : "☆"} Favorites
+    </button>
+    <button
+      class="toggle"
+      class:on={showHidden}
+      title="Show hidden mods"
+      onclick={() => (showHidden = !showHidden)}
+    >
+      Hidden
+    </button>
+
     <input
       class="search"
       type="search"
@@ -188,7 +252,11 @@
         {:else}
           <VirtualList items={filtered} rowHeight={76}>
             {#snippet row(mod)}
-              <ModRow {mod} />
+              <ModRow
+                {mod}
+                curation={cur(mod.techName)}
+                onToggle={(flag) => toggleCuration(mod.techName, flag)}
+              />
             {/snippet}
           </VirtualList>
         {/if}
@@ -343,8 +411,26 @@
     color: var(--text-muted);
     margin-left: auto;
   }
+  .toggle {
+    flex: 0 0 auto;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-muted);
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .toggle:hover {
+    color: var(--text);
+  }
+  .toggle.on {
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    color: var(--accent);
+  }
   .search {
-    flex: 0 0 320px;
+    flex: 0 0 280px;
     padding: 9px 14px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
