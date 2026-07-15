@@ -96,6 +96,26 @@
   let conflictsOpen = $state(false);
   let conflictTimer: ReturnType<typeof setTimeout> | undefined;
   let settingsOpen = $state(false);
+  let healthOpen = $state(false);
+
+  // Library health: missing dependencies, corrupt/unreadable mods, and mods the
+  // game silently ignores (name starts with a digit).
+  const health = $derived.by(() => {
+    const lib = new Set(mods.map((m) => m.techName));
+    const missingDeps: { mod: ModEntry; missing: string[] }[] = [];
+    const corrupt: ModEntry[] = [];
+    const ignored: ModEntry[] = [];
+    for (const m of mods) {
+      if (m.error) corrupt.push(m);
+      if (m.ignoredDigitPrefix) ignored.push(m);
+      const miss = m.dependencies.filter((d) => !lib.has(d));
+      if (miss.length > 0) missingDeps.push({ mod: m, missing: miss });
+    }
+    return { missingDeps, corrupt, ignored };
+  });
+  const healthCount = $derived(
+    health.missingDeps.length + health.corrupt.length + health.ignored.length,
+  );
 
   const criticalCount = $derived(
     conflicts.filter((c) => c.severity === "critical").length,
@@ -744,6 +764,56 @@
     </div>
   {/if}
 
+  {#if healthOpen}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="backdrop" onclick={() => (healthOpen = false)}></div>
+    <div class="conflicts-panel">
+      <div class="lp-head">
+        <span>Library health</span>
+        <span class="lp-sub tnum">{healthCount} issue{healthCount === 1 ? "" : "s"}</span>
+      </div>
+
+      {#if healthCount === 0}
+        <div class="lp-empty">Everything looks healthy — no problems found.</div>
+      {/if}
+
+      {#if health.missingDeps.length > 0}
+        <div class="hz-group">Missing dependencies ({health.missingDeps.length})</div>
+        {#each health.missingDeps as d (d.mod.techName)}
+          <div class="hz-row">
+            <div class="hz-name">{d.mod.title ?? d.mod.techName}</div>
+            <div class="hz-detail">
+              needs {#each d.missing as dep, i (dep)}<span class="hz-dep">{dep}</span>{#if i < d.missing.length - 1}, {/if}{/each}
+              — not in your library
+            </div>
+          </div>
+        {/each}
+      {/if}
+
+      {#if health.ignored.length > 0}
+        <div class="hz-group">Ignored by the game — name starts with a digit ({health.ignored.length})</div>
+        {#each health.ignored as m (m.techName)}
+          <div class="hz-row">
+            <div class="hz-name">{m.title ?? m.techName}</div>
+            <div class="hz-detail">
+              <span class="tnum">{m.techName}</span> — FS won't load a mod whose name starts with a number.
+            </div>
+          </div>
+        {/each}
+      {/if}
+
+      {#if health.corrupt.length > 0}
+        <div class="hz-group">Corrupt / unreadable ({health.corrupt.length})</div>
+        {#each health.corrupt as m (m.techName)}
+          <div class="hz-row">
+            <div class="hz-name">{m.title ?? m.techName}</div>
+            <div class="hz-detail">{m.error}</div>
+          </div>
+        {/each}
+      {/if}
+    </div>
+  {/if}
+
   {#if scanning}
     <div class="progress">
       <div class="bar" style="width: {pct}%"></div>
@@ -790,10 +860,15 @@
       <span class="stat-num tnum">{conflicts.length}</span>
       <span class="stat-label">conflict{conflicts.length === 1 ? "" : "s"}</span>
     </button>
-    <div class="stat" class:flag={stats.issues > 0}>
-      <span class="stat-num tnum">{stats.issues}</span>
+    <button
+      class="stat statbtn"
+      class:flag={healthCount > 0}
+      title="Library health: missing dependencies, corrupt mods, ignored names"
+      onclick={() => (healthOpen = !healthOpen)}
+    >
+      <span class="stat-num tnum">{healthCount}</span>
       <span class="stat-label">need attention</span>
-    </div>
+    </button>
     {#if result}
       <div class="took tnum" title="Scan wall-clock time">
         scanned in {result.tookMs} ms
@@ -1395,6 +1470,34 @@
     font-size: 12px;
     color: var(--text-muted);
     line-height: 1.5;
+  }
+  .hz-group {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    padding: 12px 8px 6px;
+  }
+  .hz-row {
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
+  }
+  .hz-row:hover {
+    background: color-mix(in srgb, var(--primary) 6%, transparent);
+  }
+  .hz-name {
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .hz-detail {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .hz-dep {
+    color: var(--warn);
+    font-weight: 600;
   }
   .took {
     font-size: 11px;
