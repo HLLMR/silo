@@ -12,6 +12,8 @@ import type {
   OrganizeReport,
   Loadout,
   Savegame,
+  Conflict,
+  ConflictInput,
 } from "./types";
 
 export function defaultModsPaths(): Promise<string[]> {
@@ -84,4 +86,8 @@ export function deleteLoadout(id: number): Promise<void> {
 
 export function getSavegames(): Promise<Savegame[]> {
   return invoke<Savegame[]>("get_savegames");
+}
+
+export function detectConflicts(mods: ConflictInput[]): Promise<Conflict[]> {
+  return invoke<Conflict[]>("detect_conflicts", { mods });
 }

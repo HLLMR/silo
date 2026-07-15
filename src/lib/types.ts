@@ -93,3 +93,18 @@ export interface Savegame {
   mapTitle: string | null;
   mods: SaveMod[];
 }
+
+export interface ConflictInput {
+  techName: string;
+  title: string | null;
+  path: string;
+  kind: string;
+}
+
+export interface Conflict {
+  severity: "critical" | "warning";
+  kind: string;
+  name: string;
+  explanation: string;
+  mods: string[];
+}

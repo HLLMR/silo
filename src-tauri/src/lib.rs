@@ -2,6 +2,7 @@
 //! it stays unit-testable (and reusable by a future CLI) without a running app.
 
 pub mod category;
+pub mod conflicts;
 pub mod db;
 pub mod fsgame;
 pub mod icons;
@@ -226,6 +227,16 @@ fn delete_loadout(app: tauri::AppHandle, id: i64) -> Result<(), String> {
     db::delete_loadout(&mut conn, id)
 }
 
+// ── Conflict detection (over the active set) ──
+#[tauri::command]
+async fn detect_conflicts(
+    mods: Vec<conflicts::ConflictInput>,
+) -> Result<Vec<conflicts::Conflict>, String> {
+    tauri::async_runtime::spawn_blocking(move || conflicts::detect(&mods))
+        .await
+        .map_err(|e| e.to_string())
+}
+
 // ── Savegames ──
 #[tauri::command]
 fn get_savegames() -> Result<Vec<savegame::Savegame>, String> {
@@ -254,7 +265,8 @@ pub fn run() {
             get_loadouts,
             save_loadout,
             delete_loadout,
-            get_savegames
+            get_savegames,
+            detect_conflicts
         ])
         .run(tauri::generate_context!())
         .expect("error while running Silo");
