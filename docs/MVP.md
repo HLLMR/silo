@@ -84,3 +84,14 @@ A user points Silo at their mods folder, sees their whole library organized and
 searchable within seconds, builds two profiles, gets warned about a real conflict,
 switches profiles, and launches — with their original files untouched and every
 action reversible.
+
+## Post-MVP backlog (deferred, not scoped into v0.1)
+- **User-defined tags** — a `mod_tag` table, tag chips on rows, and a tag filter in
+  the library toolbar (alongside sort + select-all). Deferred 2026-07-14 to keep
+  MVP moving; the filter bar was shipped without it.
+- **Conflict false-positive refinement** — down-rank clashes where the colliding
+  content is identical (same file hash) or mods share an author/pack, so the
+  critical list stays high-signal.
+- **ModHub integration** — update-checking against a real version source, and
+  optional browsing/downloading (fragile scraping; only if we choose to take it on).
+- **Dependency graph** visualization; per-mod notes/rating; app self-update.

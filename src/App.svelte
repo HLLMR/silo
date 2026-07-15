@@ -95,6 +95,7 @@
   let conflicts = $state<Conflict[]>([]);
   let conflictsOpen = $state(false);
   let conflictTimer: ReturnType<typeof setTimeout> | undefined;
+  let settingsOpen = $state(false);
 
   const criticalCount = $derived(
     conflicts.filter((c) => c.severity === "critical").length,
@@ -431,6 +432,21 @@
     return arr;
   });
 
+  // Select-all checkbox state over the filtered view.
+  const filteredActiveCount = $derived(
+    filtered.reduce((n, m) => n + (activeSet.has(m.techName) ? 1 : 0), 0),
+  );
+  const allFilteredActive = $derived(
+    filtered.length > 0 && filteredActiveCount === filtered.length,
+  );
+  let selectAllEl = $state<HTMLInputElement>();
+  $effect(() => {
+    if (selectAllEl) {
+      selectAllEl.indeterminate =
+        filteredActiveCount > 0 && filteredActiveCount < filtered.length;
+    }
+  });
+
   // Bulk activate/deactivate the currently-filtered set (fast loadout building).
   async function setActiveForFiltered(active: boolean) {
     const next = new Set(activeSet);
@@ -527,15 +543,7 @@
       </div>
     </div>
 
-    <div class="path" title={roots.join("\n")}>
-      {#if roots.length}
-        <span class="path-label">Watching</span>
-        <span class="path-value">{roots[0]}</span>
-        {#if roots.length > 1}<span class="path-more">+{roots.length - 1}</span>{/if}
-      {:else}
-        <span class="path-label">No mods folder detected</span>
-      {/if}
-    </div>
+    <div class="topbar-spacer"></div>
 
     {#if savegames.length > 0}
       <button
@@ -566,13 +574,18 @@
         Organize {unorganizedCount}
       </button>
     {/if}
-    {#if organizedCount > 0}
-      <button class="btn subtle" onclick={restoreVanilla} disabled={!!busy || scanning}>
-        Restore vanilla
-      </button>
-    {/if}
     <button class="btn primary" onclick={() => runScan()} disabled={scanning || !!busy}>
       {scanning ? "Scanning…" : "Rescan"}
+    </button>
+    <button
+      class="btn icon-btn"
+      class:on={settingsOpen}
+      title="Settings"
+      aria-label="Settings"
+      onclick={() => (settingsOpen = !settingsOpen)}
+      disabled={!!busy}
+    >
+      ⚙
     </button>
   </header>
 
@@ -671,6 +684,66 @@
     </div>
   {/if}
 
+  {#if settingsOpen}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="backdrop" onclick={() => (settingsOpen = false)}></div>
+    <div class="loadouts-panel settings">
+      <div class="lp-head"><span>Settings</span></div>
+
+      <div class="set-section">
+        <div class="set-label">Mods folder</div>
+        {#if roots.length}
+          {#each roots as r (r)}
+            <div class="set-path">{r}</div>
+          {/each}
+        {:else}
+          <div class="set-path muted">No mods folder detected.</div>
+        {/if}
+      </div>
+
+      <div class="set-section">
+        <div class="set-row">
+          <div>
+            <div class="set-label">Auto-file new mods</div>
+            <div class="set-hint">
+              On load, move newly-downloaded .zip mods into the library and keep them active.
+            </div>
+          </div>
+          <button
+            class="switch"
+            class:on={autoFileNew}
+            role="switch"
+            aria-checked={autoFileNew}
+            aria-label="Auto-file new mods"
+            onclick={() => setAutoFile(!autoFileNew)}
+          >
+            <span class="knob"></span>
+          </button>
+        </div>
+      </div>
+
+      {#if organizedCount > 0}
+        <div class="set-section">
+          <div class="set-label">Library layout</div>
+          <div class="set-hint">
+            {organizedCount} mod(s) organized in <code>mods/archive/</code>. Restore moves them all
+            back to a vanilla flat folder (your mods aren't deleted).
+          </div>
+          <button
+            class="set-danger"
+            onclick={() => {
+              settingsOpen = false;
+              restoreVanilla();
+            }}
+            disabled={!!busy || scanning}
+          >
+            Restore vanilla layout
+          </button>
+        </div>
+      {/if}
+    </div>
+  {/if}
+
   {#if scanning}
     <div class="progress">
       <div class="bar" style="width: {pct}%"></div>
@@ -743,14 +816,6 @@
     >
       Hidden
     </button>
-    <button
-      class="toggle"
-      class:on={autoFileNew}
-      title="Automatically file newly-downloaded mods into the library on load (kept active)"
-      onclick={() => setAutoFile(!autoFileNew)}
-    >
-      Auto-file
-    </button>
 
     <input
       class="search"
@@ -769,6 +834,15 @@
 
     <main class="list">
       <div class="crumb">
+        <input
+          type="checkbox"
+          class="select-all"
+          bind:this={selectAllEl}
+          checked={allFilteredActive}
+          disabled={!!busy || filtered.length === 0}
+          title="Activate / deactivate everything in this view"
+          onchange={(e) => setActiveForFiltered(e.currentTarget.checked)}
+        />
         <span class="crumb-path">
           {#if selected.category}
             {selected.category}{selected.subcategory ? " › " + selected.subcategory : ""}
@@ -797,25 +871,6 @@
             onclick={() => (sortDir = sortDir === "asc" ? "desc" : "asc")}
           >
             {sortDir === "asc" ? "↑" : "↓"}
-          </button>
-        </div>
-
-        <div class="tb-group">
-          <button
-            class="tb-btn"
-            title="Activate every mod in the current view"
-            onclick={() => setActiveForFiltered(true)}
-            disabled={!!busy || filtered.length === 0}
-          >
-            Activate all
-          </button>
-          <button
-            class="tb-btn"
-            title="Deactivate every mod in the current view"
-            onclick={() => setActiveForFiltered(false)}
-            disabled={!!busy || filtered.length === 0}
-          >
-            Deactivate all
           </button>
         </div>
       </div>
@@ -911,37 +966,6 @@
     font-size: 12px;
     color: var(--text-muted);
   }
-  .path {
-    flex: 1 1 auto;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-  }
-  .path-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-    flex: 0 0 auto;
-  }
-  .path-value {
-    font-size: 12.5px;
-    color: var(--text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .path-more {
-    flex: 0 0 auto;
-    font-size: 11px;
-    color: var(--text-muted);
-  }
   .btn {
     border: 1px solid var(--border);
     background: var(--surface-raised);
@@ -959,8 +983,17 @@
   .btn.primary:hover:not(:disabled) {
     background: var(--primary-hover);
   }
-  .btn.subtle {
-    color: var(--text-muted);
+  .topbar-spacer {
+    flex: 1 1 auto;
+  }
+  .icon-btn {
+    padding: 9px 12px;
+    font-size: 16px;
+    line-height: 1;
+  }
+  .icon-btn.on {
+    color: var(--primary);
+    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
   }
   .btn:hover:not(:disabled):not(.primary) {
     color: var(--text);
@@ -1103,6 +1136,92 @@
   }
   .loadouts-panel.saves {
     width: 380px;
+  }
+  .loadouts-panel.settings {
+    width: 380px;
+  }
+  .set-section {
+    padding: 10px 8px;
+    border-top: 1px solid var(--border);
+  }
+  .set-section:first-of-type {
+    border-top: none;
+  }
+  .set-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .set-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 8px;
+  }
+  .set-path {
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 7px 9px;
+    word-break: break-all;
+    margin-bottom: 4px;
+  }
+  .set-path.muted {
+    font-style: italic;
+  }
+  .set-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .switch {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 23px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    position: relative;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .switch .knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+  .switch.on {
+    background: color-mix(in srgb, var(--primary) 30%, transparent);
+    border-color: var(--primary);
+  }
+  .switch.on .knob {
+    transform: translateX(17px);
+    background: var(--primary);
+  }
+  .set-danger {
+    border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border));
+    background: transparent;
+    color: var(--danger);
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    font-weight: 600;
+    width: 100%;
+  }
+  .set-danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--danger) 10%, transparent);
+  }
+  .set-danger:disabled {
+    opacity: 0.5;
+    cursor: default;
   }
   .sg-row {
     display: flex;
@@ -1344,6 +1463,14 @@
     font-size: 12px;
     color: var(--text-muted);
   }
+  .select-all {
+    flex: 0 0 auto;
+    width: 15px;
+    height: 15px;
+    margin: 0 7px 0 0;
+    accent-color: var(--primary);
+    cursor: pointer;
+  }
   .tb-spacer {
     flex: 1 1 auto;
   }
@@ -1379,23 +1506,6 @@
   }
   .tb-dir:hover {
     border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
-  }
-  .tb-btn {
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--text);
-    padding: 7px 12px;
-    border-radius: var(--radius-sm);
-    font-size: 12.5px;
-    font-weight: 600;
-  }
-  .tb-btn:hover:not(:disabled) {
-    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
-    color: var(--primary);
-  }
-  .tb-btn:disabled {
-    opacity: 0.5;
-    cursor: default;
   }
   .list-body {
     flex: 1 1 auto;
