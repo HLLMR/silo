@@ -93,6 +93,24 @@
     } catch {}
   }
 
+  // Appearance: system (follow OS) / light / dark. Persisted; applied to <html>.
+  let theme = $state<"system" | "light" | "dark">(
+    (typeof localStorage !== "undefined"
+      ? (localStorage.getItem("silo.theme") as "system" | "light" | "dark" | null)
+      : null) ?? "system",
+  );
+  function setTheme(t: "system" | "light" | "dark") {
+    theme = t;
+    try {
+      localStorage.setItem("silo.theme", t);
+    } catch {}
+  }
+  $effect(() => {
+    const el = document.documentElement;
+    if (theme === "system") el.removeAttribute("data-theme");
+    else el.setAttribute("data-theme", theme);
+  });
+
   // Silo only organizes .zip mods (the commercial distribution format). Unpacked
   // dir mods are left in place — that's how dev/work-in-progress mods live until
   // they're officially packaged.
@@ -867,6 +885,17 @@
       <div class="lp-head"><span>Settings</span></div>
 
       <div class="set-section">
+        <div class="set-label">Appearance</div>
+        <div class="seg">
+          {#each ["system", "light", "dark"] as t (t)}
+            <button class="seg-btn" class:on={theme === t} onclick={() => setTheme(t as any)}>
+              {t}
+            </button>
+          {/each}
+        </div>
+      </div>
+
+      <div class="set-section">
         <div class="set-row">
           <div class="set-label">Mods folder</div>
           {#if roots.length}
@@ -1530,6 +1559,30 @@
   }
   .set-link:hover {
     text-decoration: underline;
+  }
+  .seg {
+    display: flex;
+    gap: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 3px;
+  }
+  .seg-btn {
+    flex: 1 1 0;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    padding: 6px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+  .seg-btn.on {
+    background: var(--surface-raised);
+    color: var(--primary);
+    box-shadow: var(--shadow-1);
   }
   .set-path {
     font-size: 12px;
