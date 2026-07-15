@@ -14,13 +14,19 @@
     curation,
     onToggle,
     onEditCategory,
+    onToggleActive,
     overridden = false,
+    organized = false,
+    active = false,
   }: {
     mod: ModEntry;
     curation: CurationRow;
     onToggle: (flag: Flag) => void;
     onEditCategory: (ev: MouseEvent) => void;
+    onToggleActive: () => void;
     overridden?: boolean;
+    organized?: boolean;
+    active?: boolean;
   } = $props();
 
   // Lazy icon: rows only mount when scrolled into view (virtualized), so this
@@ -66,8 +72,16 @@
   class="row"
   class:has-error={!!mod.error}
   class:broken={curation.broken}
-  class:dimmed={curation.hidden}
+  class:dimmed={curation.hidden || (organized && !active)}
 >
+  <button
+    class="active-dot"
+    class:on={active}
+    title={active ? "Active — click to park" : "Parked — click to activate"}
+    onclick={onToggleActive}
+    aria-label="Toggle active"
+  ></button>
+
   {#if iconSrc}
     <img class="tile img" src={iconSrc} alt="" loading="lazy" />
   {:else}
@@ -95,6 +109,7 @@
     >
       {mod.category}{mod.subcategory ? " · " + mod.subcategory : ""}
     </button>
+    {#if organized && !active}<span class="badge parked">parked</span>{/if}
     {#if mod.isMap}<span class="badge map">Map</span>{/if}
     {#if mod.mpSupported}<span class="badge mp">MP</span>{/if}
     {#if mod.scriptCount > 0}
@@ -161,6 +176,27 @@
   }
   .row:hover {
     background: color-mix(in srgb, var(--primary) 6%, transparent);
+  }
+  .active-dot {
+    flex: 0 0 auto;
+    width: 12px;
+    height: 12px;
+    padding: 0;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: transparent;
+    transition: background 0.12s ease, border-color 0.12s ease;
+  }
+  .active-dot:hover {
+    border-color: var(--primary);
+  }
+  .active-dot.on {
+    background: var(--primary);
+    border-color: var(--primary);
+  }
+  .badge.parked {
+    color: var(--text-muted);
+    background: color-mix(in srgb, var(--text-muted) 12%, transparent);
   }
   .tile {
     flex: 0 0 auto;

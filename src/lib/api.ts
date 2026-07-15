@@ -8,6 +8,8 @@ import type {
   ScanProgress,
   CurationRow,
   CategoryOverride,
+  ModInput,
+  OrganizeReport,
 } from "./types";
 
 export function defaultModsPaths(): Promise<string[]> {
@@ -46,4 +48,17 @@ export function getOverrides(): Promise<CategoryOverride[]> {
 
 export function setOverride(row: CategoryOverride): Promise<void> {
   return invoke("set_override", { row });
+}
+
+// ── Organize / projection ──
+export function applyOrganize(mods: ModInput[]): Promise<OrganizeReport> {
+  return invoke<OrganizeReport>("apply_organize", { root: null, mods });
+}
+
+export function setActive(active: string[]): Promise<OrganizeReport> {
+  return invoke<OrganizeReport>("set_active", { root: null, active });
+}
+
+export function flatten(): Promise<OrganizeReport> {
+  return invoke<OrganizeReport>("flatten", { root: null });
 }
