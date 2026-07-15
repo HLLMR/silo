@@ -162,6 +162,24 @@ export async function saveTextFile(
 }
 
 // ── Mod settings form ──
+export function userDirPath(): Promise<string | null> {
+  return invoke<string | null>("user_dir_path");
+}
+
+export function getConfig(
+  path: string,
+  paths: string[],
+): Promise<Record<string, string>> {
+  return invoke<Record<string, string>>("get_config", { path, paths });
+}
+
+export function setConfig(
+  path: string,
+  edits: { path: string; value: string }[],
+): Promise<void> {
+  return invoke("set_config", { path, edits });
+}
+
 export function modsWithSettings(): Promise<string[]> {
   return invoke<string[]>("mods_with_settings");
 }
