@@ -139,3 +139,24 @@ export interface SettingsEdit {
   id: number;
   value: string;
 }
+
+export interface RepoRow {
+  techName: string;
+  owner: string;
+  repo: string;
+}
+
+export interface ReleaseInfo {
+  tag: string;
+  name: string | null;
+  publishedAt: string | null;
+  htmlUrl: string | null;
+  assetUrl: string | null;
+  assetName: string | null;
+}
+
+export interface UpdateInfo {
+  hasUpdate: boolean;
+  current: string;
+  release: ReleaseInfo;
+}

@@ -4,7 +4,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { save, open } from "@tauri-apps/plugin-dialog";
-import { revealItemInDir, openPath } from "@tauri-apps/plugin-opener";
+import { revealItemInDir, openPath, openUrl } from "@tauri-apps/plugin-opener";
 import type {
   ScanResult,
   ScanProgress,
@@ -20,6 +20,8 @@ import type {
   GameInfo,
   SettingsFile,
   SettingsEdit,
+  RepoRow,
+  UpdateInfo,
 } from "./types";
 
 export function defaultModsPaths(): Promise<string[]> {
@@ -137,6 +139,30 @@ export function revealInFolder(path: string): Promise<void> {
 
 export function openFolder(path: string): Promise<void> {
   return openPath(path);
+}
+
+export function openExternal(url: string): Promise<void> {
+  return openUrl(url);
+}
+
+export function getModRepos(): Promise<RepoRow[]> {
+  return invoke<RepoRow[]>("get_mod_repos");
+}
+
+export function setModRepo(
+  techName: string,
+  owner: string,
+  repo: string,
+): Promise<void> {
+  return invoke("set_mod_repo", { techName, owner, repo });
+}
+
+export function checkModUpdate(
+  owner: string,
+  repo: string,
+  current: string,
+): Promise<UpdateInfo> {
+  return invoke<UpdateInfo>("check_mod_update", { owner, repo, current });
 }
 
 export function detectGame(): Promise<GameInfo | null> {

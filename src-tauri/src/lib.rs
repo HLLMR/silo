@@ -6,6 +6,7 @@ pub mod conflicts;
 pub mod db;
 pub mod fsgame;
 pub mod gamelaunch;
+pub mod github;
 pub mod icons;
 pub mod moddesc;
 pub mod organize;
@@ -117,6 +118,35 @@ fn get_curation(app: tauri::AppHandle) -> Result<Vec<db::CurationRow>, String> {
 fn set_curation(app: tauri::AppHandle, row: db::CurationRow) -> Result<(), String> {
     let conn = db::open(&db_path(&app)?)?;
     db::set_curation(&conn, &row)
+}
+
+// ── GitHub update checking ──
+#[tauri::command]
+fn get_mod_repos(app: tauri::AppHandle) -> Result<Vec<db::RepoRow>, String> {
+    let conn = db::open(&db_path(&app)?)?;
+    Ok(db::load_repos(&conn))
+}
+
+#[tauri::command]
+fn set_mod_repo(
+    app: tauri::AppHandle,
+    tech_name: String,
+    owner: String,
+    repo: String,
+) -> Result<(), String> {
+    let conn = db::open(&db_path(&app)?)?;
+    db::set_repo(&conn, &tech_name, &owner, &repo)
+}
+
+#[tauri::command]
+async fn check_mod_update(
+    owner: String,
+    repo: String,
+    current: String,
+) -> Result<github::UpdateInfo, String> {
+    tauri::async_runtime::spawn_blocking(move || github::check(&owner, &repo, &current))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 // ── Tags ──
@@ -379,6 +409,9 @@ pub fn run() {
             set_curation,
             get_tags,
             set_tags,
+            get_mod_repos,
+            set_mod_repo,
+            check_mod_update,
             get_overrides,
             set_override,
             plan_organize,
