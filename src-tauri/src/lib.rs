@@ -5,6 +5,7 @@ pub mod category;
 pub mod conflicts;
 pub mod db;
 pub mod fsgame;
+pub mod gamelaunch;
 pub mod icons;
 pub mod moddesc;
 pub mod organize;
@@ -237,6 +238,17 @@ async fn detect_conflicts(
         .map_err(|e| e.to_string())
 }
 
+// ── Game launch ──
+#[tauri::command]
+fn detect_game() -> Option<gamelaunch::GameInfo> {
+    gamelaunch::detect()
+}
+
+#[tauri::command]
+fn launch_game() -> Result<(), String> {
+    gamelaunch::launch()
+}
+
 // ── Savegames ──
 #[tauri::command]
 fn get_savegames() -> Result<Vec<savegame::Savegame>, String> {
@@ -266,7 +278,9 @@ pub fn run() {
             save_loadout,
             delete_loadout,
             get_savegames,
-            detect_conflicts
+            detect_conflicts,
+            detect_game,
+            launch_game
         ])
         .run(tauri::generate_context!())
         .expect("error while running Silo");

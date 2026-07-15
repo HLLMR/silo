@@ -14,6 +14,7 @@ import type {
   Savegame,
   Conflict,
   ConflictInput,
+  GameInfo,
 } from "./types";
 
 export function defaultModsPaths(): Promise<string[]> {
@@ -90,4 +91,12 @@ export function getSavegames(): Promise<Savegame[]> {
 
 export function detectConflicts(mods: ConflictInput[]): Promise<Conflict[]> {
   return invoke<Conflict[]>("detect_conflicts", { mods });
+}
+
+export function detectGame(): Promise<GameInfo | null> {
+  return invoke<GameInfo | null>("detect_game");
+}
+
+export function launchGame(): Promise<void> {
+  return invoke("launch_game");
 }

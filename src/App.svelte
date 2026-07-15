@@ -16,6 +16,8 @@
     deleteLoadout,
     getSavegames,
     detectConflicts,
+    detectGame,
+    launchGame,
   } from "./lib/api";
   import type {
     ModEntry,
@@ -25,6 +27,7 @@
     Loadout,
     Savegame,
     Conflict,
+    GameInfo,
   } from "./lib/types";
 
   const CATEGORIES = [
@@ -97,6 +100,22 @@
   let conflictTimer: ReturnType<typeof setTimeout> | undefined;
   let settingsOpen = $state(false);
   let healthOpen = $state(false);
+  let gameInfo = $state<GameInfo | null>(null);
+
+  async function launch() {
+    if (
+      criticalCount > 0 &&
+      !confirm(
+        `Your active set has ${criticalCount} critical conflict${criticalCount === 1 ? "" : "s"}. Launch anyway?`,
+      )
+    )
+      return;
+    try {
+      await launchGame();
+    } catch (e) {
+      errorMsg = String(e);
+    }
+  }
 
   // Library health: missing dependencies, corrupt/unreadable mods, and mods the
   // game silently ignores (name starts with a digit).
@@ -539,6 +558,7 @@
         );
         await loadLoadouts();
         await loadSavegames();
+        gameInfo = await detectGame();
       } catch (e) {
         errorMsg = String(e);
       }
@@ -594,9 +614,19 @@
         Organize {unorganizedCount}
       </button>
     {/if}
-    <button class="btn primary" onclick={() => runScan()} disabled={scanning || !!busy}>
+    <button class="btn" onclick={() => runScan()} disabled={scanning || !!busy}>
       {scanning ? "Scanning…" : "Rescan"}
     </button>
+    {#if gameInfo}
+      <button
+        class="btn primary launch-btn"
+        title="Launch Farming Simulator 25 with the current active set"
+        onclick={launch}
+        disabled={!!busy}
+      >
+        ▶ Launch{activeSet.size ? ` (${activeSet.size})` : ""}
+      </button>
+    {/if}
     <button
       class="btn icon-btn"
       class:on={settingsOpen}
@@ -718,6 +748,17 @@
           {/each}
         {:else}
           <div class="set-path muted">No mods folder detected.</div>
+        {/if}
+      </div>
+
+      <div class="set-section">
+        <div class="set-label">Game</div>
+        {#if gameInfo}
+          <div class="set-path">{gameInfo.installDir}</div>
+        {:else}
+          <div class="set-path muted">
+            Farming Simulator 25 install not found. The Launch button is hidden.
+          </div>
         {/if}
       </div>
 
@@ -1069,6 +1110,9 @@
   .icon-btn.on {
     color: var(--primary);
     border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  }
+  .launch-btn {
+    font-weight: 700;
   }
   .btn:hover:not(:disabled):not(.primary) {
     color: var(--text);
