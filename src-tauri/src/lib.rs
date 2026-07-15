@@ -13,6 +13,7 @@ pub mod savegame;
 pub mod scan;
 pub mod settings_form;
 pub mod store;
+pub mod xmlconfig;
 
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -296,6 +297,31 @@ fn save_text(path: String, content: String) -> Result<(), String> {
     std::fs::write(&path, content).map_err(|e| e.to_string())
 }
 
+/// The FS25 user data dir (parent of mods/, savegameN/, game.xml).
+#[tauri::command]
+fn user_dir_path() -> Option<String> {
+    fsgame::user_dir().map(|p| p.to_string_lossy().into_owned())
+}
+
+/// Read specific values from a config XML by path.
+#[tauri::command]
+fn get_config(
+    path: String,
+    paths: Vec<String>,
+) -> Result<std::collections::HashMap<String, String>, String> {
+    let xml = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    Ok(xmlconfig::get_values(&xml, &paths))
+}
+
+/// Apply value edits to a config XML, backing up the original to `<file>.bak`.
+#[tauri::command]
+fn set_config(path: String, edits: Vec<xmlconfig::Edit>) -> Result<(), String> {
+    let xml = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let out = xmlconfig::set_values(&xml, &edits)?;
+    let _ = std::fs::copy(&path, format!("{path}.bak"));
+    std::fs::write(&path, out).map_err(|e| e.to_string())
+}
+
 // ── Mod settings form ──
 #[tauri::command]
 fn mods_with_settings() -> Vec<String> {
@@ -371,6 +397,9 @@ pub fn run() {
             detect_game,
             launch_game,
             save_text,
+            user_dir_path,
+            get_config,
+            set_config,
             mods_with_settings,
             get_mod_settings,
             save_mod_settings,

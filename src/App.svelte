@@ -26,7 +26,14 @@
     setTags,
     openFolder,
     saveTextFile,
+    userDirPath,
   } from "./lib/api";
+  import {
+    GAME_GRAPHICS_FIELDS,
+    GAME_GRAPHICS_PRESETS,
+    type CfgField,
+    type CfgPreset,
+  } from "./lib/configSchemas";
   import type {
     ModEntry,
     ScanResult,
@@ -60,6 +67,7 @@
   import CategoryRail from "./lib/components/CategoryRail.svelte";
   import ModSettings from "./lib/components/ModSettings.svelte";
   import ModDetail from "./lib/components/ModDetail.svelte";
+  import ConfigEditor from "./lib/components/ConfigEditor.svelte";
 
   let roots = $state<string[]>([]);
   let mods = $state<ModEntry[]>([]);
@@ -129,6 +137,26 @@
   let settingsOpen = $state(false);
   let healthOpen = $state(false);
   let statsOpen = $state(false);
+  let userDir = $state<string | null>(null);
+  let configEditor = $state<{
+    title: string;
+    path: string;
+    fields: CfgField[];
+    presets: CfgPreset[];
+    footnote?: string;
+  } | null>(null);
+
+  function openGameGraphics() {
+    if (!userDir) return;
+    settingsOpen = false;
+    configEditor = {
+      title: "Graphics settings — game.xml",
+      path: `${userDir}/game.xml`,
+      fields: GAME_GRAPHICS_FIELDS,
+      presets: GAME_GRAPHICS_PRESETS,
+      footnote: "Changes take effect the next time you launch the game.",
+    };
+  }
 
   function fmtSize(b: number): string {
     if (b >= 1024 ** 3) return (b / 1024 ** 3).toFixed(1) + " GB";
@@ -729,6 +757,7 @@
         await loadLoadouts();
         await loadSavegames();
         gameInfo = await detectGame();
+        userDir = await userDirPath();
         settingsModsSet = new Set(await modsWithSettings());
       } catch (e) {
         errorMsg = String(e);
@@ -970,6 +999,18 @@
         {/if}
       </div>
 
+      {#if userDir}
+        <div class="set-section">
+          <div class="set-row">
+            <div class="set-label">Graphics &amp; performance</div>
+            <button class="set-link" onclick={openGameGraphics}>Edit game.xml ↗</button>
+          </div>
+          <div class="set-hint">
+            Tune graphics settings (presets: Performance / Balanced / Quality) without launching the game.
+          </div>
+        </div>
+      {/if}
+
       <div class="set-section">
         <div class="set-row">
           <div class="set-label">Diagnostics</div>
@@ -1026,6 +1067,17 @@
       modName={settingsMod.techName}
       title={settingsMod.title}
       onClose={() => (settingsMod = null)}
+    />
+  {/if}
+
+  {#if configEditor}
+    <ConfigEditor
+      title={configEditor.title}
+      path={configEditor.path}
+      fields={configEditor.fields}
+      presets={configEditor.presets}
+      footnote={configEditor.footnote}
+      onClose={() => (configEditor = null)}
     />
   {/if}
 
