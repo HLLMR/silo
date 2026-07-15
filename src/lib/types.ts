@@ -108,3 +108,9 @@ export interface Conflict {
   explanation: string;
   mods: string[];
 }
+
+export interface GameInfo {
+  appId: string;
+  exe: string;
+  installDir: string;
+}
