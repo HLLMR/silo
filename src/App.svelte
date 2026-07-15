@@ -31,6 +31,8 @@
   import {
     GAME_GRAPHICS_FIELDS,
     GAME_GRAPHICS_PRESETS,
+    SAVEGAME_FIELDS,
+    SAVEGAME_PRESETS,
     type CfgField,
     type CfgPreset,
   } from "./lib/configSchemas";
@@ -155,6 +157,18 @@
       fields: GAME_GRAPHICS_FIELDS,
       presets: GAME_GRAPHICS_PRESETS,
       footnote: "Changes take effect the next time you launch the game.",
+    };
+  }
+
+  function openSaveConfig(s: Savegame) {
+    if (!userDir) return;
+    savesOpen = false;
+    configEditor = {
+      title: `Configure — ${s.name}`,
+      path: `${userDir}/${s.folder}/careerSavegame.xml`,
+      fields: SAVEGAME_FIELDS,
+      presets: SAVEGAME_PRESETS,
+      footnote: "Edits this savegame's settings. Back up the save first if unsure.",
     };
   }
 
@@ -896,6 +910,13 @@
                 >{/if}
             </div>
           </div>
+          <button
+            class="sg-make"
+            title="Edit this savegame's difficulty and gameplay settings"
+            onclick={() => openSaveConfig(s)}
+          >
+            Configure
+          </button>
           <button
             class="sg-make"
             title="Back up this savegame (a safe copy — original untouched)"

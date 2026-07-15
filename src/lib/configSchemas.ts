@@ -73,6 +73,78 @@ export const GAME_GRAPHICS_FIELDS: CfgField[] = [
   { path: `${D}vsync`, label: "V-Sync", kind: "bool" },
 ];
 
+// ── careerSavegame.xml — gameplay settings (safe subset; NOT the internal
+//    revision/collision fields) ──
+const S = "careerSavegame.settings.";
+
+export const SAVEGAME_FIELDS: CfgField[] = [
+  { path: `${S}savegameName`, label: "Save name", kind: "text" },
+  {
+    path: `${S}economicDifficulty`,
+    label: "Economic difficulty",
+    kind: "select",
+    options: ["EASY", "NORMAL", "HARD"],
+  },
+  {
+    path: `${S}growthMode`,
+    label: "Growth",
+    kind: "select",
+    options: ["1", "2", "3"],
+    optionLabels: { "1": "Seasonal", "2": "Paused", "3": "Off" },
+  },
+  {
+    path: `${S}fuelUsage`,
+    label: "Fuel usage",
+    kind: "select",
+    options: ["1", "2", "3"],
+    optionLabels: { "1": "Low", "2": "Normal", "3": "High" },
+  },
+  { path: `${S}dirtInterval`, label: "Dirt interval", kind: "number" },
+  { path: `${S}timeScale`, label: "Time scale", kind: "number", hint: "Day length multiplier" },
+  { path: `${S}autoSaveInterval`, label: "Autosave interval (min)", kind: "number" },
+  { path: `${S}fruitDestruction`, label: "Crop destruction", kind: "bool" },
+  { path: `${S}plowingRequiredEnabled`, label: "Plowing required", kind: "bool" },
+  { path: `${S}stonesEnabled`, label: "Stones", kind: "bool" },
+  { path: `${S}weedsEnabled`, label: "Weeds", kind: "bool" },
+  { path: `${S}limeRequired`, label: "Lime required", kind: "bool" },
+  { path: `${S}isSnowEnabled`, label: "Snow", kind: "bool" },
+  { path: `${S}trafficEnabled`, label: "Traffic", kind: "bool" },
+  { path: `${S}helperBuyFuel`, label: "Helpers buy fuel", kind: "bool" },
+  { path: `${S}helperBuySeeds`, label: "Helpers buy seeds", kind: "bool" },
+  { path: `${S}helperBuyFertilizer`, label: "Helpers buy fertilizer", kind: "bool" },
+];
+
+export const SAVEGAME_PRESETS: CfgPreset[] = [
+  {
+    name: "Casual",
+    values: {
+      [`${S}economicDifficulty`]: "EASY",
+      [`${S}fruitDestruction`]: "false",
+      [`${S}plowingRequiredEnabled`]: "false",
+      [`${S}stonesEnabled`]: "false",
+      [`${S}weedsEnabled`]: "false",
+      [`${S}limeRequired`]: "false",
+      [`${S}helperBuyFuel`]: "true",
+      [`${S}helperBuySeeds`]: "true",
+      [`${S}helperBuyFertilizer`]: "true",
+    },
+  },
+  {
+    name: "Realistic",
+    values: {
+      [`${S}economicDifficulty`]: "HARD",
+      [`${S}fruitDestruction`]: "true",
+      [`${S}plowingRequiredEnabled`]: "true",
+      [`${S}stonesEnabled`]: "true",
+      [`${S}weedsEnabled`]: "true",
+      [`${S}limeRequired`]: "true",
+      [`${S}helperBuyFuel`]: "false",
+      [`${S}helperBuySeeds`]: "false",
+      [`${S}helperBuyFertilizer`]: "false",
+    },
+  },
+];
+
 export const GAME_GRAPHICS_PRESETS: CfgPreset[] = [
   {
     name: "Performance",
