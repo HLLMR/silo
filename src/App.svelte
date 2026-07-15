@@ -23,6 +23,7 @@
     modsWithSettings,
     getTags,
     setTags,
+    openFolder,
   } from "./lib/api";
   import type {
     ModEntry,
@@ -847,7 +848,14 @@
       <div class="lp-head"><span>Settings</span></div>
 
       <div class="set-section">
-        <div class="set-label">Mods folder</div>
+        <div class="set-row">
+          <div class="set-label">Mods folder</div>
+          {#if roots.length}
+            <button class="set-link" onclick={() => openFolder(roots[0]).catch(() => {})}>
+              Open ↗
+            </button>
+          {/if}
+        </div>
         {#if roots.length}
           {#each roots as r (r)}
             <div class="set-path">{r}</div>
@@ -858,7 +866,14 @@
       </div>
 
       <div class="set-section">
-        <div class="set-label">Game</div>
+        <div class="set-row">
+          <div class="set-label">Game</div>
+          {#if gameInfo}
+            <button class="set-link" onclick={() => gameInfo && openFolder(gameInfo.installDir).catch(() => {})}>
+              Open ↗
+            </button>
+          {/if}
+        </div>
         {#if gameInfo}
           <div class="set-path">{gameInfo.installDir}</div>
         {:else}
@@ -1486,6 +1501,16 @@
     color: var(--text-muted);
     line-height: 1.5;
     margin-bottom: 8px;
+  }
+  .set-link {
+    border: none;
+    background: transparent;
+    color: var(--info);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .set-link:hover {
+    text-decoration: underline;
   }
   .set-path {
     font-size: 12px;

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ModEntry, CurationRow, Conflict } from "../types";
-  import { getModIcon, setCuration, setTags } from "../api";
+  import { getModIcon, setCuration, setTags, revealInFolder } from "../api";
 
   type Flag = "favorite" | "hidden" | "broken";
   interface Props {
@@ -130,6 +130,9 @@
     {#if hasSettings}
       <button class="d-act" onclick={onOpenSettings}>⚙ Settings</button>
     {/if}
+    <button class="d-act" onclick={() => revealInFolder(mod.path).catch(() => {})}>
+      📂 Reveal
+    </button>
   </div>
 
   <div class="d-meta">
