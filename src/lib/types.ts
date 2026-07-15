@@ -15,6 +15,8 @@ export interface ModEntry {
 
   isMap: boolean;
   mapTitle: string | null;
+  category: string;
+  subcategory: string | null;
 
   dependencies: string[];
   scriptCount: number;

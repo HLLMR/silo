@@ -1,11 +1,13 @@
 //! Silo core — Tauri command surface. All heavy logic lives in sibling modules so
 //! it stays unit-testable (and reusable by a future CLI) without a running app.
 
+pub mod category;
 pub mod db;
 pub mod fsgame;
 pub mod icons;
 pub mod moddesc;
 pub mod scan;
+pub mod store;
 
 use std::collections::HashSet;
 use std::path::PathBuf;

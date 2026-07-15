@@ -69,6 +69,9 @@
   </div>
 
   <div class="badges">
+    <span class="badge cat">
+      {mod.category}{mod.subcategory ? " · " + mod.subcategory : ""}
+    </span>
     {#if mod.isMap}<span class="badge map">Map</span>{/if}
     {#if mod.mpSupported}<span class="badge mp">MP</span>{/if}
     {#if mod.scriptCount > 0}
@@ -176,6 +179,11 @@
     border: 1px solid var(--border);
     color: var(--text-muted);
     white-space: nowrap;
+  }
+  .badge.cat {
+    color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
   }
   .badge.map {
     color: var(--soil-500);
