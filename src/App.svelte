@@ -4,6 +4,7 @@
   import type { ModEntry, ScanResult } from "./lib/types";
   import VirtualList from "./lib/components/VirtualList.svelte";
   import ModRow from "./lib/components/ModRow.svelte";
+  import CategoryRail from "./lib/components/CategoryRail.svelte";
 
   let roots = $state<string[]>([]);
   let mods = $state<ModEntry[]>([]);
@@ -12,18 +13,31 @@
   let result = $state<ScanResult | null>(null);
   let query = $state("");
   let errorMsg = $state<string | null>(null);
+  let selected = $state<{ category: string | null; subcategory: string | null }>({
+    category: null,
+    subcategory: null,
+  });
 
   const q = $derived(query.trim().toLowerCase());
-  const filtered = $derived(
-    q === ""
-      ? mods
-      : mods.filter(
-          (m) =>
-            (m.title ?? "").toLowerCase().includes(q) ||
-            m.techName.toLowerCase().includes(q) ||
-            (m.author ?? "").toLowerCase().includes(q),
-        ),
-  );
+  const filtered = $derived.by(() => {
+    let list = mods;
+    if (selected.category) {
+      list = list.filter(
+        (m) =>
+          m.category === selected.category &&
+          (!selected.subcategory || m.subcategory === selected.subcategory),
+      );
+    }
+    if (q !== "") {
+      list = list.filter(
+        (m) =>
+          (m.title ?? "").toLowerCase().includes(q) ||
+          m.techName.toLowerCase().includes(q) ||
+          (m.author ?? "").toLowerCase().includes(q),
+      );
+    }
+    return list;
+  });
 
   const stats = $derived.by(() => {
     let maps = 0,
@@ -145,21 +159,42 @@
     />
   </div>
 
-  <main class="list">
-    {#if filtered.length === 0 && !scanning}
-      <div class="empty">
-        {mods.length === 0
-          ? "No mods found yet. Point Silo at your mods folder and rescan."
-          : "No mods match your filter."}
+  <div class="body">
+    <CategoryRail
+      items={mods}
+      {selected}
+      onSelect={(category, subcategory) => (selected = { category, subcategory })}
+    />
+
+    <main class="list">
+      <div class="crumb">
+        <span class="crumb-path">
+          {#if selected.category}
+            {selected.category}{selected.subcategory ? " › " + selected.subcategory : ""}
+          {:else}
+            All mods
+          {/if}
+        </span>
+        <span class="crumb-count tnum">{filtered.length} shown</span>
       </div>
-    {:else}
-      <VirtualList items={filtered} rowHeight={76}>
-        {#snippet row(mod)}
-          <ModRow {mod} />
-        {/snippet}
-      </VirtualList>
-    {/if}
-  </main>
+
+      <div class="list-body">
+        {#if filtered.length === 0 && !scanning}
+          <div class="empty">
+            {mods.length === 0
+              ? "No mods found yet. Point Silo at your mods folder and rescan."
+              : "No mods match your filter."}
+          </div>
+        {:else}
+          <VirtualList items={filtered} rowHeight={76}>
+            {#snippet row(mod)}
+              <ModRow {mod} />
+            {/snippet}
+          </VirtualList>
+        {/if}
+      </div>
+    </main>
+  </div>
 </div>
 
 <style>
@@ -322,7 +357,37 @@
     outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
     outline-offset: 1px;
   }
+  .body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+  }
   .list {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .crumb {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .crumb-path {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .crumb-count {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .list-body {
     flex: 1 1 auto;
     min-height: 0;
   }
