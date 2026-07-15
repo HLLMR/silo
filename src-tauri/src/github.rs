@@ -27,12 +27,19 @@ pub struct UpdateInfo {
     pub release: ReleaseInfo,
 }
 
-/// Fetch the latest release for `owner/repo`.
-pub fn latest_release(owner: &str, repo: &str) -> Result<ReleaseInfo, String> {
+const UA: &str = "Silo-FS25-Mod-Manager";
+
+/// Fetch the latest release for `owner/repo`. A token (when present) raises the
+/// rate limit to 5000/hr and allows private repos.
+pub fn latest_release(owner: &str, repo: &str, token: Option<&str>) -> Result<ReleaseInfo, String> {
     let url = format!("https://api.github.com/repos/{owner}/{repo}/releases/latest");
-    let resp = ureq::get(&url)
-        .set("User-Agent", "Silo-FS25-Mod-Manager")
-        .set("Accept", "application/vnd.github+json")
+    let mut req = ureq::get(&url)
+        .set("User-Agent", UA)
+        .set("Accept", "application/vnd.github+json");
+    if let Some(t) = token {
+        req = req.set("Authorization", &format!("Bearer {t}"));
+    }
+    let resp = req
         .call()
         .map_err(|e| match e {
             ureq::Error::Status(404, _) => "No releases found for this repo".to_string(),
@@ -92,13 +99,96 @@ pub fn is_newer(latest_tag: &str, current: &str) -> bool {
 }
 
 /// Check a repo and compare to the installed version.
-pub fn check(owner: &str, repo: &str, current: &str) -> Result<UpdateInfo, String> {
-    let release = latest_release(owner, repo)?;
+pub fn check(owner: &str, repo: &str, current: &str, token: Option<&str>) -> Result<UpdateInfo, String> {
+    let release = latest_release(owner, repo, token)?;
     Ok(UpdateInfo {
         has_update: is_newer(&release.tag, current),
         current: current.to_string(),
         release,
     })
+}
+
+// ── OAuth Device Flow (RFC 8628) — no client secret, ideal for desktop ──
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeviceCode {
+    pub device_code: String,
+    pub user_code: String,
+    pub verification_uri: String,
+    pub interval: u64,
+    pub expires_in: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PollResult {
+    /// "ok" | "pending" | "slow_down" | "expired" | "denied" | "error"
+    pub status: String,
+    pub token: Option<String>,
+    pub error: Option<String>,
+}
+
+/// Step 1: request a device + user code for the given OAuth App client id.
+pub fn device_start(client_id: &str) -> Result<DeviceCode, String> {
+    let resp = ureq::post("https://github.com/login/device/code")
+        .set("Accept", "application/json")
+        .set("User-Agent", UA)
+        .send_form(&[("client_id", client_id), ("scope", "read:user")])
+        .map_err(|e| e.to_string())?;
+    let v: serde_json::Value = resp.into_json().map_err(|e| e.to_string())?;
+    if let Some(err) = v["error"].as_str() {
+        return Err(format!(
+            "{}: {}",
+            err,
+            v["error_description"].as_str().unwrap_or("device code request failed")
+        ));
+    }
+    Ok(DeviceCode {
+        device_code: v["device_code"].as_str().unwrap_or("").to_string(),
+        user_code: v["user_code"].as_str().unwrap_or("").to_string(),
+        verification_uri: v["verification_uri"].as_str().unwrap_or("https://github.com/login/device").to_string(),
+        interval: v["interval"].as_u64().unwrap_or(5),
+        expires_in: v["expires_in"].as_u64().unwrap_or(900),
+    })
+}
+
+/// Step 2 (polled): exchange the device code for a token once the user approves.
+pub fn device_poll(client_id: &str, device_code: &str) -> Result<PollResult, String> {
+    let resp = ureq::post("https://github.com/login/oauth/access_token")
+        .set("Accept", "application/json")
+        .set("User-Agent", UA)
+        .send_form(&[
+            ("client_id", client_id),
+            ("device_code", device_code),
+            ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
+        ])
+        .map_err(|e| e.to_string())?;
+    let v: serde_json::Value = resp.into_json().map_err(|e| e.to_string())?;
+    if let Some(tok) = v["access_token"].as_str() {
+        return Ok(PollResult { status: "ok".into(), token: Some(tok.to_string()), error: None });
+    }
+    let err = v["error"].as_str().unwrap_or("error");
+    let status = match err {
+        "authorization_pending" => "pending",
+        "slow_down" => "slow_down",
+        "expired_token" => "expired",
+        "access_denied" => "denied",
+        _ => "error",
+    };
+    Ok(PollResult { status: status.into(), token: None, error: Some(err.to_string()) })
+}
+
+/// The authenticated user's login name (verifies a token).
+pub fn whoami(token: &str) -> Result<String, String> {
+    let resp = ureq::get("https://api.github.com/user")
+        .set("Accept", "application/vnd.github+json")
+        .set("User-Agent", UA)
+        .set("Authorization", &format!("Bearer {token}"))
+        .call()
+        .map_err(|e| e.to_string())?;
+    let v: serde_json::Value = resp.into_json().map_err(|e| e.to_string())?;
+    Ok(v["login"].as_str().unwrap_or("").to_string())
 }
 
 #[cfg(test)]

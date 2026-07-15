@@ -127,6 +127,10 @@ pub fn open(db_path: &Path) -> Result<Connection, String> {
              tech_name TEXT PRIMARY KEY,
              owner     TEXT NOT NULL,
              repo      TEXT NOT NULL
+         );
+         CREATE TABLE IF NOT EXISTS app_setting (
+             key   TEXT PRIMARY KEY,
+             value TEXT NOT NULL
          );",
     )
     .map_err(|e| e.to_string())?;
@@ -149,6 +153,25 @@ pub fn load_tags(conn: &Connection) -> Vec<TagRow> {
         Ok(TagRow { tech_name: r.get(0)?, tag: r.get(1)? })
     });
     rows.map(|r| r.flatten().collect()).unwrap_or_default()
+}
+
+/// Generic app setting get/set (GitHub client id, token, user, …).
+pub fn get_app_setting(conn: &Connection, key: &str) -> Option<String> {
+    conn.query_row("SELECT value FROM app_setting WHERE key = ?1", [key], |r| r.get(0))
+        .ok()
+}
+
+pub fn set_app_setting(conn: &Connection, key: &str, value: Option<&str>) -> Result<(), String> {
+    match value {
+        None => conn.execute("DELETE FROM app_setting WHERE key = ?1", [key]),
+        Some(v) => conn.execute(
+            "INSERT INTO app_setting(key, value) VALUES(?1, ?2)
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            rusqlite::params![key, v],
+        ),
+    }
+    .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 /// Load all mod→repo links.
