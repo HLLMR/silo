@@ -198,3 +198,9 @@ export interface SiloStats {
   mods: number;
   sources: number;
 }
+
+export interface InstallProgress {
+  id: string;
+  done: number;
+  total: number | null;
+}

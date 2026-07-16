@@ -6,7 +6,7 @@
 //! overridable via the `siloapi_base` app_setting so a self-hoster can repoint it.
 
 use serde::{Deserialize, Serialize};
-use std::io::Read;
+use std::io::{Read, Write};
 
 const UA: &str = "Silo-FS25-Mod-Manager";
 pub const DEFAULT_BASE: &str = "https://silo-api.hllmr.com";
@@ -162,22 +162,77 @@ fn urlencode(s: &str) -> String {
     out
 }
 
-/// Download a resolved .zip to `dest`, validating it's really a zip. Reuses the same
-/// PK-magic + size-cap guard as the GitHub installer.
-pub fn download_to(url: &str, dest: &std::path::Path) -> Result<(), String> {
+/// Download a resolved .zip to `dest`, streaming so the caller can report progress.
+/// Validates PK magic, caps at 500 MB, writes to a `.part` file then renames on
+/// success (so a failed download never leaves a half-written mod). `on_progress` is
+/// called with (bytes_done, total_bytes) — total is None when the server omits
+/// Content-Length. Kept Tauri-agnostic; the command layer turns it into events.
+pub fn download_to<F: Fn(u64, Option<u64>)>(
+    url: &str,
+    dest: &std::path::Path,
+    on_progress: F,
+) -> Result<(), String> {
+    const CAP: u64 = 500 * 1024 * 1024;
     let resp = ureq::get(url)
         .set("User-Agent", UA)
         .call()
         .map_err(|e| e.to_string())?;
-    let mut bytes: Vec<u8> = Vec::new();
-    resp.into_reader()
-        .take(500 * 1024 * 1024)
-        .read_to_end(&mut bytes)
-        .map_err(|e| e.to_string())?;
-    if bytes.len() < 4 || &bytes[..2] != b"PK" {
-        return Err("Downloaded file is not a valid .zip".to_string());
+    let total: Option<u64> = resp
+        .header("Content-Length")
+        .and_then(|s| s.parse().ok())
+        .filter(|&t| t <= CAP);
+
+    let part = dest.with_extension("zip.part");
+    let mut file = std::fs::File::create(&part).map_err(|e| e.to_string())?;
+    let mut reader = resp.into_reader();
+
+    let mut buf = [0u8; 64 * 1024];
+    let mut head: Vec<u8> = Vec::with_capacity(2);
+    let mut done: u64 = 0;
+    let mut last_emit: u64 = 0;
+    on_progress(0, total);
+
+    let result = (|| -> Result<(), String> {
+        loop {
+            let n = reader.read(&mut buf).map_err(|e| e.to_string())?;
+            if n == 0 {
+                break;
+            }
+            // Validate the zip's PK magic from the first two bytes.
+            if head.len() < 2 {
+                let need = (2 - head.len()).min(n);
+                head.extend_from_slice(&buf[..need]);
+                if head.len() == 2 && &head[..] != b"PK" {
+                    return Err("Downloaded file is not a valid .zip".to_string());
+                }
+            }
+            done += n as u64;
+            if done > CAP {
+                return Err("Download exceeds the 500 MB safety cap".to_string());
+            }
+            file.write_all(&buf[..n]).map_err(|e| e.to_string())?;
+            // Throttle progress events to ~1 MB steps to avoid flooding the UI.
+            if done - last_emit >= 1024 * 1024 {
+                last_emit = done;
+                on_progress(done, total);
+            }
+        }
+        if head.len() < 2 {
+            return Err("Downloaded file is not a valid .zip".to_string());
+        }
+        Ok(())
+    })();
+
+    if let Err(e) = result {
+        drop(file);
+        let _ = std::fs::remove_file(&part);
+        return Err(e);
     }
-    std::fs::write(dest, &bytes).map_err(|e| e.to_string())
+    file.flush().map_err(|e| e.to_string())?;
+    drop(file);
+    std::fs::rename(&part, dest).map_err(|e| e.to_string())?;
+    on_progress(done, total);
+    Ok(())
 }
 
 #[cfg(test)]
