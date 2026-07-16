@@ -181,6 +181,17 @@ export interface PollResult {
 }
 
 // ── SiloAPI (mod browser) ──
+
+/** One place a mod can be got from. The API decides `installable` — ModHub's CDN
+ *  blocks direct downloads and Nexus gates them, so those open their site instead. */
+export interface ModSourceOption {
+  source: string;
+  sourceUrl: string;
+  version: string | null;
+  installable: boolean;
+  downloadUrl: string | null;
+}
+
 export interface BrowseMod {
   id: string;
   techName: string | null;
@@ -192,6 +203,8 @@ export interface BrowseMod {
   latestVersion: string | null;
   trustScore: number | null;
   updatedAt: string | null;
+  sources: ModSourceOption[];
+  pageUrl: string | null;
 }
 
 export interface SiloStats {
@@ -213,15 +226,8 @@ export interface CatalogUpdate {
   source: string | null;
 }
 
-export interface CatalogModSource {
-  source: string;
-  sourceUrl: string;
-  downloadUrl: string | null;
-}
-
-export interface CatalogModDetail extends BrowseMod {
-  sources: CatalogModSource[];
-}
+/** The detail record is a BrowseMod plus its registrations; sources are the same shape. */
+export type CatalogModDetail = BrowseMod;
 
 export interface CategoryCount {
   category: string;

@@ -33,6 +33,12 @@ pub struct BrowseMod {
     pub trust_score: Option<i64>,
     #[serde(default)]
     pub updated_at: Option<String>,
+    /// Every place this mod can be got from, best-first. Drives the per-source buttons.
+    #[serde(default)]
+    pub sources: Vec<ModSource>,
+    /// Where to send the user when nothing is directly installable.
+    #[serde(default)]
+    pub page_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -40,12 +46,19 @@ struct BrowseResponse {
     mods: Vec<BrowseMod>,
 }
 
-/// A per-source pointer (from `GET /mods/:id`). The download url lives here.
+/// One place a mod can be got from, as the API reports it. The API decides
+/// `installable` (ModHub's CDN 403s hotlinked GETs; Nexus gates downloads), so the
+/// client never re-derives that policy — it just renders a button per source.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ModSource {
     pub source: String,
     pub source_url: String,
+    #[serde(default)]
+    pub version: Option<String>,
+    #[serde(default)]
+    pub installable: bool,
+    /// Only present when `installable` — the API strips URLs it knows won't serve us.
     #[serde(default)]
     pub download_url: Option<String>,
 }
@@ -195,23 +208,43 @@ pub fn detail(base: &str, id: &str) -> Result<ModDetail, String> {
     resp.into_json().map_err(|e| e.to_string())
 }
 
-/// Resolve a mod's best downloadable source into (url, filename). Prefers GitHub
-/// (author-sanctioned release) over ModHub CDN, but takes whatever has a url.
-pub fn resolve_download(base: &str, id: &str) -> Result<(String, String), String> {
+/// Resolve a download into (url, filename). `want` picks a specific source (the button
+/// the user clicked); without it, the API's best-ranked installable source wins.
+///
+/// The API decides what's installable and strips URLs it knows won't serve us, so a
+/// source with no url here is one the user must fetch from its own site.
+pub fn resolve_download(
+    base: &str,
+    id: &str,
+    want: Option<&str>,
+) -> Result<(String, String), String> {
     let detail = detail(base, id)?;
 
-    let with_url: Vec<&ModSource> = detail
-        .sources
-        .iter()
-        .filter(|s| s.download_url.as_deref().is_some_and(|u| !u.is_empty()))
-        .collect();
-    let pick = with_url
-        .iter()
-        .find(|s| s.source == "github")
-        .or_else(|| with_url.first())
-        .ok_or_else(|| "No downloadable source for this mod".to_string())?;
+    let usable = |s: &&ModSource| s.installable && s.download_url.is_some();
+    let pick = match want {
+        Some(name) => detail
+            .sources
+            .iter()
+            .find(|s| s.source == name)
+            .ok_or_else(|| format!("{name} doesn't list this mod"))
+            .and_then(|s| {
+                if usable(&s) {
+                    Ok(s)
+                } else {
+                    Err(format!("{name} doesn't allow direct downloads — open its page instead"))
+                }
+            })?,
+        None => detail
+            .sources
+            .iter()
+            .find(usable)
+            .ok_or_else(|| "No source allows a direct download — open the mod page".to_string())?,
+    };
 
-    let url = pick.download_url.clone().unwrap();
+    let url = pick
+        .download_url
+        .clone()
+        .ok_or_else(|| "That source has no download URL".to_string())?;
     let filename = filename_from_url(&url)
         .ok_or_else(|| "Could not derive a .zip filename from the download URL".to_string())?;
     Ok((url, filename))
