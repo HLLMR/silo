@@ -7,11 +7,12 @@
     siloapiStats,
     siloapiStatus,
     siloapiModDetail,
+    siloapiCategories,
     installRemoteMod,
     onInstallProgress,
     openExternal,
   } from "../api";
-  import type { BrowseMod, SiloStats, CatalogModDetail } from "../types";
+  import type { BrowseMod, SiloStats, CatalogModDetail, CategoryCount } from "../types";
   import type { UnlistenFn } from "@tauri-apps/api/event";
 
   interface Props {
@@ -23,6 +24,8 @@
   let { installed, onInstalled }: Props = $props();
 
   let query = $state("");
+  let category = $state("");
+  let categories = $state<CategoryCount[]>([]);
   let results = $state<BrowseMod[]>([]);
   let stats = $state<SiloStats | null>(null);
   let loading = $state(false);
@@ -77,7 +80,11 @@
     loading = true;
     error = null;
     try {
-      results = await browseMods({ query: query.trim() || undefined, limit: 60 });
+      results = await browseMods({
+        query: query.trim() || undefined,
+        category: category || undefined,
+        limit: 60,
+      });
     } catch (e) {
       error = String(e);
       results = [];
@@ -119,6 +126,11 @@
     } catch {
       /* stats/base are best-effort */
     }
+    try {
+      categories = await siloapiCategories();
+    } catch {
+      // Older server without /categories — the filter just stays hidden.
+    }
     await load();
   });
 
@@ -135,13 +147,23 @@
         </span>
       {/if}
     </div>
-    <input
-      class="search"
-      type="search"
-      placeholder="Search the catalog by title…"
-      bind:value={query}
-      oninput={onSearch}
-    />
+    <div class="bh-controls">
+      {#if categories.length > 0}
+        <select class="cat-select" bind:value={category} onchange={() => load()}>
+          <option value="">All categories</option>
+          {#each categories as c (c.category)}
+            <option value={c.category}>{c.category} ({c.count})</option>
+          {/each}
+        </select>
+      {/if}
+      <input
+        class="search"
+        type="search"
+        placeholder="Search the catalog by title…"
+        bind:value={query}
+        oninput={onSearch}
+      />
+    </div>
   </div>
 
   {#if base}
@@ -158,7 +180,9 @@
   {#if loading && results.length === 0}
     <div class="empty">Loading catalog…</div>
   {:else if results.length === 0}
-    <div class="empty">No mods found{query ? ` for “${query}”` : ""}.</div>
+    <div class="empty">
+      No mods found{query ? ` for “${query}”` : ""}{category ? ` in ${category}` : ""}.
+    </div>
   {:else}
     <div class="grid">
       {#each results as m (m.id)}
@@ -316,6 +340,25 @@
   .catalog-count {
     color: var(--text-muted);
     font-size: 0.85rem;
+  }
+  .bh-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  .cat-select {
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.85rem;
+    max-width: 220px;
+    cursor: pointer;
   }
   .search {
     flex: 1;

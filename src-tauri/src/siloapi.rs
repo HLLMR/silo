@@ -84,6 +84,19 @@ pub struct Stats {
     pub sources: u64,
 }
 
+/// A catalog category and how many mods carry it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategoryCount {
+    pub category: String,
+    pub count: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct CategoriesResponse {
+    #[serde(default)]
+    categories: Vec<CategoryCount>,
+}
+
 /// A best-download pointer from the batch lookup.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Download {
@@ -157,6 +170,13 @@ pub fn lookup(base: &str, tech_names: &[String]) -> Result<Vec<LookupResult>, St
         })?;
     let parsed: LookupResponse = resp.into_json().map_err(|e| e.to_string())?;
     Ok(parsed.results)
+}
+
+/// Catalog categories with counts (whole catalog, most-populated first).
+pub fn categories(base: &str) -> Result<Vec<CategoryCount>, String> {
+    let resp = get(&format!("{}/categories", base.trim_end_matches('/')))?;
+    let parsed: CategoriesResponse = resp.into_json().map_err(|e| e.to_string())?;
+    Ok(parsed.categories)
 }
 
 /// Catalog counts. The API returns counts as strings (bigint) — parse leniently.

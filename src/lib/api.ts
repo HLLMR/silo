@@ -30,6 +30,7 @@ import type {
   InstallProgress,
   CatalogUpdate,
   CatalogModDetail,
+  CategoryCount,
 } from "./types";
 
 export function defaultModsPaths(): Promise<string[]> {
@@ -232,6 +233,11 @@ export function siloapiStats(): Promise<SiloStats> {
 /** One mod's full catalog record + every source it was seen on. */
 export function siloapiModDetail(id: string): Promise<CatalogModDetail> {
   return invoke<CatalogModDetail>("siloapi_mod_detail", { id });
+}
+
+/** Catalog categories with counts, for the Browse filter. */
+export function siloapiCategories(): Promise<CategoryCount[]> {
+  return invoke<CategoryCount[]>("siloapi_categories");
 }
 
 /** Download a browsed mod's .zip into the library. Returns the installed filename. */

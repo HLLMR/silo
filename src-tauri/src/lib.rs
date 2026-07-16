@@ -315,6 +315,15 @@ async fn siloapi_mod_detail(
         .map_err(|e| e.to_string())?
 }
 
+/// Catalog categories with counts, for the Browse filter.
+#[tauri::command]
+async fn siloapi_categories(app: tauri::AppHandle) -> Result<Vec<siloapi::CategoryCount>, String> {
+    let base = siloapi_base(&app)?;
+    tauri::async_runtime::spawn_blocking(move || siloapi::categories(&base))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 async fn siloapi_stats(app: tauri::AppHandle) -> Result<siloapi::Stats, String> {
     let base = siloapi_base(&app)?;
@@ -701,6 +710,7 @@ pub fn run() {
             siloapi_set_base,
             browse_mods,
             siloapi_stats,
+            siloapi_categories,
             siloapi_mod_detail,
             install_remote_mod,
             catalog_check_updates,
