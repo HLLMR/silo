@@ -212,3 +212,13 @@ export interface CatalogUpdate {
   downloadUrl: string | null;
   source: string | null;
 }
+
+export interface CatalogModSource {
+  source: string;
+  sourceUrl: string;
+  downloadUrl: string | null;
+}
+
+export interface CatalogModDetail extends BrowseMod {
+  sources: CatalogModSource[];
+}

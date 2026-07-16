@@ -303,6 +303,18 @@ async fn browse_mods(
     .map_err(|e| e.to_string())?
 }
 
+/// One mod's full catalog record (metadata + every source it was seen on).
+#[tauri::command]
+async fn siloapi_mod_detail(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<siloapi::ModDetail, String> {
+    let base = siloapi_base(&app)?;
+    tauri::async_runtime::spawn_blocking(move || siloapi::detail(&base, &id))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 async fn siloapi_stats(app: tauri::AppHandle) -> Result<siloapi::Stats, String> {
     let base = siloapi_base(&app)?;
@@ -689,6 +701,7 @@ pub fn run() {
             siloapi_set_base,
             browse_mods,
             siloapi_stats,
+            siloapi_mod_detail,
             install_remote_mod,
             catalog_check_updates,
             get_overrides,

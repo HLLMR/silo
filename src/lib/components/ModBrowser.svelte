@@ -6,11 +6,12 @@
     browseMods,
     siloapiStats,
     siloapiStatus,
+    siloapiModDetail,
     installRemoteMod,
     onInstallProgress,
     openExternal,
   } from "../api";
-  import type { BrowseMod, SiloStats } from "../types";
+  import type { BrowseMod, SiloStats, CatalogModDetail } from "../types";
   import type { UnlistenFn } from "@tauri-apps/api/event";
 
   interface Props {
@@ -32,8 +33,31 @@
   // Live download progress per mod id: { done, total } bytes.
   let progress = $state<Record<string, { done: number; total: number | null }>>({});
 
+  // Detail drawer state.
+  let detail = $state<CatalogModDetail | null>(null);
+  let detailLoading = $state(false);
+
   let debounce: ReturnType<typeof setTimeout> | null = null;
   let unlisten: UnlistenFn | null = null;
+
+  async function openDetail(m: BrowseMod) {
+    detail = null;
+    detailLoading = true;
+    try {
+      detail = await siloapiModDetail(m.id);
+    } catch (e) {
+      error = String(e);
+    } finally {
+      detailLoading = false;
+    }
+  }
+
+  const SOURCE_LABEL: Record<string, string> = {
+    github: "GitHub",
+    modhub: "ModHub",
+    nexus: "Nexus Mods",
+    kingmods: "KingMods",
+  };
 
   function pct(id: string): number | null {
     const p = progress[id];
@@ -190,8 +214,8 @@
               {/if}
               <button
                 class="btn ghost"
-                title="Open this mod's catalog record"
-                onclick={() => openExternal(`${base}/mods/${m.id}`)}
+                title="Show details and sources"
+                onclick={() => openDetail(m)}
               >
                 Details
               </button>
@@ -200,6 +224,67 @@
         </div>
       {/each}
     </div>
+  {/if}
+
+  {#if detailLoading || detail}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="drawer-backdrop" onclick={() => (detail = null)}></div>
+    <aside class="drawer">
+      {#if detailLoading}
+        <div class="empty">Loading…</div>
+      {:else if detail}
+        {@const d = detail}
+        <div class="drawer-head">
+          <h3>{d.title}</h3>
+          <button class="drawer-x" title="Close" onclick={() => (detail = null)}>✕</button>
+        </div>
+        <div class="drawer-body">
+          {#if d.imageUrl}
+            <img class="drawer-img" src={d.imageUrl} alt="" />
+          {/if}
+          <dl class="facts">
+            {#if d.author}<dt>Author</dt><dd>{d.author}</dd>{/if}
+            {#if d.latestVersion}<dt>Version</dt><dd class="tnum">{d.latestVersion}</dd>{/if}
+            {#if d.category}<dt>Category</dt><dd>{d.category}</dd>{/if}
+            {#if d.techName}<dt>Tech name</dt><dd class="mono">{d.techName}</dd>{/if}
+            {#if d.trustScore != null}<dt>Trust</dt><dd class="tnum">{d.trustScore}/100</dd>{/if}
+          </dl>
+
+          {#if d.description}
+            <p class="drawer-desc">{d.description}</p>
+          {/if}
+
+          <div class="drawer-sec">Available from</div>
+          {#if d.sources.length === 0}
+            <p class="drawer-none">No sources recorded.</p>
+          {:else}
+            <ul class="srcs">
+              {#each d.sources as s (s.source + s.sourceUrl)}
+                <li>
+                  <span class="src-name">{SOURCE_LABEL[s.source] ?? s.source}</span>
+                  <button class="src-link" onclick={() => openExternal(s.sourceUrl)}>
+                    Open page ↗
+                  </button>
+                  {#if !s.downloadUrl}<span class="src-note">no direct download</span>{/if}
+                </li>
+              {/each}
+            </ul>
+          {/if}
+
+          {#if !hasLocally(d)}
+            <button
+              class="btn primary drawer-install"
+              disabled={installing === d.id}
+              onclick={() => install(d)}
+            >
+              {installing === d.id ? "Installing…" : "Install"}
+            </button>
+          {:else}
+            <div class="drawer-owned">Already in your library</div>
+          {/if}
+        </div>
+      {/if}
+    </aside>
   {/if}
 </div>
 
@@ -426,5 +511,151 @@
   .btn:disabled {
     opacity: 0.55;
     cursor: default;
+  }
+
+  /* ── Detail drawer ── */
+  .drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 40;
+  }
+  .drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(420px, 92vw);
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    box-shadow: var(--shadow-2);
+    z-index: 41;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .drawer-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .drawer-head h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    color: var(--text);
+    flex: 1;
+    line-height: 1.25;
+  }
+  .drawer-x {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: var(--radius-sm);
+  }
+  .drawer-x:hover {
+    background: var(--bg);
+    color: var(--text);
+  }
+  .drawer-body {
+    padding: 14px 16px 24px;
+    overflow-y: auto;
+  }
+  .drawer-img {
+    width: 100%;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+    display: block;
+  }
+  .facts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 12px;
+    margin: 0 0 12px;
+    font-size: 0.85rem;
+  }
+  .facts dt {
+    color: var(--text-muted);
+  }
+  .facts dd {
+    margin: 0;
+    color: var(--text);
+  }
+  .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8rem;
+  }
+  .drawer-desc {
+    color: var(--text);
+    font-size: 0.88rem;
+    line-height: 1.5;
+    margin: 0 0 14px;
+  }
+  .drawer-sec {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .drawer-none {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin: 0 0 14px;
+  }
+  .srcs {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .srcs li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+  }
+  .src-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text);
+  }
+  .src-link {
+    margin-left: auto;
+    border: none;
+    background: transparent;
+    color: var(--info);
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 0;
+  }
+  .src-link:hover {
+    text-decoration: underline;
+  }
+  .src-note {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+  .drawer-install {
+    width: 100%;
+    flex: none;
+  }
+  .drawer-owned {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 8px;
   }
 </style>
