@@ -63,6 +63,32 @@ pub struct Stats {
     pub sources: u64,
 }
 
+/// A best-download pointer from the batch lookup.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Download {
+    pub source: String,
+    pub url: String,
+}
+
+/// One row from `POST /mods/lookup`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LookupResult {
+    pub tech_name: Option<String>,
+    pub id: String,
+    pub title: String,
+    #[serde(default)]
+    pub latest_version: Option<String>,
+    #[serde(default)]
+    pub download: Option<Download>,
+}
+
+#[derive(Debug, Deserialize)]
+struct LookupResponse {
+    #[serde(default)]
+    results: Vec<LookupResult>,
+}
+
 fn get(url: &str) -> Result<ureq::Response, String> {
     ureq::get(url)
         .set("User-Agent", UA)
@@ -96,6 +122,20 @@ pub fn browse(
     let resp = get(&url)?;
     let parsed: BrowseResponse = resp.into_json().map_err(|e| e.to_string())?;
     Ok(parsed.mods)
+}
+
+/// Batch version lookup by tech name. One request covers the whole library.
+pub fn lookup(base: &str, tech_names: &[String]) -> Result<Vec<LookupResult>, String> {
+    let resp = ureq::post(&format!("{}/mods/lookup", base.trim_end_matches('/')))
+        .set("User-Agent", UA)
+        .set("Content-Type", "application/json")
+        .send_json(ureq::json!({ "techNames": tech_names }))
+        .map_err(|e| match e {
+            ureq::Error::Status(code, _) => format!("SiloAPI lookup returned {code}"),
+            other => format!("Could not reach SiloAPI: {other}"),
+        })?;
+    let parsed: LookupResponse = resp.into_json().map_err(|e| e.to_string())?;
+    Ok(parsed.results)
 }
 
 /// Catalog counts. The API returns counts as strings (bigint) — parse leniently.

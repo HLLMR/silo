@@ -349,6 +349,64 @@ async fn install_remote_mod(
     .map_err(|e| e.to_string())?
 }
 
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LocalMod {
+    tech_name: String,
+    version: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CatalogUpdate {
+    tech_name: String,
+    latest: Option<String>,
+    has_update: bool,
+    download_url: Option<String>,
+    source: Option<String>,
+}
+
+/// Check the whole library against the SiloAPI catalog in one request (by tech name),
+/// returning which mods have a newer version and where to get it. Covers ModHub mods
+/// too — not just GitHub-linked ones. Only mods the catalog knows are returned.
+#[tauri::command]
+async fn catalog_check_updates(
+    app: tauri::AppHandle,
+    mods: Vec<LocalMod>,
+) -> Result<Vec<CatalogUpdate>, String> {
+    let base = siloapi_base(&app)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<Vec<CatalogUpdate>, String> {
+        let names: Vec<String> = mods.iter().map(|m| m.tech_name.clone()).collect();
+        let results = siloapi::lookup(&base, &names)?;
+        let by_tech: std::collections::HashMap<&str, &siloapi::LookupResult> = results
+            .iter()
+            .filter_map(|r| r.tech_name.as_deref().map(|t| (t, r)))
+            .collect();
+
+        let mut out = Vec::new();
+        for m in &mods {
+            let Some(r) = by_tech.get(m.tech_name.as_str()) else {
+                continue;
+            };
+            let current = m.version.clone().unwrap_or_default();
+            let has_update = r
+                .latest_version
+                .as_deref()
+                .is_some_and(|latest| github::is_newer(latest, &current));
+            out.push(CatalogUpdate {
+                tech_name: m.tech_name.clone(),
+                latest: r.latest_version.clone(),
+                has_update,
+                download_url: r.download.as_ref().map(|d| d.url.clone()),
+                source: r.download.as_ref().map(|d| d.source.clone()),
+            });
+        }
+        Ok(out)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 fn gh_logout(app: tauri::AppHandle) -> Result<(), String> {
     let conn = db::open(&db_path(&app)?)?;
@@ -632,6 +690,7 @@ pub fn run() {
             browse_mods,
             siloapi_stats,
             install_remote_mod,
+            catalog_check_updates,
             get_overrides,
             set_override,
             plan_organize,
