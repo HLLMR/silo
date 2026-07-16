@@ -12,6 +12,7 @@ pub mod moddesc;
 pub mod organize;
 pub mod savegame;
 pub mod scan;
+pub mod siloapi;
 pub mod settings_form;
 pub mod store;
 pub mod xmlconfig;
@@ -254,6 +255,80 @@ async fn download_update(
         let conn = db::open(&db)?;
         let token = db::get_app_setting(&conn, "gh_token");
         github::download_zip(&asset_url, token.as_deref(), std::path::Path::new(&path))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+// ── SiloAPI (mod browser / discovery) ──
+
+fn siloapi_base(app: &tauri::AppHandle) -> Result<String, String> {
+    let conn = db::open(&db_path(app)?)?;
+    Ok(db::get_app_setting(&conn, "siloapi_base")
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| siloapi::DEFAULT_BASE.to_string()))
+}
+
+#[tauri::command]
+fn siloapi_status(app: tauri::AppHandle) -> Result<String, String> {
+    siloapi_base(&app)
+}
+
+#[tauri::command]
+fn siloapi_set_base(app: tauri::AppHandle, base: String) -> Result<(), String> {
+    let conn = db::open(&db_path(&app)?)?;
+    let v = base.trim().trim_end_matches('/');
+    db::set_app_setting(&conn, "siloapi_base", if v.is_empty() { None } else { Some(v) })
+}
+
+#[tauri::command]
+async fn browse_mods(
+    app: tauri::AppHandle,
+    query: Option<String>,
+    category: Option<String>,
+    limit: Option<u32>,
+    offset: Option<u32>,
+) -> Result<Vec<siloapi::BrowseMod>, String> {
+    let base = siloapi_base(&app)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        siloapi::browse(
+            &base,
+            query.as_deref(),
+            category.as_deref(),
+            limit.unwrap_or(40),
+            offset.unwrap_or(0),
+        )
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn siloapi_stats(app: tauri::AppHandle) -> Result<siloapi::Stats, String> {
+    let base = siloapi_base(&app)?;
+    tauri::async_runtime::spawn_blocking(move || siloapi::stats(&base))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+/// Download a browsed mod's .zip into the library root and return the filename.
+/// The frontend rescans (and auto-files) afterwards, so the mod lands in the archive.
+#[tauri::command]
+async fn install_remote_mod(
+    app: tauri::AppHandle,
+    id: String,
+    root: Option<String>,
+) -> Result<String, String> {
+    let base = siloapi_base(&app)?;
+    let root = primary_root(root)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
+        let (url, filename) = siloapi::resolve_download(&base, &id)?;
+        let dest = root.join(&filename);
+        if dest.exists() {
+            return Err(format!("{filename} is already in your library"));
+        }
+        siloapi::download_to(&url, &dest)?;
+        Ok(filename)
     })
     .await
     .map_err(|e| e.to_string())?
@@ -537,6 +612,11 @@ pub fn run() {
             gh_device_poll,
             gh_logout,
             download_update,
+            siloapi_status,
+            siloapi_set_base,
+            browse_mods,
+            siloapi_stats,
+            install_remote_mod,
             get_overrides,
             set_override,
             plan_organize,

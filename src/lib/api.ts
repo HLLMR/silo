@@ -25,6 +25,8 @@ import type {
   GhStatus,
   DeviceCode,
   PollResult,
+  BrowseMod,
+  SiloStats,
 } from "./types";
 
 export function defaultModsPaths(): Promise<string[]> {
@@ -195,6 +197,38 @@ export function ghLogout(): Promise<void> {
 /** Download a release .zip and install it in place (backs up the old file). */
 export function downloadUpdate(path: string, assetUrl: string): Promise<void> {
   return invoke("download_update", { path, assetUrl });
+}
+
+// ── SiloAPI (mod browser / discovery) ──
+export function siloapiStatus(): Promise<string> {
+  return invoke<string>("siloapi_status");
+}
+
+export function siloapiSetBase(base: string): Promise<void> {
+  return invoke("siloapi_set_base", { base });
+}
+
+export function browseMods(opts: {
+  query?: string;
+  category?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<BrowseMod[]> {
+  return invoke<BrowseMod[]>("browse_mods", {
+    query: opts.query ?? null,
+    category: opts.category ?? null,
+    limit: opts.limit ?? null,
+    offset: opts.offset ?? null,
+  });
+}
+
+export function siloapiStats(): Promise<SiloStats> {
+  return invoke<SiloStats>("siloapi_stats");
+}
+
+/** Download a browsed mod's .zip into the library. Returns the installed filename. */
+export function installRemoteMod(id: string): Promise<string> {
+  return invoke<string>("install_remote_mod", { id, root: null });
 }
 
 export function detectGame(): Promise<GameInfo | null> {

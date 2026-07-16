@@ -74,6 +74,7 @@
   import ModDetail from "./lib/components/ModDetail.svelte";
   import ConfigEditor from "./lib/components/ConfigEditor.svelte";
   import GitHubAuth from "./lib/components/GitHubAuth.svelte";
+  import ModBrowser from "./lib/components/ModBrowser.svelte";
 
   let roots = $state<string[]>([]);
   let mods = $state<ModEntry[]>([]);
@@ -143,6 +144,8 @@
   let settingsOpen = $state(false);
   let healthOpen = $state(false);
   let statsOpen = $state(false);
+  // Top-level view: the local library, or the remote catalog browser.
+  let view = $state<"library" | "browse">("library");
   let userDir = $state<string | null>(null);
   let configEditor = $state<{
     title: string;
@@ -870,6 +873,15 @@
       </div>
     </div>
 
+    <nav class="tabs" aria-label="Views">
+      <button class="tab" class:on={view === "library"} onclick={() => (view = "library")}>
+        Library
+      </button>
+      <button class="tab" class:on={view === "browse"} onclick={() => (view = "browse")}>
+        Browse
+      </button>
+    </nav>
+
     <div class="topbar-spacer"></div>
 
     {#if savegames.length > 0}
@@ -1370,6 +1382,12 @@
     <div class="error">{errorMsg}</div>
   {/if}
 
+  {#if view === "browse"}
+    <ModBrowser
+      installed={libraryTechNames}
+      onInstalled={() => runScan(true)}
+    />
+  {:else}
   <div class="statbar">
     <button class="stat statbtn" title="Library statistics" onclick={() => (statsOpen = !statsOpen)}>
       <span class="stat-num tnum">{mods.length}</span>
@@ -1527,6 +1545,7 @@
       </div>
     </main>
   </div>
+  {/if}
 
   {#if editing}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
@@ -1608,6 +1627,33 @@
   }
   .btn.primary:hover:not(:disabled) {
     background: var(--primary-hover);
+  }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-left: 20px;
+    padding: 3px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .tab {
+    padding: 7px 16px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .tab:hover {
+    color: var(--text);
+  }
+  .tab.on {
+    background: var(--surface-raised);
+    color: var(--text);
+    box-shadow: var(--shadow-1);
   }
   .topbar-spacer {
     flex: 1 1 auto;
