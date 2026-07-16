@@ -26,6 +26,7 @@
     setTags,
     getModRepos,
     checkModUpdate,
+    catalogCheckUpdates,
     downloadUpdate,
     openFolder,
     saveTextFile,
@@ -629,6 +630,7 @@
     latest?: string;
     hasUpdate?: boolean;
     assetUrl?: string | null;
+    source?: string;
     error?: string;
   }
   let updatesOpen = $state(false);
@@ -641,23 +643,54 @@
     updateChecking = true;
     updateResults = [];
     const byTech = new Map(mods.map((m) => [m.techName, m]));
-    const acc: UpdateRow[] = [];
+    const rows = new Map<string, UpdateRow>();
+
+    // 1. One catalog request covers the whole library (GitHub + ModHub mods alike).
+    try {
+      const catalog = await catalogCheckUpdates(
+        mods.map((m) => ({ techName: m.techName, version: m.version ?? undefined })),
+      );
+      for (const c of catalog) {
+        const m = byTech.get(c.techName);
+        if (!m) continue;
+        rows.set(c.techName, {
+          techName: c.techName,
+          title: m.title ?? c.techName,
+          path: m.path,
+          current: m.version ?? undefined,
+          latest: c.latest ?? undefined,
+          hasUpdate: c.hasUpdate,
+          assetUrl: c.downloadUrl,
+          source: c.source ?? undefined,
+        });
+      }
+      updateResults = [...rows.values()];
+    } catch {
+      // Catalog unreachable (e.g. endpoint not yet deployed) — fall back to GitHub only.
+    }
+
+    // 2. Linked GitHub repos are authoritative for the user's chosen source — check
+    //    them directly and let them override the catalog row for that mod.
     for (const [techName, r] of Object.entries(repoMap)) {
       const m = byTech.get(techName);
       if (!m) continue;
-      const row: UpdateRow = { techName, title: m.title ?? techName, path: m.path };
+      const row: UpdateRow =
+        rows.get(techName) ?? { techName, title: m.title ?? techName, path: m.path };
       try {
         const info = await checkModUpdate(r.owner, r.repo, m.version ?? "0");
         row.current = info.current;
         row.latest = info.release.tag;
         row.hasUpdate = info.hasUpdate;
         row.assetUrl = info.release.assetUrl;
+        row.source = "github";
+        row.error = undefined;
       } catch (e) {
-        row.error = String(e);
+        if (!rows.has(techName)) row.error = String(e);
       }
-      acc.push(row);
-      updateResults = [...acc];
+      rows.set(techName, row);
+      updateResults = [...rows.values()];
     }
+
     updateChecking = false;
   }
 
@@ -913,10 +946,10 @@
         Organize {unorganizedCount}
       </button>
     {/if}
-    {#if linkedCount > 0}
+    {#if mods.length > 0}
       <button
         class="btn"
-        title="Check GitHub for updates to linked mods"
+        title="Check the SiloAPI catalog (and any linked GitHub repos) for updates"
         onclick={checkAllUpdates}
         disabled={!!busy || updateChecking}
       >
@@ -1249,13 +1282,19 @@
         </span>
       </div>
       {#if updateResults.length === 0 && !updateChecking}
-        <div class="lp-empty">No linked mods to check. Link a mod to its GitHub repo in its detail panel.</div>
+        <div class="lp-empty">
+          No matches in the catalog. Mods on GitHub can also be linked to their repo in
+          the detail panel.
+        </div>
       {/if}
       {#each availableUpdates as r (r.techName)}
         <div class="hz-row">
           <div class="up-row">
             <div>
-              <div class="hz-name">{r.title}</div>
+              <div class="hz-name">
+                {r.title}
+                {#if r.source}<span class="up-src">{r.source}</span>{/if}
+              </div>
               <div class="hz-detail">{r.current} → <b class="up-new">{r.latest}</b></div>
             </div>
             {#if r.assetUrl}
@@ -2219,6 +2258,18 @@
   }
   .up-new {
     color: var(--accent);
+  }
+  .up-src {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 1px 6px;
+    margin-left: 6px;
+    vertical-align: middle;
   }
   .took {
     font-size: 11px;

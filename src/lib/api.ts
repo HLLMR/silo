@@ -28,6 +28,7 @@ import type {
   BrowseMod,
   SiloStats,
   InstallProgress,
+  CatalogUpdate,
 } from "./types";
 
 export function defaultModsPaths(): Promise<string[]> {
@@ -237,6 +238,15 @@ export function onInstallProgress(
   handler: (p: InstallProgress) => void,
 ): Promise<UnlistenFn> {
   return listen<InstallProgress>("install:progress", (e) => handler(e.payload));
+}
+
+/** Check the whole library against the catalog in one request (by tech name). */
+export function catalogCheckUpdates(
+  mods: { techName: string; version?: string }[],
+): Promise<CatalogUpdate[]> {
+  return invoke<CatalogUpdate[]>("catalog_check_updates", {
+    mods: mods.map((m) => ({ techName: m.techName, version: m.version ?? null })),
+  });
 }
 
 export function detectGame(): Promise<GameInfo | null> {

@@ -204,3 +204,11 @@ export interface InstallProgress {
   done: number;
   total: number | null;
 }
+
+export interface CatalogUpdate {
+  techName: string;
+  latest: string | null;
+  hasUpdate: boolean;
+  downloadUrl: string | null;
+  source: string | null;
+}
