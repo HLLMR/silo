@@ -179,3 +179,22 @@ export interface PollResult {
   status: "ok" | "pending" | "slow_down" | "expired" | "denied" | "error";
   error: string | null;
 }
+
+// ── SiloAPI (mod browser) ──
+export interface BrowseMod {
+  id: string;
+  techName: string | null;
+  title: string;
+  author: string | null;
+  category: string | null;
+  description: string | null;
+  imageUrl: string | null;
+  latestVersion: string | null;
+  trustScore: number | null;
+  updatedAt: string | null;
+}
+
+export interface SiloStats {
+  mods: number;
+  sources: number;
+}
