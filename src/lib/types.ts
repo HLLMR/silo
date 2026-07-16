@@ -222,3 +222,8 @@ export interface CatalogModSource {
 export interface CatalogModDetail extends BrowseMod {
   sources: CatalogModSource[];
 }
+
+export interface CategoryCount {
+  category: string;
+  count: number;
+}
