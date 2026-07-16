@@ -347,13 +347,14 @@ struct InstallProgress {
 async fn install_remote_mod(
     app: tauri::AppHandle,
     id: String,
+    source: Option<String>,
     root: Option<String>,
 ) -> Result<String, String> {
     let base = siloapi_base(&app)?;
     let root = primary_root(root)?;
     let emitter = app.clone();
     tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
-        let (url, filename) = siloapi::resolve_download(&base, &id)?;
+        let (url, filename) = siloapi::resolve_download(&base, &id, source.as_deref())?;
         let dest = root.join(&filename);
         if dest.exists() {
             return Err(format!("{filename} is already in your library"));

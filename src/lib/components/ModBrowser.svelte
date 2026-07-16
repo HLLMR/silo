@@ -12,7 +12,13 @@
     onInstallProgress,
     openExternal,
   } from "../api";
-  import type { BrowseMod, SiloStats, CatalogModDetail, CategoryCount } from "../types";
+  import type {
+    BrowseMod,
+    SiloStats,
+    CatalogModDetail,
+    CategoryCount,
+    ModSourceOption,
+  } from "../types";
   import type { UnlistenFn } from "@tauri-apps/api/event";
 
   interface Props {
@@ -61,6 +67,30 @@
     nexus: "Nexus Mods",
     kingmods: "KingMods",
   };
+  // Compact codes for the card's source buttons, where space is tight.
+  const SOURCE_SHORT: Record<string, string> = {
+    github: "GH",
+    modhub: "MH",
+    nexus: "Nexus",
+    kingmods: "KM",
+  };
+  const shortLabel = (s: string) => SOURCE_SHORT[s] ?? s;
+  const label = (s: string) => SOURCE_LABEL[s] ?? s;
+
+  /** Why a source can't be installed directly — shown on hover and in the drawer. */
+  function gatedReason(source: string): string {
+    if (source === "modhub")
+      return "ModHub blocks downloads from outside its website, so Silo can't install this for you. Opens the mod page.";
+    if (source === "nexus")
+      return "Nexus requires downloads to go through its own site. Opens the mod page.";
+    return "This source doesn't allow direct downloads. Opens the mod page.";
+  }
+
+  /** Click a source button: install it if we can, otherwise open its page. */
+  async function useSource(m: BrowseMod, s: ModSourceOption) {
+    if (s.installable) await install(m, s.source);
+    else await openExternal(s.sourceUrl);
+  }
 
   function pct(id: string): number | null {
     const p = progress[id];
@@ -98,13 +128,13 @@
     debounce = setTimeout(load, 300);
   }
 
-  async function install(m: BrowseMod) {
+  async function install(m: BrowseMod, source?: string) {
     installing = m.id;
     error = null;
     installedNote = null;
     progress = { ...progress, [m.id]: { done: 0, total: null } };
     try {
-      const filename = await installRemoteMod(m.id);
+      const filename = await installRemoteMod(m.id, source);
       installedNote = `Installed ${filename}`;
       onInstalled(filename);
     } catch (e) {
@@ -224,18 +254,31 @@
                 </span>
               </div>
             {/if}
-            <div class="card-actions">
-              {#if here}
-                <button class="btn ghost" disabled>Installed</button>
-              {:else}
+            <!-- One button per source this mod actually lives on, each with that
+                 source's own version — they drift, and that's worth seeing. -->
+            <div class="srcbar">
+              {#each m.sources as s (s.source)}
                 <button
-                  class="btn primary"
-                  disabled={installing === m.id}
-                  onclick={() => install(m)}
+                  class="srcbtn"
+                  class:can-install={s.installable}
+                  disabled={here || installing === m.id}
+                  title={here
+                    ? "Already in your library"
+                    : s.installable
+                      ? `Install from ${label(s.source)}`
+                      : gatedReason(s.source)}
+                  onclick={() => useSource(m, s)}
                 >
-                  {installing === m.id ? "Installing…" : "Install"}
+                  <span class="srcbtn-name">{shortLabel(s.source)}</span>
+                  {#if s.version}<span class="srcbtn-ver tnum">{s.version}</span>{/if}
+                  <span class="srcbtn-icon">{s.installable ? "⬇" : "↗"}</span>
                 </button>
-              {/if}
+              {:else}
+                <span class="srcbar-none">No sources</span>
+              {/each}
+            </div>
+            <div class="card-actions">
+              {#if here}<span class="card-owned">In library</span>{/if}
               <button
                 class="btn ghost"
                 title="Show details and sources"
@@ -285,25 +328,42 @@
             <ul class="srcs">
               {#each d.sources as s (s.source + s.sourceUrl)}
                 <li>
-                  <span class="src-name">{SOURCE_LABEL[s.source] ?? s.source}</span>
-                  <button class="src-link" onclick={() => openExternal(s.sourceUrl)}>
-                    Open page ↗
-                  </button>
-                  {#if !s.downloadUrl}<span class="src-note">no direct download</span>{/if}
+                  <div class="src-head">
+                    <span class="src-name">{label(s.source)}</span>
+                    {#if s.version}<span class="src-ver tnum">{s.version}</span>{/if}
+                    <button
+                      class="src-action"
+                      class:can-install={s.installable}
+                      disabled={hasLocally(d) || installing === d.id}
+                      onclick={() => useSource(d, s)}
+                    >
+                      {#if hasLocally(d)}
+                        In library
+                      {:else if s.installable}
+                        {installing === d.id ? "Installing…" : "Install ⬇"}
+                      {:else}
+                        Open page ↗
+                      {/if}
+                    </button>
+                  </div>
+                  {#if !s.installable}
+                    <p class="src-why">{gatedReason(s.source)}</p>
+                  {/if}
                 </li>
               {/each}
             </ul>
           {/if}
 
-          {#if !hasLocally(d)}
-            <button
-              class="btn primary drawer-install"
-              disabled={installing === d.id}
-              onclick={() => install(d)}
-            >
-              {installing === d.id ? "Installing…" : "Install"}
-            </button>
-          {:else}
+          {#if !hasLocally(d) && d.sources.length > 0 && !d.sources.some((s) => s.installable)}
+            <!-- Nothing here is directly installable — tell the user exactly what to do,
+                 and that Silo will still take it from there. -->
+            <p class="drawer-hint">
+              None of these sources allow apps to download for you. Grab the .zip from a
+              source above and drop it in your mods folder — Silo files it automatically
+              on the next scan.
+            </p>
+          {/if}
+          {#if hasLocally(d)}
             <div class="drawer-owned">Already in your library</div>
           {/if}
         </div>
@@ -522,11 +582,72 @@
     color: var(--text-muted);
     white-space: nowrap;
   }
+  /* One button per source, each showing that source's own version. */
+  .srcbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: auto;
+    padding-top: 8px;
+  }
+  .srcbar-none {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  .srcbtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .srcbtn:hover:not(:disabled) {
+    background: var(--bg);
+    color: var(--text);
+  }
+  /* Directly installable reads as the primary action; the rest are link-outs. */
+  .srcbtn.can-install {
+    border-color: var(--primary);
+    color: var(--primary);
+    font-weight: 600;
+  }
+  .srcbtn.can-install:hover:not(:disabled) {
+    background: var(--primary);
+    color: var(--on-primary);
+  }
+  .srcbtn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .srcbtn-name {
+    font-weight: 600;
+  }
+  .srcbtn-ver {
+    opacity: 0.85;
+  }
+  .srcbtn-icon {
+    opacity: 0.7;
+    font-size: 0.7rem;
+  }
+  .card-owned {
+    font-size: 0.75rem;
+    color: var(--primary);
+    font-weight: 600;
+    align-self: center;
+  }
   .card-actions {
     display: flex;
     gap: 8px;
-    margin-top: auto;
-    padding-top: 6px;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 8px;
   }
   .btn {
     flex: 1;
@@ -538,15 +659,6 @@
     font: inherit;
     font-size: 0.85rem;
     cursor: pointer;
-  }
-  .btn.primary {
-    background: var(--primary);
-    color: var(--on-primary);
-    border-color: transparent;
-    font-weight: 600;
-  }
-  .btn.primary:hover:not(:disabled) {
-    background: var(--primary-hover);
   }
   .btn.ghost {
     flex: 0 0 auto;
@@ -661,39 +773,66 @@
     gap: 6px;
   }
   .srcs li {
-    display: flex;
-    align-items: center;
-    gap: 8px;
     padding: 8px 10px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     background: var(--surface-raised);
+  }
+  .src-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
   .src-name {
     font-weight: 600;
     font-size: 0.85rem;
     color: var(--text);
   }
-  .src-link {
-    margin-left: auto;
-    border: none;
-    background: transparent;
-    color: var(--info);
-    font: inherit;
-    font-size: 0.8rem;
-    cursor: pointer;
-    padding: 0;
-  }
-  .src-link:hover {
-    text-decoration: underline;
-  }
-  .src-note {
-    font-size: 0.72rem;
+  .src-ver {
+    font-size: 0.75rem;
     color: var(--text-muted);
   }
-  .drawer-install {
-    width: 100%;
-    flex: none;
+  .src-action {
+    margin-left: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 0.78rem;
+    padding: 4px 9px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .src-action.can-install {
+    background: var(--primary);
+    border-color: transparent;
+    color: var(--on-primary);
+    font-weight: 600;
+  }
+  .src-action:hover:not(:disabled) {
+    filter: brightness(1.06);
+  }
+  .src-action:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  /* Why this source can't be installed directly — names who's responsible. */
+  .src-why {
+    margin: 6px 0 0;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+  }
+  .drawer-hint {
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 9px 11px;
+    margin: 0 0 12px;
   }
   .drawer-owned {
     text-align: center;

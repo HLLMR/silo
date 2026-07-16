@@ -240,9 +240,10 @@ export function siloapiCategories(): Promise<CategoryCount[]> {
   return invoke<CategoryCount[]>("siloapi_categories");
 }
 
-/** Download a browsed mod's .zip into the library. Returns the installed filename. */
-export function installRemoteMod(id: string): Promise<string> {
-  return invoke<string>("install_remote_mod", { id, root: null });
+/** Download a browsed mod's .zip into the library. Returns the installed filename.
+ *  `source` picks which source to fetch from (the button the user clicked). */
+export function installRemoteMod(id: string, source?: string): Promise<string> {
+  return invoke<string>("install_remote_mod", { id, source: source ?? null, root: null });
 }
 
 /** Per-mod download progress during install. */
