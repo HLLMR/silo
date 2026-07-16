@@ -311,8 +311,17 @@ async fn siloapi_stats(app: tauri::AppHandle) -> Result<siloapi::Stats, String> 
         .map_err(|e| e.to_string())?
 }
 
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct InstallProgress {
+    id: String,
+    done: u64,
+    total: Option<u64>,
+}
+
 /// Download a browsed mod's .zip into the library root and return the filename.
-/// The frontend rescans (and auto-files) afterwards, so the mod lands in the archive.
+/// Streams the download, emitting `install:progress` events per mod id so the UI can
+/// show a bar. The frontend rescans (and auto-files) afterwards.
 #[tauri::command]
 async fn install_remote_mod(
     app: tauri::AppHandle,
@@ -321,13 +330,19 @@ async fn install_remote_mod(
 ) -> Result<String, String> {
     let base = siloapi_base(&app)?;
     let root = primary_root(root)?;
+    let emitter = app.clone();
     tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
         let (url, filename) = siloapi::resolve_download(&base, &id)?;
         let dest = root.join(&filename);
         if dest.exists() {
             return Err(format!("{filename} is already in your library"));
         }
-        siloapi::download_to(&url, &dest)?;
+        siloapi::download_to(&url, &dest, |done, total| {
+            let _ = emitter.emit(
+                "install:progress",
+                InstallProgress { id: id.clone(), done, total },
+            );
+        })?;
         Ok(filename)
     })
     .await

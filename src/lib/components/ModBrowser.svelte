@@ -1,15 +1,17 @@
 <script lang="ts">
   // The "Browse" tab: discover mods from the canonical SiloAPI catalog, see which
   // you already have, and install new ones straight into the library.
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import {
     browseMods,
     siloapiStats,
     siloapiStatus,
     installRemoteMod,
+    onInstallProgress,
     openExternal,
   } from "../api";
   import type { BrowseMod, SiloStats } from "../types";
+  import type { UnlistenFn } from "@tauri-apps/api/event";
 
   interface Props {
     /** Tech names already in the local library, to flag "in library". */
@@ -27,8 +29,21 @@
   let installing = $state<string | null>(null);
   let installedNote = $state<string | null>(null);
   let base = $state("");
+  // Live download progress per mod id: { done, total } bytes.
+  let progress = $state<Record<string, { done: number; total: number | null }>>({});
 
   let debounce: ReturnType<typeof setTimeout> | null = null;
+  let unlisten: UnlistenFn | null = null;
+
+  function pct(id: string): number | null {
+    const p = progress[id];
+    if (!p || !p.total) return null;
+    return Math.min(100, Math.round((p.done / p.total) * 100));
+  }
+
+  function fmtMB(bytes: number): string {
+    return (bytes / (1024 * 1024)).toFixed(1);
+  }
 
   function hasLocally(m: BrowseMod): boolean {
     return m.techName != null && installed.has(m.techName);
@@ -56,6 +71,7 @@
     installing = m.id;
     error = null;
     installedNote = null;
+    progress = { ...progress, [m.id]: { done: 0, total: null } };
     try {
       const filename = await installRemoteMod(m.id);
       installedNote = `Installed ${filename}`;
@@ -64,10 +80,15 @@
       error = String(e);
     } finally {
       installing = null;
+      const { [m.id]: _drop, ...rest } = progress;
+      progress = rest;
     }
   }
 
   onMount(async () => {
+    unlisten = await onInstallProgress((p) => {
+      progress = { ...progress, [p.id]: { done: p.done, total: p.total } };
+    });
     try {
       base = await siloapiStatus();
       stats = await siloapiStats();
@@ -76,6 +97,8 @@
     }
     await load();
   });
+
+  onDestroy(() => unlisten?.());
 </script>
 
 <div class="browse">
@@ -132,6 +155,27 @@
               {#if m.latestVersion}<span class="ver">v{m.latestVersion}</span>{/if}
             </div>
             {#if m.category}<div class="chip">{m.category}</div>{/if}
+            {#if installing === m.id}
+              {@const p = progress[m.id]}
+              <div class="dl">
+                <div class="dl-bar">
+                  <div
+                    class="dl-fill"
+                    class:indet={pct(m.id) === null}
+                    style={pct(m.id) !== null ? `width:${pct(m.id)}%` : ""}
+                  ></div>
+                </div>
+                <span class="dl-text tnum">
+                  {#if p && p.total}
+                    {fmtMB(p.done)} / {fmtMB(p.total)} MB
+                  {:else if p}
+                    {fmtMB(p.done)} MB…
+                  {:else}
+                    Starting…
+                  {/if}
+                </span>
+              </div>
+            {/if}
             <div class="card-actions">
               {#if here}
                 <button class="btn ghost" disabled>Installed</button>
@@ -313,6 +357,42 @@
     background: color-mix(in srgb, var(--soil-500) 16%, transparent);
     padding: 2px 8px;
     border-radius: 999px;
+  }
+  .dl {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+  }
+  .dl-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--bg);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .dl-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 999px;
+    transition: width 0.2s ease;
+  }
+  .dl-fill.indet {
+    width: 35%;
+    animation: indet 1.1s ease-in-out infinite;
+  }
+  @keyframes indet {
+    0% {
+      margin-left: -35%;
+    }
+    100% {
+      margin-left: 100%;
+    }
+  }
+  .dl-text {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    white-space: nowrap;
   }
   .card-actions {
     display: flex;

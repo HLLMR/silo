@@ -27,6 +27,7 @@ import type {
   PollResult,
   BrowseMod,
   SiloStats,
+  InstallProgress,
 } from "./types";
 
 export function defaultModsPaths(): Promise<string[]> {
@@ -229,6 +230,13 @@ export function siloapiStats(): Promise<SiloStats> {
 /** Download a browsed mod's .zip into the library. Returns the installed filename. */
 export function installRemoteMod(id: string): Promise<string> {
   return invoke<string>("install_remote_mod", { id, root: null });
+}
+
+/** Per-mod download progress during install. */
+export function onInstallProgress(
+  handler: (p: InstallProgress) => void,
+): Promise<UnlistenFn> {
+  return listen<InstallProgress>("install:progress", (e) => handler(e.payload));
 }
 
 export function detectGame(): Promise<GameInfo | null> {
