@@ -29,6 +29,7 @@ import type {
   SiloStats,
   InstallProgress,
   CatalogUpdate,
+  CatalogModDetail,
 } from "./types";
 
 export function defaultModsPaths(): Promise<string[]> {
@@ -226,6 +227,11 @@ export function browseMods(opts: {
 
 export function siloapiStats(): Promise<SiloStats> {
   return invoke<SiloStats>("siloapi_stats");
+}
+
+/** One mod's full catalog record + every source it was seen on. */
+export function siloapiModDetail(id: string): Promise<CatalogModDetail> {
+  return invoke<CatalogModDetail>("siloapi_mod_detail", { id });
 }
 
 /** Download a browsed mod's .zip into the library. Returns the installed filename. */

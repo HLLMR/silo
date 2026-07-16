@@ -50,10 +50,31 @@ pub struct ModSource {
     pub download_url: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-struct ModDetail {
+/// Full record from `GET /mods/:id` — the catalog's view of one mod, including every
+/// source it was seen on. Powers the Browse tab's detail drawer.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModDetail {
+    pub id: String,
     #[serde(default)]
-    sources: Vec<ModSource>,
+    pub tech_name: Option<String>,
+    pub title: String,
+    #[serde(default)]
+    pub author: Option<String>,
+    #[serde(default)]
+    pub category: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub image_url: Option<String>,
+    #[serde(default)]
+    pub latest_version: Option<String>,
+    #[serde(default)]
+    pub trust_score: Option<i64>,
+    #[serde(default)]
+    pub updated_at: Option<String>,
+    #[serde(default)]
+    pub sources: Vec<ModSource>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -148,11 +169,16 @@ pub fn stats(base: &str) -> Result<Stats, String> {
     })
 }
 
+/// One mod's full catalog record, including its cross-source pointers.
+pub fn detail(base: &str, id: &str) -> Result<ModDetail, String> {
+    let resp = get(&format!("{}/mods/{}", base.trim_end_matches('/'), id))?;
+    resp.into_json().map_err(|e| e.to_string())
+}
+
 /// Resolve a mod's best downloadable source into (url, filename). Prefers GitHub
 /// (author-sanctioned release) over ModHub CDN, but takes whatever has a url.
 pub fn resolve_download(base: &str, id: &str) -> Result<(String, String), String> {
-    let resp = get(&format!("{}/mods/{}", base.trim_end_matches('/'), id))?;
-    let detail: ModDetail = resp.into_json().map_err(|e| e.to_string())?;
+    let detail = detail(base, id)?;
 
     let with_url: Vec<&ModSource> = detail
         .sources
