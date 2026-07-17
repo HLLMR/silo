@@ -44,6 +44,17 @@ pub struct BrowseMod {
 #[derive(Debug, Clone, Deserialize)]
 struct BrowseResponse {
     mods: Vec<BrowseMod>,
+    #[serde(default)]
+    total: u64,
+}
+
+/// A page of catalog results plus how many match the filter overall, so the UI can
+/// show "60 of 386" and know when it has reached the end.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BrowsePage {
+    pub mods: Vec<BrowseMod>,
+    pub total: u64,
 }
 
 /// One place a mod can be got from, as the API reports it. The API decides
@@ -153,7 +164,7 @@ pub fn browse(
     category: Option<&str>,
     limit: u32,
     offset: u32,
-) -> Result<Vec<BrowseMod>, String> {
+) -> Result<BrowsePage, String> {
     let mut url = format!(
         "{}/mods?limit={}&offset={}",
         base.trim_end_matches('/'),
@@ -168,7 +179,10 @@ pub fn browse(
     }
     let resp = get(&url)?;
     let parsed: BrowseResponse = resp.into_json().map_err(|e| e.to_string())?;
-    Ok(parsed.mods)
+    Ok(BrowsePage {
+        mods: parsed.mods,
+        total: parsed.total,
+    })
 }
 
 /// Batch version lookup by tech name. One request covers the whole library.

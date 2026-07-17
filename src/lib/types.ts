@@ -207,6 +207,12 @@ export interface BrowseMod {
   pageUrl: string | null;
 }
 
+/** A page of catalog results + how many match the filter overall. */
+export interface BrowsePage {
+  mods: BrowseMod[];
+  total: number;
+}
+
 export interface SiloStats {
   mods: number;
   sources: number;

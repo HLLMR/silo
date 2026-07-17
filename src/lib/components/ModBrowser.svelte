@@ -33,6 +33,9 @@
   let category = $state("");
   let categories = $state<CategoryCount[]>([]);
   let results = $state<BrowseMod[]>([]);
+  let total = $state(0);
+  let lastPageFull = $state(false);
+  let loadingMore = $state(false);
   let stats = $state<SiloStats | null>(null);
   let loading = $state(false);
   let error = $state<string | null>(null);
@@ -106,20 +109,59 @@
     return m.techName != null && installed.has(m.techName);
   }
 
+  const PAGE = 60;
+  // A server predating the `total` field reports 0. Don't render "of 0" or silently
+  // hide Load-more — fall back to "the last page came back full, so there's probably
+  // more", and just omit the total we don't have.
+  const knowsTotal = $derived(total > 0);
+  const hasMore = $derived(knowsTotal ? results.length < total : lastPageFull);
+
+  /** Fetch the first page for the current filters, replacing what's shown. */
   async function load() {
     loading = true;
     error = null;
     try {
-      results = await browseMods({
+      const page = await browseMods({
         query: query.trim() || undefined,
         category: category || undefined,
-        limit: 60,
+        limit: PAGE,
+        offset: 0,
       });
+      results = page.mods;
+      total = page.total;
+      lastPageFull = page.mods.length === PAGE;
     } catch (e) {
       error = String(e);
       results = [];
+      total = 0;
+      lastPageFull = false;
     } finally {
       loading = false;
+    }
+  }
+
+  /** Append the next page. Guards against double-firing and against the filters
+   *  changing mid-flight, which would splice the wrong results onto the grid. */
+  async function loadMore() {
+    if (loadingMore || !hasMore) return;
+    loadingMore = true;
+    const forQuery = query;
+    const forCategory = category;
+    try {
+      const page = await browseMods({
+        query: forQuery.trim() || undefined,
+        category: forCategory || undefined,
+        limit: PAGE,
+        offset: results.length,
+      });
+      if (forQuery !== query || forCategory !== category) return; // filters moved on
+      results = [...results, ...page.mods];
+      total = page.total;
+      lastPageFull = page.mods.length === PAGE;
+    } catch (e) {
+      error = String(e);
+    } finally {
+      loadingMore = false;
     }
   }
 
@@ -196,9 +238,16 @@
     </div>
   </div>
 
-  {#if base}
-    <p class="source-note">Catalog: {base}</p>
-  {/if}
+  <div class="bh-status">
+    {#if results.length > 0}
+      <span class="showing tnum">
+        Showing {results.length.toLocaleString()}{knowsTotal
+          ? ` of ${total.toLocaleString()}`
+          : ""}
+      </span>
+    {/if}
+    {#if base}<span class="source-note">Catalog: {base}</span>{/if}
+  </div>
 
   {#if error}
     <div class="error">{error}</div>
@@ -291,6 +340,22 @@
         </div>
       {/each}
     </div>
+
+    {#if hasMore}
+      <div class="more">
+        <button class="btn more-btn" disabled={loadingMore} onclick={loadMore}>
+          {#if loadingMore}
+            Loading…
+          {:else if knowsTotal}
+            Load {Math.min(PAGE, total - results.length)} more
+          {:else}
+            Load more
+          {/if}
+        </button>
+      </div>
+    {:else if knowsTotal && total > PAGE}
+      <div class="more end tnum">That's all {total.toLocaleString()}.</div>
+    {/if}
   {/if}
 
   {#if detailLoading || detail}
@@ -431,10 +496,39 @@
     color: var(--text);
     font: inherit;
   }
+  .bh-status {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 4px 0 12px;
+    flex-wrap: wrap;
+  }
+  .showing {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
   .source-note {
     color: var(--text-muted);
     font-size: 0.75rem;
-    margin: 2px 0 12px;
+    margin-left: auto;
+    opacity: 0.8;
+  }
+  .more {
+    display: flex;
+    justify-content: center;
+    padding: 24px 0 8px;
+  }
+  .more.end {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+  }
+  .more-btn {
+    padding: 9px 22px;
+    cursor: pointer;
+  }
+  .more-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
   }
   .error {
     background: color-mix(in srgb, var(--danger) 12%, transparent);
