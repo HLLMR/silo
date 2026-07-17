@@ -288,7 +288,7 @@ async fn browse_mods(
     category: Option<String>,
     limit: Option<u32>,
     offset: Option<u32>,
-) -> Result<Vec<siloapi::BrowseMod>, String> {
+) -> Result<siloapi::BrowsePage, String> {
     let base = siloapi_base(&app)?;
     tauri::async_runtime::spawn_blocking(move || {
         siloapi::browse(

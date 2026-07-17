@@ -26,6 +26,7 @@ import type {
   DeviceCode,
   PollResult,
   BrowseMod,
+  BrowsePage,
   SiloStats,
   InstallProgress,
   CatalogUpdate,
@@ -217,8 +218,8 @@ export function browseMods(opts: {
   category?: string;
   limit?: number;
   offset?: number;
-}): Promise<BrowseMod[]> {
-  return invoke<BrowseMod[]>("browse_mods", {
+}): Promise<BrowsePage> {
+  return invoke<BrowsePage>("browse_mods", {
     query: opts.query ?? null,
     category: opts.category ?? null,
     limit: opts.limit ?? null,
