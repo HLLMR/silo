@@ -39,7 +39,7 @@ pub fn rounds_left(n: usize) -> u32 {
         0
     } else {
         // bits needed to represent (n-1) = ceil(log2(n)) for n >= 2
-        (usize::BITS - (n - 1).leading_zeros())
+        usize::BITS - (n - 1).leading_zeros()
     }
 }
 
