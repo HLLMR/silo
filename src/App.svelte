@@ -1487,10 +1487,11 @@
   {/if}
 
   {#if view === "browse"}
-    <ModBrowser
-      installed={libraryTechNames}
-      onInstalled={() => runScan(true)}
-    />
+    <!-- Own scroll region: the library scrolls via its inner VirtualList, but Browse
+         is plain flow content, so it needs a flex-fill scroll container of its own. -->
+    <div class="browse-scroll">
+      <ModBrowser installed={libraryTechNames} onInstalled={() => runScan(true)} />
+    </div>
   {:else}
   <div class="statbar">
     <button class="stat statbtn" title="Library statistics" onclick={() => (statsOpen = !statsOpen)}>
@@ -2428,6 +2429,11 @@
     flex: 1 1 auto;
     min-height: 0;
     display: flex;
+  }
+  .browse-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
   }
   .list {
     flex: 1 1 auto;
