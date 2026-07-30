@@ -81,6 +81,7 @@
   import LogTriage from "./lib/components/LogTriage.svelte";
   import BindingsView from "./lib/components/BindingsView.svelte";
   import MpSync from "./lib/components/MpSync.svelte";
+  import BridgeTool from "./lib/components/BridgeTool.svelte";
 
   let roots = $state<string[]>([]);
   let mods = $state<ModEntry[]>([]);
@@ -153,6 +154,7 @@
   let logOpen = $state(false);
   let bindingsOpen = $state(false);
   let mpOpen = $state(false);
+  let bridgeOpen = $state(false);
   // Active set as manifest refs for MP sync (techName, path, kind, version).
   const activeModRefs = $derived(
     mods
@@ -1497,6 +1499,17 @@
     </div>
   {/if}
 
+  {#if bridgeOpen}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="backdrop" onclick={() => (bridgeOpen = false)}></div>
+    <div class="log-panel">
+      <BridgeTool
+        onGenerated={() => runScan(true)}
+        onClose={() => (bridgeOpen = false)}
+      />
+    </div>
+  {/if}
+
   {#if scanning}
     <div class="progress">
       <div class="bar" style="width: {pct}%"></div>
@@ -1574,6 +1587,14 @@
     >
       <span class="stat-num">⌨</span>
       <span class="stat-label">bindings</span>
+    </button>
+    <button
+      class="stat statbtn"
+      title="Filltype bridge: make a stubborn map filltype work with your equipment"
+      onclick={() => (bridgeOpen = true)}
+    >
+      <span class="stat-num">⛓</span>
+      <span class="stat-label">bridge</span>
     </button>
     {#if result}
       <div class="took tnum" title="Scan wall-clock time">

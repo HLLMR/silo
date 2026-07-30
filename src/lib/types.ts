@@ -286,6 +286,14 @@ export interface MpVerifyReport {
   extra: string[];
 }
 
+// ── Filltype bridge ──
+export interface BridgeSpec {
+  techName: string;
+  title: string;
+  fillTypes: string[];
+  categories: string[];
+}
+
 // ── Input bindings map ──
 export interface Bind {
   action: string;

@@ -37,6 +37,7 @@ import type {
   BindingReport,
   MpModRef,
   MpVerifyReport,
+  BridgeSpec,
 } from "./types";
 
 export function defaultModsPaths(): Promise<string[]> {
@@ -276,6 +277,11 @@ export function scanLog(): Promise<LogReport> {
 /** Parse inputBinding.xml into a per-device binding map. */
 export function scanBindings(): Promise<BindingReport> {
   return invoke<BindingReport>("scan_bindings");
+}
+
+/** Generate a filltype-compatibility bridge companion mod. Returns the created filename. */
+export function generateBridge(spec: BridgeSpec): Promise<string> {
+  return invoke<string>("generate_bridge", { spec, root: null });
 }
 
 // ── Multiplayer mod-set sync ──
