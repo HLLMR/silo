@@ -620,6 +620,14 @@ fn save_text(path: String, content: String) -> Result<(), String> {
     std::fs::write(&path, content).map_err(|e| e.to_string())
 }
 
+/// Clear the scan cache so the next scan re-parses & re-categorizes every mod.
+#[tauri::command]
+fn clear_scan_cache(app: tauri::AppHandle) -> Result<(), String> {
+    let conn = db::open(&db_path(&app)?)?;
+    db::clear_cache(&conn);
+    Ok(())
+}
+
 /// The FS25 user data dir (parent of mods/, savegameN/, game.xml).
 #[tauri::command]
 fn user_dir_path() -> Option<String> {
@@ -871,6 +879,7 @@ pub fn run() {
             launch_game,
             save_text,
             user_dir_path,
+            clear_scan_cache,
             scan_log,
             scan_bindings,
             mp_export,

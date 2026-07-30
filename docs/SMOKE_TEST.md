@@ -12,16 +12,16 @@ closes the app). A packaged build is `npm run tauri:build`.
 ---
 
 ## 0. Launch & shell
-- [ ] `[app]` App launches, no error dialog, window renders the Library view.
-- [ ] `[app]` Library/Browse tabs switch cleanly; theme toggle (Settings) cycles system/light/dark and both themes are legible.
-- [ ] `[app]` Resize the window — no horizontal scroll, panels stay centered.
+- [x] `[app]` App launches, no error dialog, window renders the Library view.
+- [x] `[app]` Library/Browse tabs switch cleanly; theme toggle (Settings) cycles system/light/dark and both themes are legible.
+- [x] `[app]` Resize the window — no horizontal scroll, panels stay centered.
 
 ## 1. Library scan & organize  _(auto-verified: scan/organize/moddesc engines)_
-- [ ] `[app]` Initial scan lists the full library; counts (mods/maps/scripts/DLC) look right; "scanned in N ms" shows.
-- [ ] `[app]` Rescan re-reads without error; warm scan is fast.
-- [ ] `[app]` Organize moves loose zips into `mods/archive/<Category>/`; dev **folder** mods are left untouched (zip-only).
-- [ ] `[app]` Category rail filters; search filters by title/author/tech name; Favorites/Hidden toggles work.
-- [ ] `[app]` Select-all checkbox activates/deactivates the filtered set.
+- [x] `[app]` Initial scan lists the full library; counts (mods/maps/scripts/DLC) look right; "scanned in N ms" shows.
+- [x] `[app]` Rescan re-reads without error; warm scan is fast.
+- [-] `[app]` Organize moves loose zips into `mods/archive/<Category>/`; dev **folder** mods are left untouched (zip-only).
+- [x] `[app]` Category rail filters; search filters by title/author/tech name; Favorites/Hidden toggles work.
+- [x] `[app]` Select-all checkbox activates/deactivates the filtered set.
 
 ## 2. Curation & detail drawer  _(auto-verified: curation/tags/rating store)_
 - [ ] `[app]` Click a mod row → detail drawer opens with icon, metadata, deps (with present/missing status).

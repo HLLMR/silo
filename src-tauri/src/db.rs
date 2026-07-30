@@ -437,6 +437,13 @@ pub fn set_override(conn: &Connection, row: &CategoryOverride) -> Result<(), Str
 
 /// Load the entire scan cache into memory (one query) for lock-free lookups
 /// during the parallel scan.
+/// Drop every cached scan row, forcing the next scan to re-parse (and re-categorize)
+/// every mod from scratch. Used when categorization logic improves and the user wants
+/// it applied to their existing library.
+pub fn clear_cache(conn: &Connection) -> usize {
+    conn.execute("DELETE FROM mod_cache", []).unwrap_or(0)
+}
+
 pub fn load_cache(conn: &Connection) -> HashMap<String, CacheEntry> {
     let mut map = HashMap::new();
     let Ok(mut stmt) = conn.prepare("SELECT path, mtime_ms, size, json FROM mod_cache") else {

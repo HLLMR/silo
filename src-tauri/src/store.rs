@@ -9,9 +9,19 @@ use std::path::Path;
 
 /// Read the `<storeData><category>` of the first storeItem, if any.
 pub fn first_store_category(mod_path: &Path, kind: &str, store_files: &[String]) -> Option<String> {
-    let first = store_files.first()?;
+    // Skip mission-vehicle store items — a contract/script mod (e.g. AdditionalContracts)
+    // ships `missionVehicles/*.xml` for its contracts; those aren't the mod's own shop
+    // presence, and reading the first one miscategorizes the whole mod as that vehicle's
+    // type. If ONLY mission vehicles remain, return None so the keyword heuristic decides.
+    let first = store_files.iter().find(|f| !is_mission_vehicle(f))?;
     let xml = read_member(mod_path, kind, first)?;
     parse_store_category(&xml)
+}
+
+/// A store item under `missionVehicles/` is a contract-mission prop, not the mod's own
+/// shop presence — don't let it decide the mod's category.
+fn is_mission_vehicle(store_file: &str) -> bool {
+    store_file.replace('\\', "/").to_lowercase().contains("missionvehicles/")
 }
 
 fn read_member(mod_path: &Path, kind: &str, member: &str) -> Option<String> {
@@ -71,5 +81,12 @@ mod tests {
     fn reads_category() {
         let xml = r#"<vehicle><storeData><name>X</name><category>tractorsM</category></storeData></vehicle>"#;
         assert_eq!(parse_store_category(xml).as_deref(), Some("tractorsM"));
+    }
+
+    #[test]
+    fn mission_vehicles_are_skipped() {
+        assert!(is_mission_vehicle("missionVehicles/chaff_jaguar990TT.xml"));
+        assert!(is_mission_vehicle("data\\missionVehicles\\x.xml")); // backslashes + nested
+        assert!(!is_mission_vehicle("store/myTractor.xml"));
     }
 }
