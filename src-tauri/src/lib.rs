@@ -12,6 +12,7 @@ pub mod github;
 pub mod icons;
 pub mod logscan;
 pub mod moddesc;
+pub mod mpsync;
 pub mod organize;
 pub mod savegame;
 pub mod scan;
@@ -624,6 +625,30 @@ fn user_dir_path() -> Option<String> {
     fsgame::user_dir().map(|p| p.to_string_lossy().into_owned())
 }
 
+// ── Multiplayer mod-set sync ──
+
+/// Build a shareable manifest (hashed) from the host's active mods.
+#[tauri::command]
+async fn mp_build_manifest(mods: Vec<mpsync::ModRef>) -> Result<mpsync::Manifest, String> {
+    tauri::async_runtime::spawn_blocking(move || mpsync::build_manifest(&mods))
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Verify a manifest against the joiner's local mods: hash them, then diff.
+#[tauri::command]
+async fn mp_verify(
+    manifest: mpsync::Manifest,
+    local: Vec<mpsync::ModRef>,
+) -> Result<mpsync::VerifyReport, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let local_hashed = mpsync::hash_mods(&local);
+        mpsync::diff(&manifest.mods, &local_hashed)
+    })
+    .await
+    .map_err(|e| e.to_string())
+}
+
 /// Parse the FS25 log.txt and report which mods are throwing errors/warnings, whether
 /// the last run crashed, and the culprit ranking. Read-only; touches nothing.
 #[tauri::command]
@@ -817,6 +842,8 @@ pub fn run() {
             user_dir_path,
             scan_log,
             scan_bindings,
+            mp_build_manifest,
+            mp_verify,
             bisect_plan,
             bisect_narrow,
             bisect_snapshot_save,

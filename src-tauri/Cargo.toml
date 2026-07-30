@@ -25,6 +25,7 @@ walkdir = "2"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 quick-xml = "0.37"
 rayon = "1"
+md5 = "0.7"
 dirs = "5"
 # Icon decoding: FS25 mod icons are usually .dds (BC1/BC3/BC7); some are .png/.jpg.
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
