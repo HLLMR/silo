@@ -118,6 +118,36 @@ fn identical_script(parsed: &[Parsed], idxs: &[usize], basename: &str) -> bool {
     prev.is_some()
 }
 
+/// Extract declared `<fillType name>` values (UPPER-cased, as the game keys them) from
+/// a mod's fillTypes XML. Pure — unit-testable. The registry match is case-insensitive
+/// (FillTypeManager string.upper's the name), so we normalize here too.
+fn fill_type_names(xml: &[u8]) -> Vec<String> {
+    use quick_xml::events::Event;
+    use quick_xml::Reader;
+    let mut reader = Reader::from_reader(xml);
+    reader.config_mut().trim_text(true);
+    let mut out = Vec::new();
+    let mut buf = Vec::new();
+    loop {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Start(e)) | Ok(Event::Empty(e)) if e.name().as_ref() == b"fillType" => {
+                if let Some(a) = e.attributes().flatten().find(|a| a.key.as_ref() == b"name") {
+                    if let Ok(v) = a.unescape_value() {
+                        let n = v.trim().to_uppercase();
+                        if !n.is_empty() && !out.contains(&n) {
+                            out.push(n);
+                        }
+                    }
+                }
+            }
+            Ok(Event::Eof) | Err(_) => break,
+            _ => {}
+        }
+        buf.clear();
+    }
+    out
+}
+
 fn labels(parsed: &[Parsed], idxs: &[usize]) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     for &i in idxs {
@@ -254,6 +284,39 @@ pub fn detect(inputs: &[ConflictInput]) -> Vec<Conflict> {
         out.push(c);
     }
 
+    // Cross-mod fillType override: when two mods declare the same <fillType name>, the
+    // later loader OVERWRITES the earlier one's properties in place (verified in
+    // FillTypeManager.lua) — a silent, load-order-dependent clobber. Distinct names are
+    // additive and DON'T conflict, so we flag only genuine same-name collisions.
+    let mut fill_types: HashMap<String, Vec<usize>> = HashMap::new();
+    for (i, p) in parsed.iter().enumerate() {
+        let Some(file) = &p.md.fill_types_file else { continue };
+        let Some(bytes) = read_member(&p.path, &p.kind, file) else { continue };
+        for name in fill_type_names(&bytes) {
+            let v = fill_types.entry(name).or_default();
+            if !v.contains(&i) {
+                v.push(i);
+            }
+        }
+    }
+    for (name, idxs) in fill_types {
+        let labels = labels(&parsed, &idxs);
+        if labels.len() < 2 {
+            continue;
+        }
+        let sa = same_author(&parsed, &idxs);
+        out.push(Conflict {
+            severity: if sa { "info" } else { "warning" }.into(),
+            kind: "fillType".into(),
+            name: name.clone(),
+            explanation: format!(
+                "These mods each define the fillType \"{name}\". FS keeps only one definition — whichever loads last silently overrides the others' settings (capacity, price, etc.), so one mod may misbehave.{}",
+                if sa { " Same author, so likely coordinated." } else { "" }
+            ),
+            mods: labels,
+        });
+    }
+
     // critical → warning → info, then by name.
     let rank = |s: &str| match s {
         "critical" => 0,
@@ -285,5 +348,25 @@ mod tests {
         assert_eq!(c.kind, "map");
         assert_eq!(c.mods.len(), 2);
         assert!(c.name.contains('2'));
+    }
+
+    #[test]
+    fn fill_type_names_upper_and_dedup() {
+        let xml = br#"<map><fillTypes>
+            <fillType name="Limestone" title="Limestone"/>
+            <fillType name="COMPOST"/>
+            <fillType name="limestone"/>
+        </fillTypes></map>"#;
+        let names = fill_type_names(xml);
+        // Case-folded to match the game's registry key, and de-duplicated.
+        assert!(names.contains(&"LIMESTONE".to_string()));
+        assert!(names.contains(&"COMPOST".to_string()));
+        assert_eq!(names.iter().filter(|n| *n == "LIMESTONE").count(), 1);
+    }
+
+    #[test]
+    fn empty_fill_types_is_safe() {
+        assert!(fill_type_names(b"<map></map>").is_empty());
+        assert!(fill_type_names(b"not xml").is_empty());
     }
 }

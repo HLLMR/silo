@@ -49,6 +49,9 @@ pub struct ModDesc {
     pub store_item_files: Vec<String>,
     pub mp_supported: bool,
     pub mp_only: bool,
+    /// `<fillTypes filename>` — the additional fillTypes XML this mod registers. Used to
+    /// detect cross-mod fillType name collisions (silent load-order overrides).
+    pub fill_types_file: Option<String>,
 }
 
 /// Pick the best display title from a set of localized strings.
@@ -131,6 +134,11 @@ fn handle_open(md: &mut ModDesc, e: &quick_xml::events::BytesStart, name: &str, 
             }
         }
         "maps" => md.is_map = true,
+        "fillTypes" if parent == "modDesc" => {
+            if let Some(f) = attr(e, b"filename") {
+                md.fill_types_file = Some(f.replace('\\', "/"));
+            }
+        }
         "map" if parent == "maps" => {
             if md.map_id.is_none() {
                 md.map_id = attr(e, b"id");
