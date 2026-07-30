@@ -8,6 +8,7 @@ pub mod fsgame;
 pub mod gamelaunch;
 pub mod github;
 pub mod icons;
+pub mod logscan;
 pub mod moddesc;
 pub mod organize;
 pub mod savegame;
@@ -621,6 +622,26 @@ fn user_dir_path() -> Option<String> {
     fsgame::user_dir().map(|p| p.to_string_lossy().into_owned())
 }
 
+/// Parse the FS25 log.txt and report which mods are throwing errors/warnings, whether
+/// the last run crashed, and the culprit ranking. Read-only; touches nothing.
+#[tauri::command]
+async fn scan_log() -> Result<logscan::LogReport, String> {
+    let path = fsgame::user_dir()
+        .map(|d| d.join("log.txt"))
+        .ok_or_else(|| "Could not locate the FS25 user directory".to_string())?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<logscan::LogReport, String> {
+        if !path.exists() {
+            return Err("No log.txt found — launch FS25 at least once first".to_string());
+        }
+        // Logs are read as lossy UTF-8; FS writes mostly ASCII but paths can carry stray bytes.
+        let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
+        let text = String::from_utf8_lossy(&bytes);
+        Ok(logscan::parse(&text))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// Read specific values from a config XML by path.
 #[tauri::command]
 fn get_config(
@@ -734,6 +755,7 @@ pub fn run() {
             launch_game,
             save_text,
             user_dir_path,
+            scan_log,
             get_config,
             set_config,
             mods_with_settings,
