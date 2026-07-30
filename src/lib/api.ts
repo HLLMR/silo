@@ -48,6 +48,11 @@ export function scanMods(roots?: string[]): Promise<ScanResult> {
   return invoke<ScanResult>("scan_mods", { roots: roots ?? null });
 }
 
+/** Drop the scan cache so the next scan re-parses & re-categorizes every mod. */
+export function clearScanCache(): Promise<void> {
+  return invoke("clear_scan_cache");
+}
+
 export function getModIcon(
   path: string,
   kind: string,

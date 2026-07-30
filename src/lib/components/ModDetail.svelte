@@ -31,6 +31,10 @@
     hasSettings: boolean;
     libraryTechNames: Set<string>;
     conflicts: Conflict[];
+    categories: string[];
+    isOverridden: boolean;
+    onSetCategory: (category: string, subcategory: string | null) => void;
+    onResetCategory: () => void;
     onClose: () => void;
     onToggle: (flag: Flag) => void;
     onToggleActive: () => void;
@@ -51,6 +55,10 @@
     hasSettings,
     libraryTechNames,
     conflicts,
+    categories,
+    isOverridden,
+    onSetCategory,
+    onResetCategory,
     onClose,
     onToggle,
     onToggleActive,
@@ -88,6 +96,19 @@
       })
       .catch(() => {});
   });
+
+  // Category override editor — the discoverable way to fix a miscategorized mod.
+  // Drafts are synced from the prop by the effect below (which also re-syncs when the
+  // drawer switches mods), so they start empty rather than capturing the initial prop.
+  let catDraft = $state("");
+  let subDraft = $state("");
+  $effect(() => {
+    catDraft = mod.category;
+    subDraft = mod.subcategory ?? "";
+  });
+  const catDirty = $derived(
+    catDraft !== mod.category || (subDraft.trim() || null) !== (mod.subcategory ?? null),
+  );
 
   let installing = $state(false);
   async function installUpdate() {
@@ -257,6 +278,26 @@
     {#if mod.scriptCount > 0}<div><span>Scripts</span><span class="tnum">{mod.scriptCount}</span></div>{/if}
     <div><span>Multiplayer</span>{mod.mpSupported ? "Supported" : "Not marked"}</div>
     {#if organized}<div><span>Library</span>Organized</div>{/if}
+  </div>
+
+  <div class="d-section">
+    <div class="d-label">
+      Category {#if isOverridden}<span class="d-ovr">manual</span>{/if}
+    </div>
+    <div class="d-cat">
+      <select class="d-cat-sel" bind:value={catDraft}>
+        {#each categories as c (c)}<option value={c}>{c}</option>{/each}
+      </select>
+      <input class="d-cat-sub" placeholder="Subcategory (optional)" bind:value={subDraft} />
+    </div>
+    <div class="d-cat-actions">
+      <button class="d-cat-save" disabled={!catDirty} onclick={() => onSetCategory(catDraft, subDraft.trim() || null)}>
+        Save
+      </button>
+      {#if isOverridden}
+        <button class="d-cat-reset" onclick={onResetCategory}>↺ Reset to auto</button>
+      {/if}
+    </div>
   </div>
 
   {#if logHealth}
@@ -534,6 +575,68 @@
     color: var(--text-muted);
     font-weight: 700;
     margin-bottom: 8px;
+  }
+  .d-ovr {
+    font-size: 9px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    padding: 1px 6px;
+    border-radius: 999px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .d-cat {
+    display: flex;
+    gap: 8px;
+  }
+  .d-cat-sel,
+  .d-cat-sub {
+    padding: 7px 9px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.85rem;
+  }
+  .d-cat-sel {
+    flex: 0 0 auto;
+  }
+  .d-cat-sub {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .d-cat-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .d-cat-save {
+    padding: 6px 14px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: var(--primary);
+    color: var(--on-primary);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .d-cat-save:disabled {
+    opacity: 0.5;
+    cursor: default;
+    background: var(--border);
+    color: var(--text-muted);
+  }
+  .d-cat-reset {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 0.82rem;
+    cursor: pointer;
   }
   .d-log {
     font-size: 0.85rem;

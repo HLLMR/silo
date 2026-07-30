@@ -11,6 +11,7 @@
     applyOrganize,
     setActive,
     flatten,
+    clearScanCache,
     getLoadouts,
     saveLoadout,
     deleteLoadout,
@@ -536,6 +537,18 @@
   // Manual "Organize N" button: file new mods, keep them active too.
   const organizeNew = () => fileLooseMods(true);
 
+  async function rebuildLibrary() {
+    busy = "Rebuilding library (re-scanning every mod)…";
+    errorMsg = null;
+    try {
+      await clearScanCache();
+      await runScan(false);
+    } catch (e) {
+      errorMsg = String(e);
+    }
+    busy = null;
+  }
+
   async function restoreVanilla() {
     if (
       !confirm(
@@ -567,14 +580,18 @@
     editing = { techName, x: ev.clientX, y: ev.clientY };
   }
 
-  async function setCategory(techName: string, category: string) {
+  async function setCategory(
+    techName: string,
+    category: string,
+    subcategory: string | null = null,
+  ) {
     overrideMap = {
       ...overrideMap,
-      [techName]: { category, subcategory: null },
+      [techName]: { category, subcategory },
     };
     editing = null;
     try {
-      await setOverride({ techName, category, subcategory: null });
+      await setOverride({ techName, category, subcategory });
     } catch (e) {
       errorMsg = String(e);
     }
@@ -1259,15 +1276,36 @@
         </div>
       </div>
 
-      {#if organizedCount > 0}
-        <div class="set-section">
-          <div class="set-label">Library layout</div>
-          <div class="set-hint">
-            {organizedCount} mod(s) organized in <code>mods/archive/</code>. Restore moves them all
-            back to a vanilla flat folder (your mods aren't deleted).
-          </div>
+      <div class="set-section">
+        <div class="set-label">Library layout</div>
+        <div class="set-hint">
+          Organize sorts your <code>.zip</code> mods into <code>mods/archive/&lt;Category&gt;/</code>
+          (subfolders the game ignores) and projects the active set via hardlinks — no
+          duplication, fully reversible. {#if organizedCount > 0}{organizedCount} mod(s) currently organized.{/if}
+        </div>
+        <div class="set-btnrow">
+          <button
+            class="set-btn"
+            onclick={() => {
+              settingsOpen = false;
+              organizeNew();
+            }}
+            disabled={!!busy || scanning}
+          >
+            Organize {unorganizedCount > 0 ? unorganizedCount : "library"}
+          </button>
+          <button class="set-btn" onclick={rebuildLibrary} disabled={!!busy || scanning}>
+            ↻ Rebuild categories
+          </button>
+        </div>
+        <div class="set-hint" style="margin-top:8px">
+          Rebuild re-scans every mod from scratch — use it after a Silo update improves
+          categorization, so existing mods pick up the better categories.
+        </div>
+        {#if organizedCount > 0}
           <button
             class="set-danger"
+            style="margin-top:10px"
             onclick={() => {
               settingsOpen = false;
               restoreVanilla();
@@ -1276,8 +1314,8 @@
           >
             Restore vanilla layout
           </button>
-        </div>
-      {/if}
+        {/if}
+      </div>
     </div>
   {/if}
 
@@ -1311,6 +1349,10 @@
       hasSettings={settingsModsSet.has(dm.techName)}
       {libraryTechNames}
       {conflicts}
+      categories={CATEGORIES}
+      isOverridden={overrideMap[dm.techName] != null}
+      onSetCategory={(c, s) => setCategory(dm.techName, c, s)}
+      onResetCategory={() => resetCategory(dm.techName)}
       onClose={() => (detailMod = null)}
       onToggle={(flag) => toggleCuration(dm.techName, flag)}
       onToggleActive={() => toggleActive(dm.techName)}
@@ -1747,10 +1789,18 @@
   .topbar {
     display: flex;
     align-items: center;
-    gap: 20px;
-    padding: 14px 20px;
+    gap: 12px 16px;
+    flex-wrap: wrap;
+    padding: 12px 20px;
     border-bottom: 1px solid var(--border);
     background: var(--surface);
+  }
+  /* The spacer pushes actions right on a wide bar, but must not force a blank row when
+     things wrap — collapse it once the bar is narrow enough to wrap. */
+  @media (max-width: 900px) {
+    .topbar-spacer {
+      display: none;
+    }
   }
   .brand {
     display: flex;
@@ -2099,6 +2149,30 @@
     transform: translateX(17px);
     background: var(--primary);
   }
+  .set-btnrow {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .set-btn {
+    flex: 1 1 auto;
+    border: 1px solid var(--border);
+    background: var(--surface-raised);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .set-btn:hover:not(:disabled) {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+  .set-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
   .set-danger {
     border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border));
     background: transparent;
@@ -2108,6 +2182,7 @@
     font-size: 12.5px;
     font-weight: 600;
     width: 100%;
+    cursor: pointer;
   }
   .set-danger:hover:not(:disabled) {
     background: color-mix(in srgb, var(--danger) 10%, transparent);
@@ -2189,7 +2264,8 @@
   .statbar {
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 12px 20px;
+    flex-wrap: wrap;
     padding: 12px 20px;
     border-bottom: 1px solid var(--border);
     background: var(--surface);
