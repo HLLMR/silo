@@ -80,6 +80,7 @@
   import ModBrowser from "./lib/components/ModBrowser.svelte";
   import LogTriage from "./lib/components/LogTriage.svelte";
   import BindingsView from "./lib/components/BindingsView.svelte";
+  import MpSync from "./lib/components/MpSync.svelte";
 
   let roots = $state<string[]>([]);
   let mods = $state<ModEntry[]>([]);
@@ -151,6 +152,13 @@
   let statsOpen = $state(false);
   let logOpen = $state(false);
   let bindingsOpen = $state(false);
+  let mpOpen = $state(false);
+  // Active set as manifest refs for MP sync (techName, path, kind, version).
+  const activeModRefs = $derived(
+    mods
+      .filter((m) => activeSet.has(m.techName))
+      .map((m) => ({ techName: m.techName, path: m.path, kind: m.kind, version: m.version })),
+  );
   // Set when a previous bisection didn't finish (app closed mid-run) — the user's mod
   // set may be partially applied, so offer to restore it.
   let bisectRecovery = $state<string[] | null>(null);
@@ -970,6 +978,16 @@
       {/if}
     </button>
 
+    <button
+      class="btn"
+      class:on={mpOpen}
+      title="Multiplayer: share or verify your mod set so friends can join"
+      onclick={() => (mpOpen = !mpOpen)}
+      disabled={!!busy}
+    >
+      Multiplayer
+    </button>
+
     {#if unorganizedCount > 0 && !autoFileNew}
       <button class="btn" onclick={organizeNew} disabled={!!busy || scanning}>
         Organize {unorganizedCount}
@@ -1468,6 +1486,14 @@
     <div class="backdrop" onclick={() => (bindingsOpen = false)}></div>
     <div class="log-panel">
       <BindingsView onClose={() => (bindingsOpen = false)} />
+    </div>
+  {/if}
+
+  {#if mpOpen}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="backdrop" onclick={() => (mpOpen = false)}></div>
+    <div class="log-panel">
+      <MpSync active={activeModRefs} onClose={() => (mpOpen = false)} />
     </div>
   {/if}
 

@@ -627,26 +627,35 @@ fn user_dir_path() -> Option<String> {
 
 // ── Multiplayer mod-set sync ──
 
-/// Build a shareable manifest (hashed) from the host's active mods.
+/// Hash the host's active set and write a shareable manifest to `path`. Returns the
+/// number of mods written.
 #[tauri::command]
-async fn mp_build_manifest(mods: Vec<mpsync::ModRef>) -> Result<mpsync::Manifest, String> {
-    tauri::async_runtime::spawn_blocking(move || mpsync::build_manifest(&mods))
-        .await
-        .map_err(|e| e.to_string())
-}
-
-/// Verify a manifest against the joiner's local mods: hash them, then diff.
-#[tauri::command]
-async fn mp_verify(
-    manifest: mpsync::Manifest,
-    local: Vec<mpsync::ModRef>,
-) -> Result<mpsync::VerifyReport, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        let local_hashed = mpsync::hash_mods(&local);
-        mpsync::diff(&manifest.mods, &local_hashed)
+async fn mp_export(mods: Vec<mpsync::ModRef>, path: String) -> Result<usize, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<usize, String> {
+        let manifest = mpsync::build_manifest(&mods);
+        let json = serde_json::to_string_pretty(&manifest).map_err(|e| e.to_string())?;
+        std::fs::write(&path, json).map_err(|e| e.to_string())?;
+        Ok(manifest.mods.len())
     })
     .await
-    .map_err(|e| e.to_string())
+    .map_err(|e| e.to_string())?
+}
+
+/// Read a shared manifest from `path`, hash the joiner's local set, and diff.
+#[tauri::command]
+async fn mp_verify_file(
+    path: String,
+    local: Vec<mpsync::ModRef>,
+) -> Result<mpsync::VerifyReport, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<mpsync::VerifyReport, String> {
+        let text = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+        let manifest: mpsync::Manifest = serde_json::from_str(&text)
+            .map_err(|_| "That file isn't a valid Silo mod-set manifest".to_string())?;
+        let local_hashed = mpsync::hash_mods(&local);
+        Ok(mpsync::diff(&manifest.mods, &local_hashed))
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// Parse the FS25 log.txt and report which mods are throwing errors/warnings, whether
@@ -842,8 +851,8 @@ pub fn run() {
             user_dir_path,
             scan_log,
             scan_bindings,
-            mp_build_manifest,
-            mp_verify,
+            mp_export,
+            mp_verify_file,
             bisect_plan,
             bisect_narrow,
             bisect_snapshot_save,

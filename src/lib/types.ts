@@ -260,6 +260,32 @@ export interface LogReport {
   totalFindings: number;
 }
 
+// ── Multiplayer mod-set sync ──
+export interface MpModRef {
+  techName: string;
+  path: string;
+  kind: string;
+  version: string | null;
+}
+export interface MpManifestEntry {
+  techName: string;
+  version: string | null;
+  hash: string;
+  size: number;
+}
+export interface MpMismatch {
+  techName: string;
+  expected: string;
+  got: string;
+}
+export interface MpVerifyReport {
+  ok: boolean;
+  missing: MpManifestEntry[];
+  versionMismatch: MpMismatch[];
+  hashMismatch: MpMismatch[];
+  extra: string[];
+}
+
 // ── Input bindings map ──
 export interface Bind {
   action: string;

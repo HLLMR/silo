@@ -35,6 +35,8 @@ import type {
   LogReport,
   BisectStep,
   BindingReport,
+  MpModRef,
+  MpVerifyReport,
 } from "./types";
 
 export function defaultModsPaths(): Promise<string[]> {
@@ -274,6 +276,26 @@ export function scanLog(): Promise<LogReport> {
 /** Parse inputBinding.xml into a per-device binding map. */
 export function scanBindings(): Promise<BindingReport> {
   return invoke<BindingReport>("scan_bindings");
+}
+
+// ── Multiplayer mod-set sync ──
+/** Prompt for a path and export a manifest of the active set. Returns count, or null if cancelled. */
+export async function mpExport(mods: MpModRef[]): Promise<number | null> {
+  const path = await save({
+    defaultPath: "my-modset.silomp",
+    filters: [{ name: "Silo mod-set", extensions: ["silomp", "json"] }],
+  });
+  if (!path) return null;
+  return await invoke<number>("mp_export", { mods, path });
+}
+/** Prompt for a manifest file and verify the active set against it. Null if cancelled. */
+export async function mpVerify(local: MpModRef[]): Promise<MpVerifyReport | null> {
+  const path = await open({
+    multiple: false,
+    filters: [{ name: "Silo mod-set", extensions: ["silomp", "json"] }],
+  });
+  if (!path || Array.isArray(path)) return null;
+  return await invoke<MpVerifyReport>("mp_verify_file", { path, local });
 }
 
 // ── Guided bisection ──
