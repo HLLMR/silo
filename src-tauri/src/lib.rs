@@ -3,6 +3,7 @@
 
 pub mod bindings;
 pub mod bisect;
+pub mod bridge;
 pub mod category;
 pub mod conflicts;
 pub mod db;
@@ -625,6 +626,27 @@ fn user_dir_path() -> Option<String> {
     fsgame::user_dir().map(|p| p.to_string_lossy().into_owned())
 }
 
+/// Generate a filltype-compatibility bridge companion mod into the library root.
+/// Returns the created zip filename; the frontend rescans to pick it up.
+#[tauri::command]
+async fn generate_bridge(
+    spec: bridge::BridgeSpec,
+    root: Option<String>,
+) -> Result<String, String> {
+    let root = primary_root(root)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
+        let filename = format!("{}.zip", spec.tech_name);
+        let dest = root.join(&filename);
+        if dest.exists() {
+            return Err(format!("{filename} already exists in your mods folder"));
+        }
+        bridge::generate(&spec, &dest)?;
+        Ok(filename)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 // ── Multiplayer mod-set sync ──
 
 /// Hash the host's active set and write a shareable manifest to `path`. Returns the
@@ -853,6 +875,7 @@ pub fn run() {
             scan_bindings,
             mp_export,
             mp_verify_file,
+            generate_bridge,
             bisect_plan,
             bisect_narrow,
             bisect_snapshot_save,
