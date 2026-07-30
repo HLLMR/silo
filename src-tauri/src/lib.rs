@@ -1,6 +1,7 @@
 //! Silo core — Tauri command surface. All heavy logic lives in sibling modules so
 //! it stays unit-testable (and reusable by a future CLI) without a running app.
 
+pub mod bindings;
 pub mod bisect;
 pub mod category;
 pub mod conflicts;
@@ -643,6 +644,23 @@ async fn scan_log() -> Result<logscan::LogReport, String> {
     .map_err(|e| e.to_string())?
 }
 
+/// Parse inputBinding.xml into a per-device binding map (read-only).
+#[tauri::command]
+async fn scan_bindings() -> Result<bindings::BindingReport, String> {
+    let path = fsgame::user_dir()
+        .map(|d| d.join("inputBinding.xml"))
+        .ok_or_else(|| "Could not locate the FS25 user directory".to_string())?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<bindings::BindingReport, String> {
+        if !path.exists() {
+            return Err("No inputBinding.xml found — launch FS25 at least once first".to_string());
+        }
+        let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
+        Ok(bindings::parse(&String::from_utf8_lossy(&bytes)))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 // ── Guided bisection ──
 
 /// Decide the next split for the current suspect pool (pure; see bisect.rs).
@@ -798,6 +816,7 @@ pub fn run() {
             save_text,
             user_dir_path,
             scan_log,
+            scan_bindings,
             bisect_plan,
             bisect_narrow,
             bisect_snapshot_save,
