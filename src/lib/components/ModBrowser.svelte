@@ -31,7 +31,9 @@
 
   let query = $state("");
   let category = $state("");
-  let sort = $state<"recent" | "name">("recent");
+  let sort = $state<"popular" | "recent" | "name" | "downloads" | "rating">(
+    "popular",
+  );
   let categories = $state<CategoryCount[]>([]);
   let results = $state<BrowseMod[]>([]);
   let total = $state(0);
@@ -104,6 +106,13 @@
 
   function fmtMB(bytes: number): string {
     return (bytes / (1024 * 1024)).toFixed(1);
+  }
+
+  /** Compact download counts: 980, 12k, 1.3M. */
+  function fmtCount(n: number): string {
+    if (n < 1000) return `${n}`;
+    if (n < 1_000_000) return `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k`;
+    return `${(n / 1_000_000).toFixed(1)}M`;
   }
 
   function hasLocally(m: BrowseMod): boolean {
@@ -224,6 +233,9 @@
     </div>
     <div class="bh-controls">
       <select class="cat-select" bind:value={sort} onchange={() => load()} title="Sort">
+        <option value="popular">Popular</option>
+        <option value="downloads">Most downloaded</option>
+        <option value="rating">Top rated</option>
         <option value="recent">Newest</option>
         <option value="name">Name (A–Z)</option>
       </select>
@@ -288,6 +300,20 @@
               {#if m.author}<span class="author">{m.author}</span>{/if}
               {#if m.latestVersion}<span class="ver">v{m.latestVersion}</span>{/if}
             </div>
+            {#if m.rating != null || m.downloads != null}
+              <div class="stats">
+                {#if m.rating != null}
+                  <span class="stat" title="Rating">
+                    ⭐ {m.rating.toFixed(1)}{#if m.ratingCount}<span class="stat-sub"
+                        >&nbsp;({fmtCount(m.ratingCount)})</span
+                      >{/if}
+                  </span>
+                {/if}
+                {#if m.downloads != null}
+                  <span class="stat" title="Downloads">⬇ {fmtCount(m.downloads)}</span>
+                {/if}
+              </div>
+            {/if}
             {#if m.category}<div class="chip">{m.category}</div>{/if}
             {#if installing === m.id}
               {@const p = progress[m.id]}
@@ -387,6 +413,16 @@
             {#if d.category}<dt>Category</dt><dd>{d.category}</dd>{/if}
             {#if d.techName}<dt>Tech name</dt><dd class="mono">{d.techName}</dd>{/if}
             {#if d.trustScore != null}<dt>Trust</dt><dd class="tnum">{d.trustScore}/100</dd>{/if}
+            {#if d.rating != null}
+              <dt>Rating</dt>
+              <dd class="tnum">
+                ⭐ {d.rating.toFixed(1)}{#if d.ratingCount}
+                  &nbsp;({fmtCount(d.ratingCount)}){/if}
+              </dd>
+            {/if}
+            {#if d.downloads != null}
+              <dt>Downloads</dt><dd class="tnum">{fmtCount(d.downloads)}</dd>
+            {/if}
           </dl>
 
           {#if d.description}
@@ -638,6 +674,22 @@
   .card-meta .ver {
     margin-left: auto;
     font-variant-numeric: tabular-nums;
+  }
+  .stats {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+  }
+  .stat-sub {
+    color: var(--text-faint, var(--text-muted));
   }
   .chip {
     align-self: flex-start;

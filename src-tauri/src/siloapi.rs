@@ -33,6 +33,16 @@ pub struct BrowseMod {
     pub trust_score: Option<i64>,
     #[serde(default)]
     pub updated_at: Option<String>,
+    // Popularity signals (see SiloAPI docs/ENRICHMENT.md). All optional: they stay None
+    // until the server-side backfill lands, and the UI hides any badge that is None.
+    #[serde(default)]
+    pub downloads: Option<i64>,
+    #[serde(default)]
+    pub rating: Option<f64>,
+    #[serde(default)]
+    pub rating_count: Option<i64>,
+    #[serde(default)]
+    pub popularity: Option<f64>,
     /// Every place this mod can be got from, best-first. Drives the per-source buttons.
     #[serde(default)]
     pub sources: Vec<ModSource>,
@@ -72,6 +82,16 @@ pub struct ModSource {
     /// Only present when `installable` — the API strips URLs it knows won't serve us.
     #[serde(default)]
     pub download_url: Option<String>,
+    // Raw per-source popularity signals — a source only fills what it natively reports
+    // (Nexus: downloads+endorsements, GitHub: downloads+stars, ModHub: rating+count).
+    #[serde(default)]
+    pub downloads: Option<i64>,
+    #[serde(default)]
+    pub rating: Option<f64>,
+    #[serde(default)]
+    pub endorsements: Option<i64>,
+    #[serde(default)]
+    pub stars: Option<i64>,
 }
 
 /// Full record from `GET /mods/:id` — the catalog's view of one mod, including every
@@ -178,15 +198,27 @@ pub fn browse(
     if let Some(c) = category.filter(|s| !s.trim().is_empty()) {
         url.push_str(&format!("&category={}", urlencode(c.trim())));
     }
-    if let Some(s) = sort.filter(|s| !s.trim().is_empty()) {
-        url.push_str(&format!("&sort={}", urlencode(s.trim())));
+
+    let fetch = |u: &str| -> Result<BrowsePage, String> {
+        let resp = get(u)?;
+        let parsed: BrowseResponse = resp.into_json().map_err(|e| e.to_string())?;
+        Ok(BrowsePage {
+            mods: parsed.mods,
+            total: parsed.total,
+        })
+    };
+
+    // A server predating a given sort value (e.g. `popular` before the enrichment
+    // backfill ships) rejects it with an error body rather than a page. Rather than
+    // surface a dead Browse, fall back to the server's default ordering — the new sort
+    // lights up automatically once the API learns the value.
+    match sort.filter(|s| !s.trim().is_empty()) {
+        Some(s) => {
+            let sorted = format!("{}&sort={}", url, urlencode(s.trim()));
+            fetch(&sorted).or_else(|_| fetch(&url))
+        }
+        None => fetch(&url),
     }
-    let resp = get(&url)?;
-    let parsed: BrowseResponse = resp.into_json().map_err(|e| e.to_string())?;
-    Ok(BrowsePage {
-        mods: parsed.mods,
-        total: parsed.total,
-    })
 }
 
 /// Batch version lookup by tech name. One request covers the whole library.

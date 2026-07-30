@@ -190,6 +190,12 @@ export interface ModSourceOption {
   version: string | null;
   installable: boolean;
   downloadUrl: string | null;
+  // Raw per-source popularity signals (see SiloAPI docs/ENRICHMENT.md). Each source
+  // only fills what it natively reports; null until the server backfill lands.
+  downloads?: number | null;
+  rating?: number | null;
+  endorsements?: number | null;
+  stars?: number | null;
 }
 
 export interface BrowseMod {
@@ -203,6 +209,13 @@ export interface BrowseMod {
   latestVersion: string | null;
   trustScore: number | null;
   updatedAt: string | null;
+  // Aggregated popularity (see SiloAPI docs/ENRICHMENT.md). `downloads` is a
+  // cross-source sum, `rating` (0–5) from the rating-bearing source, `popularity` the
+  // composite sort key. All null until the server backfill lands — render null-safe.
+  downloads?: number | null;
+  rating?: number | null;
+  ratingCount?: number | null;
+  popularity?: number | null;
   sources: ModSourceOption[];
   pageUrl: string | null;
 }
