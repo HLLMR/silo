@@ -5,11 +5,20 @@
   import { onMount } from "svelte";
   import { scanLog, revealInFolder, userDirPath } from "../api";
   import type { LogReport, LogModHealth } from "../types";
+  import BisectFlow from "./BisectFlow.svelte";
 
   interface Props {
     onClose: () => void;
+    /** Current active tech names, and which of them are maps (kept on during bisection). */
+    activeMods: string[];
+    activeMaps: string[];
   }
-  let { onClose }: Props = $props();
+  let { onClose, activeMods, activeMaps }: Props = $props();
+
+  let mode = $state<"report" | "bisect">("report");
+  // Bisect the active non-map mods; maps stay on so the save still loads.
+  const pool = $derived(activeMods.filter((m) => !activeMaps.includes(m)));
+  const canBisect = $derived(pool.length >= 2);
 
   let report = $state<LogReport | null>(null);
   let loading = $state(true);
@@ -59,14 +68,18 @@
       {/if}
     </div>
     <div class="lt-head-actions">
-      <button class="btn" onclick={scan} disabled={loading}>
-        {loading ? "Reading…" : "↻ Re-read log"}
-      </button>
+      {#if mode === "report"}
+        <button class="btn" onclick={scan} disabled={loading}>
+          {loading ? "Reading…" : "↻ Re-read log"}
+        </button>
+      {/if}
       <button class="x" title="Close" onclick={onClose}>✕</button>
     </div>
   </div>
 
-  {#if loading && !report}
+  {#if mode === "bisect"}
+    <BisectFlow {pool} alwaysOn={activeMaps} onExit={() => (mode = "report")} />
+  {:else if loading && !report}
     <div class="empty">Reading log.txt…</div>
   {:else if error}
     <div class="verdict bad">{error}</div>
@@ -80,10 +93,20 @@
         {#if culprits.length > 0}
           The mod{culprits.length === 1 ? "" : "s"} below logged errors right before it stopped.
         {:else}
-          No mod logged an error before it stopped — if it still crashes, try the guided
-          bisection (coming next) to find an interaction the log can't name.
+          No mod logged an error before it stopped — the cause is likely an interaction the
+          log can't name. Guided bisection will find it.
         {/if}
       </div>
+      {#if culprits.length === 0}
+        <button
+          class="bisect-cta"
+          disabled={!canBisect}
+          onclick={() => (mode = "bisect")}
+          title={canBisect ? "" : "Need at least 2 active non-map mods to bisect"}
+        >
+          ◆ Run guided bisection ({pool.length} mods)
+        </button>
+      {/if}
     {:else if culprits.length > 0}
       <div class="verdict warn">
         <strong>Last run exited cleanly</strong>, but {culprits.length} mod{culprits.length === 1
@@ -137,6 +160,13 @@
 
     {#if r.mods.length === 0 && r.unattributed === 0}
       <div class="empty">Nothing in the log to report.</div>
+    {/if}
+
+    {#if !r.crashed && canBisect}
+      <p class="foot">
+        Something misbehaving that the log doesn't explain?
+        <button class="link" onclick={() => (mode = "bisect")}>Run guided bisection →</button>
+      </p>
     {/if}
   {/if}
 </div>
@@ -336,5 +366,29 @@
     cursor: pointer;
     padding: 0;
     text-decoration: underline;
+  }
+  .bisect-cta {
+    display: block;
+    width: 100%;
+    margin: 0 0 14px;
+    padding: 10px;
+    border: 1px solid var(--primary);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--primary);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .bisect-cta:hover:not(:disabled) {
+    background: var(--primary);
+    color: var(--on-primary);
+  }
+  .bisect-cta:disabled {
+    opacity: 0.5;
+    cursor: default;
+    border-color: var(--border);
+    color: var(--text-muted);
+    background: var(--bg);
   }
 </style>

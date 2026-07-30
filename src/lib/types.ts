@@ -259,3 +259,9 @@ export interface LogReport {
   unattributed: number;
   totalFindings: number;
 }
+
+// ── Guided bisection ──
+export type BisectStep =
+  | { kind: "split"; test: string[]; rest: string[]; roundsLeft: number }
+  | { kind: "culprit"; modName: string }
+  | { kind: "inconclusive" };

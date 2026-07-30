@@ -1,6 +1,7 @@
 //! Silo core — Tauri command surface. All heavy logic lives in sibling modules so
 //! it stays unit-testable (and reusable by a future CLI) without a running app.
 
+pub mod bisect;
 pub mod category;
 pub mod conflicts;
 pub mod db;
@@ -642,6 +643,47 @@ async fn scan_log() -> Result<logscan::LogReport, String> {
     .map_err(|e| e.to_string())?
 }
 
+// ── Guided bisection ──
+
+/// Decide the next split for the current suspect pool (pure; see bisect.rs).
+#[tauri::command]
+fn bisect_plan(pool: Vec<String>) -> bisect::BisectStep {
+    bisect::plan(&pool)
+}
+
+/// Narrow the pool by the last round's verdict — kept in one tested place so the
+/// test/rest halves can't get swapped by the caller.
+#[tauri::command]
+fn bisect_narrow(test: Vec<String>, rest: Vec<String>, still_broken: bool) -> Vec<String> {
+    bisect::narrow(test, rest, still_broken)
+}
+
+/// Persist the user's real active set before bisection perturbs it, so even an app
+/// crash mid-diagnosis can restore it (reversibility is non-negotiable — CLAUDE.md).
+#[tauri::command]
+fn bisect_snapshot_save(app: tauri::AppHandle, active: Vec<String>) -> Result<(), String> {
+    let conn = db::open(&db_path(&app)?)?;
+    let json = serde_json::to_string(&active).map_err(|e| e.to_string())?;
+    db::set_app_setting(&conn, "bisect_snapshot", Some(&json))
+}
+
+/// The saved pre-bisection active set, if a bisection is (or was) in progress.
+#[tauri::command]
+fn bisect_snapshot_get(app: tauri::AppHandle) -> Result<Option<Vec<String>>, String> {
+    let conn = db::open(&db_path(&app)?)?;
+    match db::get_app_setting(&conn, "bisect_snapshot") {
+        Some(json) => Ok(Some(serde_json::from_str(&json).map_err(|e| e.to_string())?)),
+        None => Ok(None),
+    }
+}
+
+/// Clear the snapshot once the original set has been restored.
+#[tauri::command]
+fn bisect_snapshot_clear(app: tauri::AppHandle) -> Result<(), String> {
+    let conn = db::open(&db_path(&app)?)?;
+    db::set_app_setting(&conn, "bisect_snapshot", None)
+}
+
 /// Read specific values from a config XML by path.
 #[tauri::command]
 fn get_config(
@@ -756,6 +798,11 @@ pub fn run() {
             save_text,
             user_dir_path,
             scan_log,
+            bisect_plan,
+            bisect_narrow,
+            bisect_snapshot_save,
+            bisect_snapshot_get,
+            bisect_snapshot_clear,
             get_config,
             set_config,
             mods_with_settings,

@@ -31,6 +31,8 @@
     openFolder,
     saveTextFile,
     userDirPath,
+    bisectSnapshotGet,
+    bisectSnapshotClear,
   } from "./lib/api";
   import {
     GAME_GRAPHICS_FIELDS,
@@ -147,6 +149,9 @@
   let healthOpen = $state(false);
   let statsOpen = $state(false);
   let logOpen = $state(false);
+  // Set when a previous bisection didn't finish (app closed mid-run) — the user's mod
+  // set may be partially applied, so offer to restore it.
+  let bisectRecovery = $state<string[] | null>(null);
   // Top-level view: the local library, or the remote catalog browser.
   let view = $state<"library" | "browse">("library");
   let userDir = $state<string | null>(null);
@@ -893,9 +898,29 @@
         errorMsg = String(e);
       }
       if (roots.length) runScan();
+      // A leftover snapshot means a bisection was interrupted — offer to restore.
+      try {
+        bisectRecovery = await bisectSnapshotGet();
+      } catch {
+        /* non-critical */
+      }
     })();
     return () => unlisten?.();
   });
+
+  async function restoreBisect() {
+    if (!bisectRecovery) return;
+    busy = "Restoring your mod set…";
+    try {
+      await setActive(bisectRecovery);
+      await bisectSnapshotClear();
+      bisectRecovery = null;
+      await runScan(false);
+    } catch (e) {
+      errorMsg = String(e);
+    }
+    busy = null;
+  }
 </script>
 
 <div class="app">
@@ -982,6 +1007,22 @@
       ⚙
     </button>
   </header>
+
+  {#if bisectRecovery}
+    <div class="recover-banner">
+      <span>
+        A guided diagnosis was interrupted — your active mods may be partially applied.
+      </span>
+      <div class="recover-actions">
+        <button class="btn primary" onclick={restoreBisect} disabled={!!busy}>
+          Restore my mod set
+        </button>
+        <button class="btn" onclick={() => (bisectRecovery = null)} disabled={!!busy}>
+          Later
+        </button>
+      </div>
+    </div>
+  {/if}
 
   {#if loadoutsOpen}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
@@ -1412,7 +1453,11 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="backdrop" onclick={() => (logOpen = false)}></div>
     <div class="log-panel">
-      <LogTriage onClose={() => (logOpen = false)} />
+      <LogTriage
+        onClose={() => (logOpen = false)}
+        activeMods={[...activeSet]}
+        activeMaps={mods.filter((m) => activeSet.has(m.techName) && m.isMap).map((m) => m.techName)}
+      />
     </div>
   {/if}
 
@@ -2134,6 +2179,24 @@
     scrollbar-width: thin;
   }
   /* Log-triage panel owns its own padding (LogTriage.svelte), so no inner padding here. */
+  .recover-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 0 0 10px;
+    padding: 10px 14px;
+    background: color-mix(in srgb, var(--warn) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 0.88rem;
+  }
+  .recover-actions {
+    display: flex;
+    gap: 8px;
+  }
   .log-panel {
     position: fixed;
     z-index: 50;

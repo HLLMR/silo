@@ -33,6 +33,7 @@ import type {
   CatalogModDetail,
   CategoryCount,
   LogReport,
+  BisectStep,
 } from "./types";
 
 export function defaultModsPaths(): Promise<string[]> {
@@ -267,6 +268,28 @@ export function catalogCheckUpdates(
 /** Parse FS25's log.txt: did the last run crash, and which mods are at fault. */
 export function scanLog(): Promise<LogReport> {
   return invoke<LogReport>("scan_log");
+}
+
+// ── Guided bisection ──
+export function bisectPlan(pool: string[]): Promise<BisectStep> {
+  return invoke<BisectStep>("bisect_plan", { pool });
+}
+export function bisectNarrow(
+  test: string[],
+  rest: string[],
+  stillBroken: boolean,
+): Promise<string[]> {
+  return invoke<string[]>("bisect_narrow", { test, rest, stillBroken });
+}
+/** Persist the real active set before bisection perturbs it (crash-safe restore). */
+export function bisectSnapshotSave(active: string[]): Promise<void> {
+  return invoke("bisect_snapshot_save", { active });
+}
+export function bisectSnapshotGet(): Promise<string[] | null> {
+  return invoke<string[] | null>("bisect_snapshot_get");
+}
+export function bisectSnapshotClear(): Promise<void> {
+  return invoke("bisect_snapshot_clear");
 }
 
 export function detectGame(): Promise<GameInfo | null> {
