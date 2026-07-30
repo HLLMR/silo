@@ -32,6 +32,7 @@ import type {
   CatalogUpdate,
   CatalogModDetail,
   CategoryCount,
+  LogReport,
 } from "./types";
 
 export function defaultModsPaths(): Promise<string[]> {
@@ -261,6 +262,11 @@ export function catalogCheckUpdates(
   return invoke<CatalogUpdate[]>("catalog_check_updates", {
     mods: mods.map((m) => ({ techName: m.techName, version: m.version ?? null })),
   });
+}
+
+/** Parse FS25's log.txt: did the last run crash, and which mods are at fault. */
+export function scanLog(): Promise<LogReport> {
+  return invoke<LogReport>("scan_log");
 }
 
 export function detectGame(): Promise<GameInfo | null> {

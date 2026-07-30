@@ -76,6 +76,7 @@
   import ConfigEditor from "./lib/components/ConfigEditor.svelte";
   import GitHubAuth from "./lib/components/GitHubAuth.svelte";
   import ModBrowser from "./lib/components/ModBrowser.svelte";
+  import LogTriage from "./lib/components/LogTriage.svelte";
 
   let roots = $state<string[]>([]);
   let mods = $state<ModEntry[]>([]);
@@ -145,6 +146,7 @@
   let settingsOpen = $state(false);
   let healthOpen = $state(false);
   let statsOpen = $state(false);
+  let logOpen = $state(false);
   // Top-level view: the local library, or the remote catalog browser.
   let view = $state<"library" | "browse">("library");
   let userDir = $state<string | null>(null);
@@ -1406,6 +1408,14 @@
     </div>
   {/if}
 
+  {#if logOpen}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="backdrop" onclick={() => (logOpen = false)}></div>
+    <div class="log-panel">
+      <LogTriage onClose={() => (logOpen = false)} />
+    </div>
+  {/if}
+
   {#if scanning}
     <div class="progress">
       <div class="bar" style="width: {pct}%"></div>
@@ -1466,6 +1476,14 @@
     >
       <span class="stat-num tnum">{healthCount}</span>
       <span class="stat-label">need attention</span>
+    </button>
+    <button
+      class="stat statbtn"
+      title="Crash & log triage: did the last run crash, and which mod is at fault?"
+      onclick={() => (logOpen = true)}
+    >
+      <span class="stat-num">◆</span>
+      <span class="stat-label">diagnose</span>
     </button>
     {#if result}
       <div class="took tnum" title="Scan wall-clock time">
@@ -2113,6 +2131,23 @@
     border-radius: var(--radius);
     box-shadow: var(--shadow-2);
     padding: 10px;
+    scrollbar-width: thin;
+  }
+  /* Log-triage panel owns its own padding (LogTriage.svelte), so no inner padding here. */
+  .log-panel {
+    position: fixed;
+    z-index: 50;
+    top: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 620px;
+    max-width: calc(100vw - 40px);
+    max-height: 80vh;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-2);
     scrollbar-width: thin;
   }
   .cf-row {

@@ -239,3 +239,23 @@ export interface CategoryCount {
   category: string;
   count: number;
 }
+
+// ── Crash / log triage ──
+export interface LogModHealth {
+  modName: string;
+  errors: number;
+  warnings: number;
+  benign: number;
+  sample: string;
+  sampleLine: number;
+}
+
+export interface LogReport {
+  engineVersion: string | null;
+  modCount: number;
+  cleanExit: boolean;
+  crashed: boolean;
+  mods: LogModHealth[];
+  unattributed: number;
+  totalFindings: number;
+}
