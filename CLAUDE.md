@@ -12,9 +12,45 @@ The management layer FS25 lacks: organize a curated **source library**, define
 **profiles/loadouts**, detect **conflicts**, track **updates**, and bind mods to
 **savegames** — projecting the active set into the game's flat `mods/` folder only
 at launch (via symlink/junction, with a copy fallback). See [docs/](docs/):
-`VISION.md`, `MVP.md`, `ARCHITECTURE.md`, and `reference/`.
+`VISION.md`, `MVP.md`, `ARCHITECTURE.md`, `SMOKE_TEST.md`, and `reference/`.
 
-## Stack & structure (planned)
+### Feature set (shipped as of 2026-07)
+
+Well past the incumbents (FSG Mod Assistant, FarmSim Hub, MarkThor11 — see the
+`fs25-mod-manager-decision` memory). Beyond the MVP management layer above:
+
+- **Browse tab** — the SiloAPI canonical catalog (GitHub + ModHub + Nexus), search,
+  category filter, pagination, per-source buttons w/ versions, in-app GitHub install
+  with a streaming progress bar, detail drawer. ModHub/Nexus are index-only
+  (open-page; their CDNs gate direct download).
+- **Catalog-routed updates** — "⟳ Updates" checks the whole library against the
+  catalog's latest-across-sources (fixes the GitHub-vs-ModHub false-"outdated" bug the
+  incumbents have); per-mod update status also in the detail drawer.
+- **Crash & log triage** (`◆ diagnose`) — parses `log.txt`, names the culprit mod,
+  separates real errors from cosmetic noise.
+- **Guided bisection** — automates "disable half, relaunch" to isolate a crash the log
+  can't name; crash-safe (snapshots + restores the active set).
+- **Conflict detection** — uniqueType/specialization/script collisions, **duplicate
+  active map** (instant-crash), **cross-mod fillType override** (same-name last-wins;
+  SDK-verified true-positive-only).
+- **Bindings map** (`⌨ bindings`) — the full control map from `inputBinding.xml`,
+  grouped by device, reused inputs highlighted (a view, not a verdict).
+- **Multiplayer sync** — export a hashed manifest of the active set; a joiner verifies
+  theirs against it (fix-list: missing / wrong version / different file / extra).
+- **Filltype bridge** (`⛓ bridge`) — GENERATES a companion mod that adds a stubborn map
+  filltype into the categories your equipment accepts (the "sugar beet" fix), no vehicle
+  edits. Generator lives in Silo; output is per-user, no separate repo.
+
+Backend: **SiloAPI** (separate repo `HLLMR/silo-api`, live at `https://silo-api.hllmr.com`).
+
+## Stack & structure
+
+Rust core modules (`src-tauri/src/`): `scan` `moddesc` `category` `icons` `db` `store`
+`fsgame` `organize` `savegame` `conflicts` `settings_form` `xmlconfig` `gamelaunch`
+`github` `siloapi` (catalog client) · `logscan` (crash triage) · `bisect` (guided
+bisection) · `bindings` (input map) · `mpsync` (MP manifest) · `bridge` (filltype
+companion generator). Each is pure logic behind thin `#[tauri::command]` wrappers with
+unit tests (42+ Rust tests). Frontend panels in `src/lib/components/`.
 
 - **Tauri v2**: Rust core in `src-tauri/`, web frontend in `src/`.
 - **Frontend: Svelte 5 (runes) + Vite + TypeScript**, hand-authored CSS design

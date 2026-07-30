@@ -45,6 +45,12 @@ Keep `scan`, `moddesc`, `library`, `profile`, `projection`, `conflict`, and
 `commands/` wrappers. They should be testable against a fixture folder without a
 running app.
 
+> **Shipped module set (2026-07)** has grown well beyond the original sketch above —
+> the same pure-logic-behind-thin-command pattern held. Current authoritative list is
+> in `CLAUDE.md` ("Stack & structure"): adds `siloapi`, `logscan`, `bisect`, `bindings`,
+> `mpsync`, `bridge`, plus `organize`/`savegame`/`xmlconfig`/`gamelaunch`/`github`.
+> 42+ Rust unit tests. Feature-level release gate: `docs/SMOKE_TEST.md`.
+
 ## Key crates (proposed — confirm at scaffold time)
 
 | Concern | Crate |
