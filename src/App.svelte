@@ -79,6 +79,7 @@
   import GitHubAuth from "./lib/components/GitHubAuth.svelte";
   import ModBrowser from "./lib/components/ModBrowser.svelte";
   import LogTriage from "./lib/components/LogTriage.svelte";
+  import BindingsView from "./lib/components/BindingsView.svelte";
 
   let roots = $state<string[]>([]);
   let mods = $state<ModEntry[]>([]);
@@ -149,6 +150,7 @@
   let healthOpen = $state(false);
   let statsOpen = $state(false);
   let logOpen = $state(false);
+  let bindingsOpen = $state(false);
   // Set when a previous bisection didn't finish (app closed mid-run) — the user's mod
   // set may be partially applied, so offer to restore it.
   let bisectRecovery = $state<string[] | null>(null);
@@ -1461,6 +1463,14 @@
     </div>
   {/if}
 
+  {#if bindingsOpen}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="backdrop" onclick={() => (bindingsOpen = false)}></div>
+    <div class="log-panel">
+      <BindingsView onClose={() => (bindingsOpen = false)} />
+    </div>
+  {/if}
+
   {#if scanning}
     <div class="progress">
       <div class="bar" style="width: {pct}%"></div>
@@ -1529,6 +1539,14 @@
     >
       <span class="stat-num">◆</span>
       <span class="stat-label">diagnose</span>
+    </button>
+    <button
+      class="stat statbtn"
+      title="The full control-binding map — every action and key, grouped by device"
+      onclick={() => (bindingsOpen = true)}
+    >
+      <span class="stat-num">⌨</span>
+      <span class="stat-label">bindings</span>
     </button>
     {#if result}
       <div class="took tnum" title="Scan wall-clock time">

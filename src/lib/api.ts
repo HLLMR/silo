@@ -34,6 +34,7 @@ import type {
   CategoryCount,
   LogReport,
   BisectStep,
+  BindingReport,
 } from "./types";
 
 export function defaultModsPaths(): Promise<string[]> {
@@ -268,6 +269,11 @@ export function catalogCheckUpdates(
 /** Parse FS25's log.txt: did the last run crash, and which mods are at fault. */
 export function scanLog(): Promise<LogReport> {
   return invoke<LogReport>("scan_log");
+}
+
+/** Parse inputBinding.xml into a per-device binding map. */
+export function scanBindings(): Promise<BindingReport> {
+  return invoke<BindingReport>("scan_bindings");
 }
 
 // ── Guided bisection ──

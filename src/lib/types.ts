@@ -260,6 +260,26 @@ export interface LogReport {
   totalFindings: number;
 }
 
+// ── Input bindings map ──
+export interface Bind {
+  action: string;
+  input: string;
+}
+export interface SharedInput {
+  input: string;
+  actions: string[];
+}
+export interface DeviceBindings {
+  device: string;
+  bindings: Bind[];
+  shared: SharedInput[];
+}
+export interface BindingReport {
+  totalActions: number;
+  totalBindings: number;
+  devices: DeviceBindings[];
+}
+
 // ── Guided bisection ──
 export type BisectStep =
   | { kind: "split"; test: string[]; rest: string[]; roundsLeft: number }
