@@ -162,6 +162,7 @@ pub fn browse(
     base: &str,
     query: Option<&str>,
     category: Option<&str>,
+    sort: Option<&str>,
     limit: u32,
     offset: u32,
 ) -> Result<BrowsePage, String> {
@@ -176,6 +177,9 @@ pub fn browse(
     }
     if let Some(c) = category.filter(|s| !s.trim().is_empty()) {
         url.push_str(&format!("&category={}", urlencode(c.trim())));
+    }
+    if let Some(s) = sort.filter(|s| !s.trim().is_empty()) {
+        url.push_str(&format!("&sort={}", urlencode(s.trim())));
     }
     let resp = get(&url)?;
     let parsed: BrowseResponse = resp.into_json().map_err(|e| e.to_string())?;

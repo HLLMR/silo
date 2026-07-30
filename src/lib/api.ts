@@ -227,12 +227,14 @@ export function siloapiSetBase(base: string): Promise<void> {
 export function browseMods(opts: {
   query?: string;
   category?: string;
+  sort?: string;
   limit?: number;
   offset?: number;
 }): Promise<BrowsePage> {
   return invoke<BrowsePage>("browse_mods", {
     query: opts.query ?? null,
     category: opts.category ?? null,
+    sort: opts.sort ?? null,
     limit: opts.limit ?? null,
     offset: opts.offset ?? null,
   });

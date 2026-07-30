@@ -291,6 +291,7 @@ async fn browse_mods(
     app: tauri::AppHandle,
     query: Option<String>,
     category: Option<String>,
+    sort: Option<String>,
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> Result<siloapi::BrowsePage, String> {
@@ -300,6 +301,7 @@ async fn browse_mods(
             &base,
             query.as_deref(),
             category.as_deref(),
+            sort.as_deref(),
             limit.unwrap_or(40),
             offset.unwrap_or(0),
         )

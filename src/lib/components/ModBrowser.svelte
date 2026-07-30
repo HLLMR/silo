@@ -31,6 +31,7 @@
 
   let query = $state("");
   let category = $state("");
+  let sort = $state<"recent" | "name">("recent");
   let categories = $state<CategoryCount[]>([]);
   let results = $state<BrowseMod[]>([]);
   let total = $state(0);
@@ -124,6 +125,7 @@
       const page = await browseMods({
         query: query.trim() || undefined,
         category: category || undefined,
+        sort,
         limit: PAGE,
         offset: 0,
       });
@@ -151,6 +153,7 @@
       const page = await browseMods({
         query: forQuery.trim() || undefined,
         category: forCategory || undefined,
+        sort,
         limit: PAGE,
         offset: results.length,
       });
@@ -220,6 +223,10 @@
       {/if}
     </div>
     <div class="bh-controls">
+      <select class="cat-select" bind:value={sort} onchange={() => load()} title="Sort">
+        <option value="recent">Newest</option>
+        <option value="name">Name (A–Z)</option>
+      </select>
       {#if categories.length > 0}
         <select class="cat-select" bind:value={category} onchange={() => load()}>
           <option value="">All categories</option>
