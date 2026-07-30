@@ -128,6 +128,23 @@ fn labels(parsed: &[Parsed], idxs: &[usize]) -> Vec<String> {
     out
 }
 
+/// Flag when more than one map is active (a reliable instant-crash cause). Pure over
+/// the active maps' labels, so it's testable without fixture mods.
+fn map_conflict(map_labels: Vec<String>) -> Option<Conflict> {
+    if map_labels.len() < 2 {
+        return None;
+    }
+    Some(Conflict {
+        severity: "critical".into(),
+        kind: "map".into(),
+        name: format!("{} maps enabled", map_labels.len()),
+        explanation:
+            "More than one map is active. FS loads a second map's scripts even when it isn't the one you're playing, which typically crashes on load — keep exactly one map enabled."
+                .into(),
+        mods: map_labels,
+    })
+}
+
 /// Detect conflicts within the given active set.
 pub fn detect(inputs: &[ConflictInput]) -> Vec<Conflict> {
     let parsed: Vec<Parsed> = inputs
@@ -228,6 +245,15 @@ pub fn detect(inputs: &[ConflictInput]) -> Vec<Conflict> {
         });
     }
 
+    // Two active maps = instant crash on load: a second map's scripts still load even
+    // if unused. Canonical FS folklore ("never have more than one map enabled"); no
+    // manager surfaces it. Zero false positives — a mod either declares <maps> or not.
+    let map_labels: Vec<String> =
+        parsed.iter().filter(|p| p.md.is_map).map(|p| p.label.clone()).collect();
+    if let Some(c) = map_conflict(map_labels) {
+        out.push(c);
+    }
+
     // critical → warning → info, then by name.
     let rank = |s: &str| match s {
         "critical" => 0,
@@ -240,4 +266,24 @@ pub fn detect(inputs: &[ConflictInput]) -> Vec<Conflict> {
             .then(a.name.to_lowercase().cmp(&b.name.to_lowercase()))
     });
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn one_or_zero_maps_is_fine() {
+        assert!(map_conflict(vec![]).is_none());
+        assert!(map_conflict(vec!["FS25_LoneStar".into()]).is_none());
+    }
+
+    #[test]
+    fn two_plus_maps_is_critical() {
+        let c = map_conflict(vec!["Lone Star Plains".into(), "Frankenmuth".into()]).unwrap();
+        assert_eq!(c.severity, "critical");
+        assert_eq!(c.kind, "map");
+        assert_eq!(c.mods.len(), 2);
+        assert!(c.name.contains('2'));
+    }
 }
