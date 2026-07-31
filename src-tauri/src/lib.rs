@@ -39,7 +39,7 @@ struct Progress {
 /// "Device Flow", and paste its Client ID (Iv1.…/Ov23…) here. Client ids are
 /// public — safe to embed; device flow needs no secret. Empty = fall back to a
 /// user-provided id from Settings.
-const SILO_GH_CLIENT_ID: &str = "";
+const SILO_GH_CLIENT_ID: &str = "Ov23lizY2TSJF2P5CRyx";
 
 fn effective_client_id(conn: &rusqlite::Connection) -> Option<String> {
     if !SILO_GH_CLIENT_ID.is_empty() {
