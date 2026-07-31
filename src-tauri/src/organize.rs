@@ -7,8 +7,9 @@
 //!   (zips) or dir links (unpacked mods) — same volume as the archive, so no admin /
 //!   Developer Mode and no disk duplication. The game reads the flat root and loads
 //!   exactly the active set.
-//! * **Flatten:** everything moves back to a vanilla flat `mods/` and the archive is
-//!   removed — always one step from stock.
+//! * **Flatten:** everything moves back to a vanilla flat `mods/`; only *empty* archive
+//!   directories are removed. Anything Silo doesn't recognize is left in place, never
+//!   deleted — always one step from stock, and never a step that eats a file.
 //!
 //! Every move/link is recorded in the `organized` manifest so cleanup only ever
 //! touches Silo-owned entries; nothing the user placed is deleted. Failures are
@@ -118,23 +119,29 @@ pub fn apply_organize(conn: &Connection, root: &Path, mods: &[ModInput]) -> Repo
             continue;
         }
         let to = dir.join(&m.file_name);
+        // Manifest-first: record the row BEFORE moving the file. If the DB write fails we
+        // never move, so we can't leave a file orphaned in the archive (which flatten
+        // would later be unable to tell from junk). If the move then fails, roll the row
+        // back. Net effect: an archived file always has a manifest row, and vice versa.
+        let row = OrganizedRow {
+            tech_name: m.tech_name.clone(),
+            file_name: m.file_name.clone(),
+            kind: m.kind.clone(),
+            category: m.category.clone(),
+            subcategory: m.subcategory.clone(),
+            active: false,
+        };
+        if let Err(e) = db::upsert_organized(conn, &row) {
+            rep.errors.push(format!("{}: manifest: {e}", m.tech_name));
+            continue;
+        }
         match move_path(&from, &to) {
-            Ok(()) => {
-                let row = OrganizedRow {
-                    tech_name: m.tech_name.clone(),
-                    file_name: m.file_name.clone(),
-                    kind: m.kind.clone(),
-                    category: m.category.clone(),
-                    subcategory: m.subcategory.clone(),
-                    active: false,
-                };
-                if let Err(e) = db::upsert_organized(conn, &row) {
-                    rep.errors.push(format!("{}: manifest: {e}", m.tech_name));
-                } else {
-                    rep.changed += 1;
-                }
+            Ok(()) => rep.changed += 1,
+            Err(e) => {
+                // Roll back the row we just wrote — nothing was moved.
+                let _ = db::delete_organized(conn, &m.tech_name);
+                rep.errors.push(format!("{}: move: {e}", m.tech_name));
             }
-            Err(e) => rep.errors.push(format!("{}: move: {e}", m.tech_name)),
         }
     }
     rep
@@ -174,7 +181,8 @@ pub fn set_active(conn: &Connection, root: &Path, active: &HashSet<String>) -> R
 }
 
 /// Restore a vanilla flat `mods/`: remove every Silo link, move archived files back
-/// to the root, delete the archive tree, and clear the manifest.
+/// to the root, remove only empty archive directories (never an unrecognized file), and
+/// clear the manifest.
 pub fn flatten(conn: &Connection, root: &Path) -> Report {
     let mut rep = Report::default();
     for row in db::load_organized(conn) {
@@ -197,9 +205,57 @@ pub fn flatten(conn: &Connection, root: &Path) -> Report {
         let _ = db::delete_organized(conn, &row.tech_name);
         rep.changed += 1;
     }
-    // Best-effort removal of the (now-empty) archive tree.
-    let _ = std::fs::remove_dir_all(root.join(ARCHIVE));
+    // NEVER `remove_dir_all` the archive — that would destroy any file we don't have a
+    // manifest row for (e.g. a mod whose manifest write failed on a crash). Remove only
+    // provably-empty directories, and surface anything left behind untouched.
+    match cleanup_empty_archive(&root.join(ARCHIVE)) {
+        Ok(leftover) => {
+            for p in leftover {
+                let name = p.file_name().map(|n| n.to_string_lossy().into_owned());
+                rep.errors.push(format!(
+                    "kept an unrecognized file in archive/ (NOT deleted): {}",
+                    name.unwrap_or_else(|| p.display().to_string())
+                ));
+            }
+        }
+        Err(e) => rep.errors.push(format!("archive cleanup: {e}")),
+    }
     rep
+}
+
+/// Remove empty directories under `archive` bottom-up. NEVER deletes a file or a
+/// non-empty directory — any file the manifest didn't restore is left in place and
+/// returned so the caller can tell the user. This is the guard against the flatten
+/// step eating an untracked mod.
+fn cleanup_empty_archive(archive: &Path) -> std::io::Result<Vec<PathBuf>> {
+    let mut leftover = Vec::new();
+    if !archive.exists() {
+        return Ok(leftover);
+    }
+    // Returns true if `dir` is empty once processing finishes.
+    fn walk(dir: &Path, leftover: &mut Vec<PathBuf>) -> std::io::Result<bool> {
+        let mut empty = true;
+        for entry in std::fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            // Use symlink semantics: never follow/recurse a link.
+            if entry.file_type()?.is_dir() {
+                if walk(&path, leftover)? {
+                    let _ = std::fs::remove_dir(&path);
+                } else {
+                    empty = false;
+                }
+            } else {
+                leftover.push(path);
+                empty = false;
+            }
+        }
+        Ok(empty)
+    }
+    if walk(archive, &mut leftover)? {
+        let _ = std::fs::remove_dir(archive);
+    }
+    Ok(leftover)
 }
 
 // ── filesystem primitives ──
@@ -273,4 +329,52 @@ fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cleanup_never_deletes_unknown_files() {
+        let base = std::env::temp_dir().join(format!("silo_flatten_a_{}", std::process::id()));
+        let archive = base.join(ARCHIVE);
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(archive.join("Maps")).unwrap(); // empty → should be removed
+        std::fs::create_dir_all(archive.join("Vehicles")).unwrap();
+        // An orphan the manifest doesn't know about (e.g. a move whose DB write crashed).
+        let orphan = archive.join("Vehicles").join("orphan.zip");
+        std::fs::write(&orphan, b"PK\x03\x04").unwrap();
+
+        let leftover = cleanup_empty_archive(&archive).unwrap();
+
+        assert!(orphan.exists(), "orphan file must NOT be deleted");
+        assert_eq!(leftover.len(), 1);
+        assert!(
+            !archive.join("Maps").exists(),
+            "empty dir should be removed"
+        );
+        assert!(archive.join("Vehicles").exists(), "non-empty dir kept");
+        assert!(
+            archive.exists(),
+            "archive kept because it still holds the orphan"
+        );
+
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn cleanup_removes_a_fully_empty_archive() {
+        let base = std::env::temp_dir().join(format!("silo_flatten_b_{}", std::process::id()));
+        let archive = base.join(ARCHIVE);
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(archive.join("A").join("B")).unwrap();
+
+        let leftover = cleanup_empty_archive(&archive).unwrap();
+
+        assert!(leftover.is_empty());
+        assert!(!archive.exists(), "a fully-empty archive tree is removed");
+
+        let _ = std::fs::remove_dir_all(&base);
+    }
 }

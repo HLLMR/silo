@@ -202,9 +202,31 @@ pub fn device_poll(client_id: &str, device_code: &str) -> Result<PollResult, Str
 /// Download a release .zip asset and install it in place at `dest`, backing up the
 /// current file to `<dest>.bak` first. Overwrites the existing file (same inode) so
 /// any active hardlink projection reflects the update automatically.
+/// True only for GitHub-owned hosts. The token is attached ONLY to these — never to an
+/// arbitrary URL handed in from the webview/catalog, so a hostile `downloadUrl` can't
+/// harvest the user's credential.
+pub fn is_github_host(url: &str) -> bool {
+    let host = match url.split_once("://") {
+        Some((_, rest)) => rest
+            .split(['/', '?', '#'])
+            .next()
+            .unwrap_or("")
+            .to_ascii_lowercase(),
+        None => return false,
+    };
+    let host = host.split('@').next_back().unwrap_or(""); // ignore any userinfo
+    let host = host.split(':').next().unwrap_or(""); // strip port
+    host == "github.com"
+        || host == "api.github.com"
+        || host == "codeload.github.com"
+        || host.ends_with(".githubusercontent.com")
+}
+
 pub fn download_zip(url: &str, token: Option<&str>, dest: &std::path::Path) -> Result<(), String> {
     let mut req = ureq::get(url).set("User-Agent", UA);
-    if let Some(t) = token {
+    // Attach the token ONLY to GitHub hosts. Public release assets don't need it anyway;
+    // this guarantees the credential never travels to a non-GitHub URL.
+    if let Some(t) = token.filter(|_| is_github_host(url)) {
         req = req.set("Authorization", &format!("Bearer {t}"));
     }
     let resp = req.call().map_err(|e| e.to_string())?;
@@ -446,6 +468,24 @@ mod tests {
             find_repo_in_text("github.com/sponsors/foo then github.com/real/repo"),
             Some(("real".into(), "repo".into()))
         );
+    }
+
+    #[test]
+    fn token_only_attaches_to_github_hosts() {
+        assert!(is_github_host(
+            "https://github.com/o/r/releases/download/v1/a.zip"
+        ));
+        assert!(is_github_host("https://api.github.com/repos/o/r"));
+        assert!(is_github_host("https://objects.githubusercontent.com/x"));
+        assert!(is_github_host("https://codeload.github.com/o/r/zip"));
+        // Spoofing attempts must NOT be treated as GitHub.
+        assert!(!is_github_host("https://github.com.evil.com/steal"));
+        assert!(!is_github_host("https://evil.com/github.com/a.zip"));
+        assert!(!is_github_host("https://raw.githubusercontent.example/x"));
+        assert!(!is_github_host(
+            "https://staticdelivery.nexusmods.com/a.png"
+        ));
+        assert!(!is_github_host("http://github.com@evil.com/x"));
     }
 
     #[test]
