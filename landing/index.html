@@ -243,6 +243,27 @@
   .card.wide .glyph { margin: 0; }
   .card.wide p { margin: 6px 0 0; }
 
+  /* Screenshots */
+  .screens { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  .shot { margin: 0; }
+  .shot img {
+    width: 100%; display: block; border-radius: var(--radius);
+    border: 1px solid var(--border); box-shadow: var(--shadow-1); background: var(--surface);
+  }
+  /* Graceful placeholder until real screenshots are dropped in screenshots/. */
+  .shot.missing { position: relative; aspect-ratio: 16 / 10; }
+  .shot.missing img { display: none; }
+  .shot.missing::before {
+    content: "Screenshot coming soon"; position: absolute; inset: 0;
+    display: grid; place-items: center; border-radius: var(--radius);
+    border: 1px dashed var(--border); color: var(--muted);
+    font-family: var(--font-mono); font-size: 0.8rem;
+    background:
+      repeating-linear-gradient(135deg, transparent 0 14px, color-mix(in srgb, var(--primary) 5%, transparent) 14px 15px),
+      var(--surface);
+  }
+  .shot figcaption { margin-top: 10px; color: var(--muted); font-size: 0.9rem; }
+
   /* Ethos band */
   .ethos { background: linear-gradient(135deg, var(--green-700), var(--green-900)); color: #f3f1e6; border-radius: 18px; padding: 44px; }
   .ethos .eyebrow { color: color-mix(in srgb, var(--gold-300) 90%, #fff); }
@@ -306,7 +327,7 @@
   @media (max-width: 620px) {
     body { font-size: 16px; }
     .nav-links a:not(.btn) { display: none; }
-    .feat-grid, .steps, .ethos-grid { grid-template-columns: 1fr; }
+    .feat-grid, .steps, .ethos-grid, .screens { grid-template-columns: 1fr; }
     .card.wide { grid-column: span 1; grid-template-columns: 1fr; }
     .mock-body { grid-template-columns: 1fr; }
     .mock-draw { display: none; }
@@ -496,6 +517,21 @@
         </div>
         <a class="btn btn-ghost" href="#download">Try it</a>
       </div>
+    </div>
+  </div>
+</section>
+
+<section id="screens">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">See it</p>
+      <h2>What the tool actually looks like.</h2>
+    </div>
+    <div class="screens">
+      <figure class="shot"><img src="screenshots/library.png" alt="The Silo library — hundreds of mods, organized and searchable." loading="lazy" onerror="this.closest('figure').classList.add('missing')"><figcaption>Your library, organized</figcaption></figure>
+      <figure class="shot"><img src="screenshots/triage.png" alt="Crash triage naming the mod at fault from the game log." loading="lazy" onerror="this.closest('figure').classList.add('missing')"><figcaption>Crash triage names the culprit</figcaption></figure>
+      <figure class="shot"><img src="screenshots/browse.png" alt="Browsing the cross-source catalog with the per-source detail drawer." loading="lazy" onerror="this.closest('figure').classList.add('missing')"><figcaption>One catalog, every source</figcaption></figure>
+      <figure class="shot"><img src="screenshots/conflicts.png" alt="Conflict detection flagging colliding mods before launch." loading="lazy" onerror="this.closest('figure').classList.add('missing')"><figcaption>Conflicts caught before launch</figcaption></figure>
     </div>
   </div>
 </section>
