@@ -92,6 +92,8 @@
   // Detail drawer state.
   let detail = $state<CatalogModDetail | null>(null);
   let detailLoading = $state(false);
+  // Full-description modal (the drawer shows a clamped snippet).
+  let descModal = $state<{ title: string; text: string; url: string | null } | null>(null);
 
   let debounce: ReturnType<typeof setTimeout> | null = null;
   let unlisten: UnlistenFn | null = null;
@@ -469,7 +471,15 @@
           </dl>
 
           {#if d.description}
-            <p class="drawer-desc">{d.description}</p>
+            <p class="drawer-desc clamped">{d.description}</p>
+            {#if d.description.length > 160}
+              <button
+                class="read-more"
+                onclick={() => (descModal = { title: d.title, text: d.description ?? "", url: d.pageUrl })}
+              >
+                Read more →
+              </button>
+            {/if}
           {/if}
 
           <div class="drawer-sec">Available from</div>
@@ -560,6 +570,28 @@
         </div>
       {/if}
     </aside>
+  {/if}
+
+  {#if descModal}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="modal-backdrop" onclick={() => (descModal = null)}></div>
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <h3>{descModal.title}</h3>
+        <button class="drawer-x" title="Close" onclick={() => (descModal = null)}>✕</button>
+      </div>
+      <div class="modal-body">
+        <p>{descModal.text}</p>
+      </div>
+      <div class="modal-foot">
+        <span class="modal-note">This is the catalog summary — the full write-up lives on the mod's page.</span>
+        {#if descModal.url}
+          <button class="modal-link" onclick={() => openExternal(descModal!.url!)}>
+            Open full mod page ↗
+          </button>
+        {/if}
+      </div>
+    </div>
   {/if}
 </div>
 
@@ -986,7 +1018,98 @@
     color: var(--text);
     font-size: 0.88rem;
     line-height: 1.5;
+    margin: 0 0 4px;
+  }
+  .drawer-desc.clamped {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .read-more {
+    border: none;
+    background: transparent;
+    color: var(--info);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0;
     margin: 0 0 14px;
+    cursor: pointer;
+  }
+  .read-more:hover {
+    text-decoration: underline;
+  }
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 50;
+  }
+  .modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(620px, 92vw);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface, var(--bg));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    z-index: 51;
+  }
+  .modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-head h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
+  .modal-body {
+    overflow-y: auto;
+    padding: 16px;
+  }
+  .modal-body p {
+    margin: 0;
+    color: var(--text);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+  .modal-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+  }
+  .modal-note {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  .modal-link {
+    flex: 0 0 auto;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--info);
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .modal-link:hover {
+    border-color: color-mix(in srgb, var(--info) 40%, var(--border));
   }
   .drawer-sec {
     font-size: 0.72rem;
