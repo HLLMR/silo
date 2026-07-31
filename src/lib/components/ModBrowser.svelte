@@ -24,6 +24,7 @@
   import type { UnlistenFn } from "@tauri-apps/api/event";
   import GithubCard from "./GithubCard.svelte";
   import NexusCard from "./NexusCard.svelte";
+  import ModHubCard from "./ModHubCard.svelte";
 
   interface Props {
     /** Tech names already in the local library, to flag "in library". */
@@ -504,9 +505,10 @@
             </ul>
           {/if}
 
-          {#if d.sources.some((s) => (s.source === "github" && parseRepo(s.sourceUrl)) || (s.source === "nexus" && parseNexusId(s.sourceUrl)))}
+          {#if d.sources.some((s) => (s.source === "github" && parseRepo(s.sourceUrl)) || (s.source === "nexus" && parseNexusId(s.sourceUrl)) || s.source === "modhub")}
             {@const ghSrcs = d.sources.filter((s) => s.source === "github" && parseRepo(s.sourceUrl))}
             {@const nxSrcs = d.sources.filter((s) => s.source === "nexus" && parseNexusId(s.sourceUrl))}
+            {@const mhSrcs = d.sources.filter((s) => s.source === "modhub")}
             <div class="drawer-sec">Interact</div>
             <div class="src-cards">
               {#each ghSrcs as s (s.sourceUrl)}
@@ -532,6 +534,13 @@
                     onConnect={() => onNeedAuth?.()}
                   />
                 {/if}
+              {/each}
+              {#each mhSrcs as s (s.sourceUrl)}
+                <ModHubCard
+                  rating={d.rating}
+                  ratingCount={d.ratingCount}
+                  sourceUrl={s.sourceUrl}
+                />
               {/each}
             </div>
           {/if}
