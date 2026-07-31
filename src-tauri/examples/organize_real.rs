@@ -6,9 +6,9 @@
 //!   cargo run --example organize_real -- apply   # move mods into archive/
 //!   cargo run --example organize_real -- flatten # restore vanilla flat mods/
 
+use silo_lib::organize::{self, ModInput};
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
-use silo_lib::organize::{self, ModInput};
 
 fn app_db() -> std::path::PathBuf {
     // Matches Tauri's app_data_dir for identifier com.hllmr.silo.
@@ -32,7 +32,11 @@ fn main() {
 
     if mode == "flatten" {
         let rep = organize::flatten(&conn, &root);
-        println!("FLATTEN: {} restored, {} errors", rep.changed, rep.errors.len());
+        println!(
+            "FLATTEN: {} restored, {} errors",
+            rep.changed,
+            rep.errors.len()
+        );
         for e in rep.errors.iter().take(20) {
             println!("  ERR {e}");
         }

@@ -47,7 +47,9 @@ pub fn rounds_left(n: usize) -> u32 {
 pub fn plan(pool: &[String]) -> BisectStep {
     match pool.len() {
         0 => BisectStep::Inconclusive,
-        1 => BisectStep::Culprit { mod_name: pool[0].clone() },
+        1 => BisectStep::Culprit {
+            mod_name: pool[0].clone(),
+        },
         n => {
             let half = n / 2; // first `half` are the test set; keeps splits ~balanced
             BisectStep::Split {
@@ -93,13 +95,23 @@ mod tests {
     #[test]
     fn terminal_cases() {
         assert_eq!(plan(&[]), BisectStep::Inconclusive);
-        assert_eq!(plan(&names(&["FS25_X"])), BisectStep::Culprit { mod_name: "FS25_X".into() });
+        assert_eq!(
+            plan(&names(&["FS25_X"])),
+            BisectStep::Culprit {
+                mod_name: "FS25_X".into()
+            }
+        );
     }
 
     #[test]
     fn split_is_balanced_and_covers_the_pool() {
         let pool = names(&["a", "b", "c", "d", "e"]);
-        let BisectStep::Split { test, rest, rounds_left } = plan(&pool) else {
+        let BisectStep::Split {
+            test,
+            rest,
+            rounds_left,
+        } = plan(&pool)
+        else {
             panic!("expected split");
         };
         assert_eq!(test, names(&["a", "b"]));
@@ -121,7 +133,9 @@ mod tests {
                 let found = loop {
                     match plan(&pool) {
                         BisectStep::Culprit { mod_name } => break mod_name,
-                        BisectStep::Inconclusive => panic!("lost the culprit (n={n}, i={culprit_idx})"),
+                        BisectStep::Inconclusive => {
+                            panic!("lost the culprit (n={n}, i={culprit_idx})")
+                        }
                         BisectStep::Split { test, rest, .. } => {
                             launches += 1;
                             // Oracle: single-culprit → problem persists iff it's in the test half.
@@ -146,7 +160,8 @@ mod tests {
     #[test]
     fn interaction_is_not_blamed_on_one_mod() {
         // culprit needs BOTH a AND d present; they're in opposite halves of the first split.
-        let need = |set: &[String]| set.contains(&"a".to_string()) && set.contains(&"d".to_string());
+        let need =
+            |set: &[String]| set.contains(&"a".to_string()) && set.contains(&"d".to_string());
         let mut pool = names(&["a", "b", "c", "d"]);
         let mut fabricated = None;
         loop {

@@ -18,8 +18,8 @@ pub mod nexus;
 pub mod organize;
 pub mod savegame;
 pub mod scan;
-pub mod siloapi;
 pub mod settings_form;
+pub mod siloapi;
 pub mod store;
 pub mod xmlconfig;
 
@@ -166,7 +166,11 @@ fn set_mod_repo(
 fn guess_repo(path: String, kind: String) -> Option<db::RepoRow> {
     let xml = scan::read_moddesc_xml(std::path::Path::new(&path), &kind).ok()?;
     let (owner, repo) = github::find_repo_in_text(&xml)?;
-    Some(db::RepoRow { tech_name: String::new(), owner, repo })
+    Some(db::RepoRow {
+        tech_name: String::new(),
+        owner,
+        repo,
+    })
 }
 
 #[tauri::command]
@@ -213,7 +217,11 @@ fn gh_status(app: tauri::AppHandle) -> Result<GhStatus, String> {
 fn gh_set_client_id(app: tauri::AppHandle, client_id: String) -> Result<(), String> {
     let conn = db::open(&db_path(&app)?)?;
     let v = client_id.trim();
-    db::set_app_setting(&conn, "gh_client_id", if v.is_empty() { None } else { Some(v) })
+    db::set_app_setting(
+        &conn,
+        "gh_client_id",
+        if v.is_empty() { None } else { Some(v) },
+    )
 }
 
 #[tauri::command]
@@ -249,8 +257,8 @@ async fn gh_device_poll(
     let write = write.unwrap_or(false);
     tauri::async_runtime::spawn_blocking(move || -> Result<github::PollResult, String> {
         let conn = db::open(&db)?;
-        let cid = effective_client_id(&conn)
-            .ok_or_else(|| "No client id configured".to_string())?;
+        let cid =
+            effective_client_id(&conn).ok_or_else(|| "No client id configured".to_string())?;
         let res = github::device_poll(&cid, &device_code)?;
         if res.status == "ok" {
             if let Some(tok) = &res.token {
@@ -356,7 +364,9 @@ struct NexusStatus {
 #[tauri::command]
 fn nexus_status(app: tauri::AppHandle) -> Result<NexusStatus, String> {
     let conn = db::open(&db_path(&app)?)?;
-    Ok(NexusStatus { user: db::get_app_setting(&conn, "nexus_user") })
+    Ok(NexusStatus {
+        user: db::get_app_setting(&conn, "nexus_user"),
+    })
 }
 
 /// Verify + store a Nexus personal API key. Returns the account name.
@@ -458,7 +468,11 @@ fn siloapi_status(app: tauri::AppHandle) -> Result<String, String> {
 fn siloapi_set_base(app: tauri::AppHandle, base: String) -> Result<(), String> {
     let conn = db::open(&db_path(&app)?)?;
     let v = base.trim().trim_end_matches('/');
-    db::set_app_setting(&conn, "siloapi_base", if v.is_empty() { None } else { Some(v) })
+    db::set_app_setting(
+        &conn,
+        "siloapi_base",
+        if v.is_empty() { None } else { Some(v) },
+    )
 }
 
 #[tauri::command]
@@ -544,7 +558,11 @@ async fn install_remote_mod(
         siloapi::download_to(&url, &dest, |done, total| {
             let _ = emitter.emit(
                 "install:progress",
-                InstallProgress { id: id.clone(), done, total },
+                InstallProgress {
+                    id: id.clone(),
+                    done,
+                    total,
+                },
             );
         })?;
         Ok(filename)
@@ -758,7 +776,11 @@ fn export_loadout(app: tauri::AppHandle, id: i64, path: String) -> Result<(), St
         .into_iter()
         .find(|l| l.id == id)
         .ok_or_else(|| "Loadout not found".to_string())?;
-    let file = LoadoutFile { silo: 1, name: lo.name, mods: lo.mods };
+    let file = LoadoutFile {
+        silo: 1,
+        name: lo.name,
+        mods: lo.mods,
+    };
     let json = serde_json::to_string_pretty(&file).map_err(|e| e.to_string())?;
     std::fs::write(&path, json).map_err(|e| e.to_string())
 }
@@ -815,10 +837,7 @@ fn user_dir_path() -> Option<String> {
 /// Generate a filltype-compatibility bridge companion mod into the library root.
 /// Returns the created zip filename; the frontend rescans to pick it up.
 #[tauri::command]
-async fn generate_bridge(
-    spec: bridge::BridgeSpec,
-    root: Option<String>,
-) -> Result<String, String> {
+async fn generate_bridge(spec: bridge::BridgeSpec, root: Option<String>) -> Result<String, String> {
     let root = primary_root(root)?;
     tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
         let filename = format!("{}.zip", spec.tech_name);
@@ -932,7 +951,9 @@ fn bisect_snapshot_save(app: tauri::AppHandle, active: Vec<String>) -> Result<()
 fn bisect_snapshot_get(app: tauri::AppHandle) -> Result<Option<Vec<String>>, String> {
     let conn = db::open(&db_path(&app)?)?;
     match db::get_app_setting(&conn, "bisect_snapshot") {
-        Some(json) => Ok(Some(serde_json::from_str(&json).map_err(|e| e.to_string())?)),
+        Some(json) => Ok(Some(
+            serde_json::from_str(&json).map_err(|e| e.to_string())?,
+        )),
         None => Ok(None),
     }
 }

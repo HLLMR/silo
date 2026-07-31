@@ -33,7 +33,10 @@ fn main() {
     eprintln!("checking conflicts across all {} mods…\n", inputs.len());
     let conflicts = conflicts::detect(&inputs);
 
-    let crit = conflicts.iter().filter(|c| c.severity == "critical").count();
+    let crit = conflicts
+        .iter()
+        .filter(|c| c.severity == "critical")
+        .count();
     let warn = conflicts.iter().filter(|c| c.severity == "warning").count();
     println!("=== conflicts if ALL {} mods were active ===", inputs.len());
     println!("critical: {crit}   warnings: {warn}\n");
@@ -41,7 +44,10 @@ fn main() {
     for c in conflicts.iter().take(25) {
         println!(
             "[{}] {} \"{}\"  ({} mods)",
-            c.severity, c.kind, c.name, c.mods.len()
+            c.severity,
+            c.kind,
+            c.name,
+            c.mods.len()
         );
         println!("   {}", c.mods.join(", "));
     }

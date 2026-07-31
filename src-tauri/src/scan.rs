@@ -86,11 +86,19 @@ struct Candidate {
 fn candidate_from(path: PathBuf, name: &str, ft: std::fs::FileType) -> Option<Candidate> {
     if ft.is_dir() {
         if path.join("modDesc.xml").is_file() {
-            return Some(Candidate { tech_name: name.to_string(), path, kind: "dir" });
+            return Some(Candidate {
+                tech_name: name.to_string(),
+                path,
+                kind: "dir",
+            });
         }
     } else if ft.is_file() && name.to_lowercase().ends_with(".zip") {
         let tech_name = name[..name.len() - 4].to_string();
-        return Some(Candidate { tech_name, path, kind: "zip" });
+        return Some(Candidate {
+            tech_name,
+            path,
+            kind: "zip",
+        });
     }
     None
 }
@@ -227,8 +235,12 @@ fn build_entry(c: &Candidate) -> ModEntry {
                 crate::store::first_store_category(&c.path, c.kind, &md.store_item_files)
             };
             let title = md.title.clone().or_else(|| Some(c.tech_name.clone()));
-            let (category, subcategory) =
-                crate::category::categorize(&md, store_cat.as_deref(), &c.tech_name, title.as_deref());
+            let (category, subcategory) = crate::category::categorize(
+                &md,
+                store_cat.as_deref(),
+                &c.tech_name,
+                title.as_deref(),
+            );
             entry.category = category;
             entry.subcategory = subcategory;
             entry.title = title;
@@ -362,7 +374,10 @@ where
     ScanOutput {
         result: ScanResult {
             mods,
-            roots: roots.iter().map(|p| p.to_string_lossy().into_owned()).collect(),
+            roots: roots
+                .iter()
+                .map(|p| p.to_string_lossy().into_owned())
+                .collect(),
             took_ms: started.elapsed().as_millis(),
             total,
         },

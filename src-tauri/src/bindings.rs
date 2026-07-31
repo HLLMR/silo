@@ -53,9 +53,10 @@ pub struct BindingReport {
 }
 
 fn attr(e: &quick_xml::events::BytesStart, key: &[u8]) -> Option<String> {
-    e.attributes().flatten().find(|a| a.key.as_ref() == key).and_then(|a| {
-        a.unescape_value().ok().map(|v| v.into_owned())
-    })
+    e.attributes()
+        .flatten()
+        .find(|a| a.key.as_ref() == key)
+        .and_then(|a| a.unescape_value().ok().map(|v| v.into_owned()))
 }
 
 /// Parse `inputBinding.xml` into a per-device binding map. Pure — unit-testable.
@@ -70,20 +71,18 @@ pub fn parse(xml: &str) -> BindingReport {
     let mut buf = Vec::new();
     loop {
         match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
-                match e.name().as_ref() {
-                    b"actionBinding" => current_action = attr(&e, b"action"),
-                    b"binding" => {
-                        if let Some(action) = &current_action {
-                            let device = attr(&e, b"device").unwrap_or_default();
-                            if let Some(input) = attr(&e, b"input") {
-                                raw.push((device, action.clone(), input));
-                            }
+            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => match e.name().as_ref() {
+                b"actionBinding" => current_action = attr(&e, b"action"),
+                b"binding" => {
+                    if let Some(action) = &current_action {
+                        let device = attr(&e, b"device").unwrap_or_default();
+                        if let Some(input) = attr(&e, b"input") {
+                            raw.push((device, action.clone(), input));
                         }
                     }
-                    _ => {}
                 }
-            }
+                _ => {}
+            },
             // actionBinding closes -> clear context so a stray later binding isn't misfiled.
             Ok(Event::End(e)) if e.name().as_ref() == b"actionBinding" => current_action = None,
             Ok(Event::Eof) => break,
@@ -120,8 +119,15 @@ pub fn parse(xml: &str) -> BindingReport {
                 .collect();
 
             pairs.sort();
-            let bindings = pairs.into_iter().map(|(action, input)| Bind { action, input }).collect();
-            DeviceBindings { device, bindings, shared }
+            let bindings = pairs
+                .into_iter()
+                .map(|(action, input)| Bind { action, input })
+                .collect();
+            DeviceBindings {
+                device,
+                bindings,
+                shared,
+            }
         })
         .collect();
 
@@ -162,14 +168,22 @@ mod tests {
         assert_eq!(r.total_bindings, 5);
         assert_eq!(r.total_actions, 4); // JUMP, ACTIVATE_HANDTOOL, ..._SECONDARY, CROUCH
         assert_eq!(r.devices.len(), 2); // KB_MOUSE_DEFAULT, GAMEPAD
-        let kb = r.devices.iter().find(|d| d.device == "KB_MOUSE_DEFAULT").unwrap();
+        let kb = r
+            .devices
+            .iter()
+            .find(|d| d.device == "KB_MOUSE_DEFAULT")
+            .unwrap();
         assert_eq!(kb.bindings.len(), 4);
     }
 
     #[test]
     fn flags_input_shared_across_actions_but_not_within_one() {
         let r = parse(SAMPLE);
-        let kb = r.devices.iter().find(|d| d.device == "KB_MOUSE_DEFAULT").unwrap();
+        let kb = r
+            .devices
+            .iter()
+            .find(|d| d.device == "KB_MOUSE_DEFAULT")
+            .unwrap();
         // KEY_x drives BOTH ACTIVATE_HANDTOOL and ACTIVATE_HANDTOOL_SECONDARY → shared.
         let key_x = kb.shared.iter().find(|s| s.input == "KEY_x").unwrap();
         assert_eq!(key_x.actions.len(), 2);

@@ -170,7 +170,10 @@ fn handle_open(md: &mut ModDesc, e: &quick_xml::events::BytesStart, name: &str, 
                 _ => None,
             };
             if let (Some(kind), Some(nm)) = (kind, attr(e, b"name")) {
-                md.registrations.push(Registration { kind: kind.into(), name: nm });
+                md.registrations.push(Registration {
+                    kind: kind.into(),
+                    name: nm,
+                });
             }
         }
         // <type> under one of the three type containers registers a type name.
@@ -182,22 +185,34 @@ fn handle_open(md: &mut ModDesc, e: &quick_xml::events::BytesStart, name: &str, 
                 _ => None,
             };
             if let (Some(kind), Some(nm)) = (kind, attr(e, b"name")) {
-                md.registrations.push(Registration { kind: kind.into(), name: nm });
+                md.registrations.push(Registration {
+                    kind: kind.into(),
+                    name: nm,
+                });
             }
         }
         "action" if parent == "actions" => {
             if let Some(nm) = attr(e, b"name") {
-                md.registrations.push(Registration { kind: "action".into(), name: nm });
+                md.registrations.push(Registration {
+                    kind: "action".into(),
+                    name: nm,
+                });
             }
         }
         "brand" if parent == "brands" => {
             if let Some(nm) = attr(e, b"name") {
-                md.registrations.push(Registration { kind: "brand".into(), name: nm });
+                md.registrations.push(Registration {
+                    kind: "brand".into(),
+                    name: nm,
+                });
             }
         }
         "storeCategory" if parent == "storeCategories" => {
             if let Some(nm) = attr(e, b"name") {
-                md.registrations.push(Registration { kind: "storeCategory".into(), name: nm });
+                md.registrations.push(Registration {
+                    kind: "storeCategory".into(),
+                    name: nm,
+                });
             }
         }
         _ => {}
@@ -236,11 +251,15 @@ fn absorb_text(
         }
         // Localized <title><en>… directly under modDesc.
         lang if parent == "title" && gp == "modDesc" => {
-            mod_title.entry(lang.to_string()).or_insert_with(|| text.to_string());
+            mod_title
+                .entry(lang.to_string())
+                .or_insert_with(|| text.to_string());
         }
         // Localized map title: <maps><map><title><en>…
         lang if parent == "title" && gp == "map" => {
-            map_title.entry(lang.to_string()).or_insert_with(|| text.to_string());
+            map_title
+                .entry(lang.to_string())
+                .or_insert_with(|| text.to_string());
         }
         _ => {}
     }
@@ -280,7 +299,10 @@ mod tests {
         assert_eq!(md.author.as_deref(), Some("Pepperonie, EWW_Bobo"));
         assert_eq!(md.version.as_deref(), Some("1.0.0.0"));
         assert_eq!(md.title.as_deref(), Some("Adjustable Engine Power"));
-        assert_eq!(md.icon_filename.as_deref(), Some("icon_adjustEnginePower.dds"));
+        assert_eq!(
+            md.icon_filename.as_deref(),
+            Some("icon_adjustEnginePower.dds")
+        );
         assert!(md.mp_supported);
         assert_eq!(md.scripts.len(), 2);
         assert!(!md.is_map);
@@ -309,7 +331,13 @@ mod tests {
         // One specialization registration + one vehicleType registration.
         // The <specialization> inside <type> is a reference, not a registration.
         assert_eq!(md.registrations.len(), 2);
-        assert!(md.registrations.iter().any(|r| r.kind == "specialization" && r.name == "fooSpec"));
-        assert!(md.registrations.iter().any(|r| r.kind == "vehicleType" && r.name == "fooTruck"));
+        assert!(md
+            .registrations
+            .iter()
+            .any(|r| r.kind == "specialization" && r.name == "fooSpec"));
+        assert!(md
+            .registrations
+            .iter()
+            .any(|r| r.kind == "vehicleType" && r.name == "fooTruck"));
     }
 }

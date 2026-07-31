@@ -95,7 +95,10 @@ pub fn hash_mods(mods: &[ModRef]) -> Vec<ManifestEntry> {
 pub fn build_manifest(mods: &[ModRef]) -> Manifest {
     let mut mods = hash_mods(mods);
     mods.sort_by(|a, b| a.tech_name.cmp(&b.tech_name));
-    Manifest { algo: ALGO.to_string(), mods }
+    Manifest {
+        algo: ALGO.to_string(),
+        mods,
+    }
 }
 
 /// Diff a manifest against the joiner's already-hashed local set. Pure — unit-tested.
@@ -140,7 +143,9 @@ pub fn diff(manifest: &[ManifestEntry], local: &[ManifestEntry]) -> VerifyReport
     extra.sort();
 
     VerifyReport {
-        ok: missing.is_empty() && version_mismatch.is_empty() && hash_mismatch.is_empty()
+        ok: missing.is_empty()
+            && version_mismatch.is_empty()
+            && hash_mismatch.is_empty()
             && extra.is_empty(),
         missing,
         version_mismatch,
@@ -175,8 +180,8 @@ mod tests {
     fn catches_every_kind_of_drift() {
         let host = vec![
             e("FS25_Present", "1.0", "same"),
-            e("FS25_Missing", "1.0", "x"),      // joiner lacks it
-            e("FS25_OldVer", "2.0", "h2"),      // joiner has older
+            e("FS25_Missing", "1.0", "x"),       // joiner lacks it
+            e("FS25_OldVer", "2.0", "h2"),       // joiner has older
             e("FS25_Rezip", "1.0", "hostbytes"), // same ver, different bytes
         ];
         let joiner = vec![

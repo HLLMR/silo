@@ -4,9 +4,9 @@
 //!
 //!   cargo run --example organize_test
 
+use silo_lib::organize::{self, ModInput};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use silo_lib::organize::{self, ModInput};
 
 fn write(path: &Path, contents: &str) {
     std::fs::write(path, contents).expect("write fixture");
@@ -61,36 +61,79 @@ fn main() {
     let plan = organize::plan_organize(&root, &inputs);
     assert(plan.len() == 3, "plan lists all 3 mods");
     assert(
-        plan.iter().any(|p| p.rel_to == "archive/Tractors/FS25_Fendt.zip"),
+        plan.iter()
+            .any(|p| p.rel_to == "archive/Tractors/FS25_Fendt.zip"),
         "plan targets archive/Tractors/FS25_Fendt.zip",
     );
 
     println!("\n[apply organize]");
     let rep = organize::apply_organize(&conn, &root, &inputs);
-    assert(rep.changed == 3 && rep.errors.is_empty(), "organized 3, no errors");
+    assert(
+        rep.changed == 3 && rep.errors.is_empty(),
+        "organized 3, no errors",
+    );
     let arch = |cat: &str, f: &str| root.join("archive").join(cat).join(f);
-    assert(exists(&arch("Tractors", "FS25_Fendt.zip")), "Fendt in archive/Tractors");
-    assert(exists(&arch("Harvesters", "FS25_Claas.zip")), "Claas in archive/Harvesters");
-    assert(!exists(&root.join("FS25_Fendt.zip")), "flat root no longer holds Fendt");
-    assert(read(&arch("Tractors", "FS25_Fendt.zip")) == "fendt-bytes", "archived content intact");
+    assert(
+        exists(&arch("Tractors", "FS25_Fendt.zip")),
+        "Fendt in archive/Tractors",
+    );
+    assert(
+        exists(&arch("Harvesters", "FS25_Claas.zip")),
+        "Claas in archive/Harvesters",
+    );
+    assert(
+        !exists(&root.join("FS25_Fendt.zip")),
+        "flat root no longer holds Fendt",
+    );
+    assert(
+        read(&arch("Tractors", "FS25_Fendt.zip")) == "fendt-bytes",
+        "archived content intact",
+    );
 
     println!("\n[activate {{Fendt, Barn}}]");
-    let active: HashSet<String> = ["FS25_Fendt", "FS25_Barn"].iter().map(|s| s.to_string()).collect();
+    let active: HashSet<String> = ["FS25_Fendt", "FS25_Barn"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
     let rep = organize::set_active(&conn, &root, &active);
     assert(rep.errors.is_empty(), "activate no errors");
-    assert(exists(&root.join("FS25_Fendt.zip")), "Fendt projected into flat root");
-    assert(exists(&root.join("FS25_Barn.zip")), "Barn projected into flat root");
-    assert(!exists(&root.join("FS25_Claas.zip")), "Claas NOT projected (inactive)");
+    assert(
+        exists(&root.join("FS25_Fendt.zip")),
+        "Fendt projected into flat root",
+    );
+    assert(
+        exists(&root.join("FS25_Barn.zip")),
+        "Barn projected into flat root",
+    );
+    assert(
+        !exists(&root.join("FS25_Claas.zip")),
+        "Claas NOT projected (inactive)",
+    );
     // Hardlink shares content with the archive original.
-    assert(read(&root.join("FS25_Fendt.zip")) == "fendt-bytes", "projected link reads correct content");
-    assert(exists(&arch("Tractors", "FS25_Fendt.zip")), "archive original still present while active");
+    assert(
+        read(&root.join("FS25_Fendt.zip")) == "fendt-bytes",
+        "projected link reads correct content",
+    );
+    assert(
+        exists(&arch("Tractors", "FS25_Fendt.zip")),
+        "archive original still present while active",
+    );
 
     println!("\n[deactivate all]");
     let rep = organize::set_active(&conn, &root, &HashSet::new());
     assert(rep.errors.is_empty(), "deactivate no errors");
-    assert(!exists(&root.join("FS25_Fendt.zip")), "Fendt link removed from flat root");
-    assert(!exists(&root.join("FS25_Barn.zip")), "Barn link removed from flat root");
-    assert(exists(&arch("Tractors", "FS25_Fendt.zip")), "archive original untouched by deactivate");
+    assert(
+        !exists(&root.join("FS25_Fendt.zip")),
+        "Fendt link removed from flat root",
+    );
+    assert(
+        !exists(&root.join("FS25_Barn.zip")),
+        "Barn link removed from flat root",
+    );
+    assert(
+        exists(&arch("Tractors", "FS25_Fendt.zip")),
+        "archive original untouched by deactivate",
+    );
 
     println!("\n[flatten -> vanilla]");
     // Re-activate one first, to prove flatten handles an active projection.
@@ -101,10 +144,16 @@ fn main() {
     for (tech, _cat, body) in &mods {
         let p = root.join(format!("{tech}.zip"));
         assert(exists(&p), &format!("{tech}.zip restored to flat root"));
-        assert(read(&p) == *body, &format!("{tech}.zip content preserved through full cycle"));
+        assert(
+            read(&p) == *body,
+            &format!("{tech}.zip content preserved through full cycle"),
+        );
     }
     assert(!exists(&root.join("archive")), "archive tree removed");
-    assert(silo_lib::db::load_organized(&conn).is_empty(), "manifest cleared");
+    assert(
+        silo_lib::db::load_organized(&conn).is_empty(),
+        "manifest cleared",
+    );
 
     // Count files in the flat root — should be exactly the 3 zips (+ the test db).
     let n_zip = std::fs::read_dir(&root)
@@ -112,7 +161,10 @@ fn main() {
         .flatten()
         .filter(|e| e.path().extension().map(|x| x == "zip").unwrap_or(false))
         .count();
-    assert(n_zip == 3, "exactly 3 zips in the restored flat root (no duplication)");
+    assert(
+        n_zip == 3,
+        "exactly 3 zips in the restored flat root (no duplication)",
+    );
 
     // Clean up the sandbox.
     drop(conn);

@@ -145,20 +145,26 @@ pub fn open(db_path: &Path) -> Result<Connection, String> {
 
 /// Load all tags, grouped later by the caller.
 pub fn load_tags(conn: &Connection) -> Vec<TagRow> {
-    let Ok(mut stmt) = conn.prepare("SELECT tech_name, tag FROM mod_tag ORDER BY tag COLLATE NOCASE")
+    let Ok(mut stmt) =
+        conn.prepare("SELECT tech_name, tag FROM mod_tag ORDER BY tag COLLATE NOCASE")
     else {
         return Vec::new();
     };
     let rows = stmt.query_map([], |r| {
-        Ok(TagRow { tech_name: r.get(0)?, tag: r.get(1)? })
+        Ok(TagRow {
+            tech_name: r.get(0)?,
+            tag: r.get(1)?,
+        })
     });
     rows.map(|r| r.flatten().collect()).unwrap_or_default()
 }
 
 /// Generic app setting get/set (GitHub client id, token, user, …).
 pub fn get_app_setting(conn: &Connection, key: &str) -> Option<String> {
-    conn.query_row("SELECT value FROM app_setting WHERE key = ?1", [key], |r| r.get(0))
-        .ok()
+    conn.query_row("SELECT value FROM app_setting WHERE key = ?1", [key], |r| {
+        r.get(0)
+    })
+    .ok()
 }
 
 pub fn set_app_setting(conn: &Connection, key: &str, value: Option<&str>) -> Result<(), String> {
@@ -180,7 +186,11 @@ pub fn load_repos(conn: &Connection) -> Vec<RepoRow> {
         return Vec::new();
     };
     let rows = stmt.query_map([], |r| {
-        Ok(RepoRow { tech_name: r.get(0)?, owner: r.get(1)?, repo: r.get(2)? })
+        Ok(RepoRow {
+            tech_name: r.get(0)?,
+            owner: r.get(1)?,
+            repo: r.get(2)?,
+        })
     });
     rows.map(|r| r.flatten().collect()).unwrap_or_default()
 }
@@ -213,7 +223,8 @@ pub fn set_tags(conn: &mut Connection, tech_name: &str, tags: &[String]) -> Resu
         for t in tags {
             let t = t.trim();
             if !t.is_empty() {
-                stmt.execute(rusqlite::params![tech_name, t]).map_err(|e| e.to_string())?;
+                stmt.execute(rusqlite::params![tech_name, t])
+                    .map_err(|e| e.to_string())?;
             }
         }
     }
@@ -256,8 +267,11 @@ pub fn save_loadout(
     let tx = conn.transaction().map_err(|e| e.to_string())?;
     let id = match id {
         Some(id) => {
-            tx.execute("UPDATE loadout SET name = ?2 WHERE id = ?1", rusqlite::params![id, name])
-                .map_err(|e| e.to_string())?;
+            tx.execute(
+                "UPDATE loadout SET name = ?2 WHERE id = ?1",
+                rusqlite::params![id, name],
+            )
+            .map_err(|e| e.to_string())?;
             tx.execute("DELETE FROM loadout_mod WHERE loadout_id = ?1", [id])
                 .map_err(|e| e.to_string())?;
             id
@@ -273,7 +287,8 @@ pub fn save_loadout(
             .prepare("INSERT OR IGNORE INTO loadout_mod(loadout_id, tech_name) VALUES(?1, ?2)")
             .map_err(|e| e.to_string())?;
         for m in mods {
-            stmt.execute(rusqlite::params![id, m]).map_err(|e| e.to_string())?;
+            stmt.execute(rusqlite::params![id, m])
+                .map_err(|e| e.to_string())?;
         }
     }
     tx.commit().map_err(|e| e.to_string())?;
@@ -330,7 +345,11 @@ pub fn upsert_organized(conn: &Connection, row: &OrganizedRow) -> Result<(), Str
     Ok(())
 }
 
-pub fn set_organized_active(conn: &Connection, tech_name: &str, active: bool) -> Result<(), String> {
+pub fn set_organized_active(
+    conn: &Connection,
+    tech_name: &str,
+    active: bool,
+) -> Result<(), String> {
     conn.execute(
         "UPDATE organized SET active = ?2 WHERE tech_name = ?1",
         rusqlite::params![tech_name, active as i64],
@@ -373,8 +392,11 @@ pub fn set_curation(conn: &Connection, row: &CurationRow) -> Result<(), String> 
         && row.rating == 0
         && row.note.as_deref().unwrap_or("").is_empty();
     if empty {
-        conn.execute("DELETE FROM curation WHERE tech_name = ?1", [&row.tech_name])
-            .map_err(|e| e.to_string())?;
+        conn.execute(
+            "DELETE FROM curation WHERE tech_name = ?1",
+            [&row.tech_name],
+        )
+        .map_err(|e| e.to_string())?;
         return Ok(());
     }
     conn.execute(
@@ -419,8 +441,11 @@ pub fn load_overrides(conn: &Connection) -> Vec<CategoryOverride> {
 /// Upsert (or clear) a category override.
 pub fn set_override(conn: &Connection, row: &CategoryOverride) -> Result<(), String> {
     if row.category.is_empty() {
-        conn.execute("DELETE FROM category_override WHERE tech_name = ?1", [&row.tech_name])
-            .map_err(|e| e.to_string())?;
+        conn.execute(
+            "DELETE FROM category_override WHERE tech_name = ?1",
+            [&row.tech_name],
+        )
+        .map_err(|e| e.to_string())?;
         return Ok(());
     }
     conn.execute(
@@ -459,14 +484,24 @@ pub fn load_cache(conn: &Connection) -> HashMap<String, CacheEntry> {
     });
     if let Ok(rows) = rows {
         for (path, mtime_ms, size, json) in rows.flatten() {
-            map.insert(path, CacheEntry { mtime_ms, size, json });
+            map.insert(
+                path,
+                CacheEntry {
+                    mtime_ms,
+                    size,
+                    json,
+                },
+            );
         }
     }
     map
 }
 
 /// Upsert freshly-parsed rows in a single transaction.
-pub fn upsert_many(conn: &mut Connection, rows: &[(String, u64, u64, String)]) -> Result<(), String> {
+pub fn upsert_many(
+    conn: &mut Connection,
+    rows: &[(String, u64, u64, String)],
+) -> Result<(), String> {
     if rows.is_empty() {
         return Ok(());
     }

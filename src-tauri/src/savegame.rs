@@ -116,7 +116,10 @@ pub fn list_savegames(user_dir: &Path) -> Vec<Savegame> {
     };
     for entry in rd.flatten() {
         let folder = entry.file_name().to_string_lossy().into_owned();
-        let Some(index) = folder.strip_prefix("savegame").and_then(|n| n.parse::<u32>().ok()) else {
+        let Some(index) = folder
+            .strip_prefix("savegame")
+            .and_then(|n| n.parse::<u32>().ok())
+        else {
             continue;
         };
         let xml_path = entry.path().join("careerSavegame.xml");
@@ -154,7 +157,9 @@ pub fn backup(user_dir: &Path, folder: &str) -> Result<String, String> {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    let dst = user_dir.join("SiloBackups").join(format!("{folder}_{secs}"));
+    let dst = user_dir
+        .join("SiloBackups")
+        .join(format!("{folder}_{secs}"));
     copy_dir(&src, &dst).map_err(|e| e.to_string())?;
     Ok(dst.to_string_lossy().into_owned())
 }
@@ -178,9 +183,17 @@ mod tests {
         assert_eq!(s.name, "My game save");
         assert_eq!(s.map_title.as_deref(), Some("Riverbend Springs"));
         assert_eq!(s.mods.len(), 2);
-        let pf = s.mods.iter().find(|m| m.mod_name == "FS25_precisionFarming").unwrap();
+        let pf = s
+            .mods
+            .iter()
+            .find(|m| m.mod_name == "FS25_precisionFarming")
+            .unwrap();
         assert!(pf.required && !pf.is_dlc);
-        let dlc = s.mods.iter().find(|m| m.mod_name == "pdlc_vredoPack").unwrap();
+        let dlc = s
+            .mods
+            .iter()
+            .find(|m| m.mod_name == "pdlc_vredoPack")
+            .unwrap();
         assert!(dlc.is_dlc && !dlc.required);
     }
 

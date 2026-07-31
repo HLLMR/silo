@@ -16,10 +16,18 @@ fn main() {
     let icon = md.icon_filename.expect("mod has no <iconFilename>");
     eprintln!("iconFilename: {icon}");
 
-    let png = silo_lib::icons::extract_icon_png(&path, kind, &icon)
-        .expect("extract/decode icon");
+    let png = silo_lib::icons::extract_icon_png(&path, kind, &icon).expect("extract/decode icon");
 
-    let out = PathBuf::from(std::env::args().nth(2).unwrap_or_else(|| "icon_out.png".into()));
+    let out = PathBuf::from(
+        std::env::args()
+            .nth(2)
+            .unwrap_or_else(|| "icon_out.png".into()),
+    );
     std::fs::write(&out, &png).expect("write png");
-    println!("OK: decoded '{}' -> {} bytes PNG at {:?}", icon, png.len(), out);
+    println!(
+        "OK: decoded '{}' -> {} bytes PNG at {:?}",
+        icon,
+        png.len(),
+        out
+    );
 }

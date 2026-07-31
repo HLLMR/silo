@@ -69,7 +69,9 @@ fn kind_label(kind: &str) -> &str {
 
 /// All involved mods share one non-empty author.
 fn same_author(parsed: &[Parsed], idxs: &[usize]) -> bool {
-    let mut it = idxs.iter().map(|&i| parsed[i].author.as_deref().unwrap_or(""));
+    let mut it = idxs
+        .iter()
+        .map(|&i| parsed[i].author.as_deref().unwrap_or(""));
     match it.next() {
         Some(first) if !first.is_empty() => it.all(|a| a.eq_ignore_ascii_case(first)),
         _ => false,
@@ -102,9 +104,10 @@ fn identical_script(parsed: &[Parsed], idxs: &[usize], basename: &str) -> bool {
     let mut prev: Option<u64> = None;
     for &i in idxs {
         let p = &parsed[i];
-        let full = p.md.scripts.iter().find(|s| {
-            s.rsplit('/').next().unwrap_or(s.as_str()) == basename
-        });
+        let full =
+            p.md.scripts
+                .iter()
+                .find(|s| s.rsplit('/').next().unwrap_or(s.as_str()) == basename);
         let Some(full) = full else { return false };
         let Some(bytes) = read_member(&p.path, &p.kind, full) else {
             return false;
@@ -199,7 +202,10 @@ pub fn detect(inputs: &[ConflictInput]) -> Vec<Conflict> {
 
     for (i, p) in parsed.iter().enumerate() {
         for r in &p.md.registrations {
-            registrations.entry((r.kind.clone(), r.name.clone())).or_default().push(i);
+            registrations
+                .entry((r.kind.clone(), r.name.clone()))
+                .or_default()
+                .push(i);
         }
         if let Some(ut) = &p.md.unique_type {
             unique_types.entry(ut.clone()).or_default().push(i);
@@ -258,7 +264,10 @@ pub fn detect(inputs: &[ConflictInput]) -> Vec<Conflict> {
         let identical = identical_script(&parsed, &idxs, &base);
         let sa = same_author(&parsed, &idxs);
         let (severity, extra) = if identical {
-            ("info", " The file is byte-identical in each, so it's a shared library, not a real clash.")
+            (
+                "info",
+                " The file is byte-identical in each, so it's a shared library, not a real clash.",
+            )
         } else if sa {
             ("info", note_same_author)
         } else {
@@ -278,8 +287,11 @@ pub fn detect(inputs: &[ConflictInput]) -> Vec<Conflict> {
     // Two active maps = instant crash on load: a second map's scripts still load even
     // if unused. Canonical FS folklore ("never have more than one map enabled"); no
     // manager surfaces it. Zero false positives — a mod either declares <maps> or not.
-    let map_labels: Vec<String> =
-        parsed.iter().filter(|p| p.md.is_map).map(|p| p.label.clone()).collect();
+    let map_labels: Vec<String> = parsed
+        .iter()
+        .filter(|p| p.md.is_map)
+        .map(|p| p.label.clone())
+        .collect();
     if let Some(c) = map_conflict(map_labels) {
         out.push(c);
     }
@@ -290,8 +302,12 @@ pub fn detect(inputs: &[ConflictInput]) -> Vec<Conflict> {
     // additive and DON'T conflict, so we flag only genuine same-name collisions.
     let mut fill_types: HashMap<String, Vec<usize>> = HashMap::new();
     for (i, p) in parsed.iter().enumerate() {
-        let Some(file) = &p.md.fill_types_file else { continue };
-        let Some(bytes) = read_member(&p.path, &p.kind, file) else { continue };
+        let Some(file) = &p.md.fill_types_file else {
+            continue;
+        };
+        let Some(bytes) = read_member(&p.path, &p.kind, file) else {
+            continue;
+        };
         for name in fill_type_names(&bytes) {
             let v = fill_types.entry(name).or_default();
             if !v.contains(&i) {

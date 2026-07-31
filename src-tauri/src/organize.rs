@@ -113,7 +113,8 @@ pub fn apply_organize(conn: &Connection, root: &Path, mods: &[ModInput]) -> Repo
         }
         let dir = archive_dir(root, &m.category);
         if let Err(e) = std::fs::create_dir_all(&dir) {
-            rep.errors.push(format!("{}: mkdir {}: {e}", m.tech_name, dir.display()));
+            rep.errors
+                .push(format!("{}: mkdir {}: {e}", m.tech_name, dir.display()));
             continue;
         }
         let to = dir.join(&m.file_name);

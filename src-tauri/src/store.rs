@@ -21,7 +21,10 @@ pub fn first_store_category(mod_path: &Path, kind: &str, store_files: &[String])
 /// A store item under `missionVehicles/` is a contract-mission prop, not the mod's own
 /// shop presence — don't let it decide the mod's category.
 fn is_mission_vehicle(store_file: &str) -> bool {
-    store_file.replace('\\', "/").to_lowercase().contains("missionvehicles/")
+    store_file
+        .replace('\\', "/")
+        .to_lowercase()
+        .contains("missionvehicles/")
 }
 
 fn read_member(mod_path: &Path, kind: &str, member: &str) -> Option<String> {

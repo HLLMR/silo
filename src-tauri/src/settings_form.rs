@@ -73,7 +73,10 @@ fn element_slots(e: &BytesStart) -> Vec<Slot> {
     let mut raw: Vec<(String, String)> = Vec::new();
     for a in e.attributes().flatten() {
         let key = local(a.key.as_ref());
-        let val = a.unescape_value().map(|c| c.into_owned()).unwrap_or_default();
+        let val = a
+            .unescape_value()
+            .map(|c| c.into_owned())
+            .unwrap_or_default();
         if key == "name" {
             name_label = Some(val.clone());
         }
@@ -144,12 +147,19 @@ fn edited_start<'a>(e: &BytesStart<'a>, base_id: usize, edits: &[Edit]) -> Bytes
     let mut slot_i = 0usize;
     for a in e.attributes().flatten() {
         let key = local(a.key.as_ref());
-        let orig = a.unescape_value().map(|c| c.into_owned()).unwrap_or_default();
+        let orig = a
+            .unescape_value()
+            .map(|c| c.into_owned())
+            .unwrap_or_default();
         let is_slot = slots.get(slot_i).map(|s| s.attr == key).unwrap_or(false);
         let value = if is_slot {
             let this_id = base_id + slot_i;
             slot_i += 1;
-            edits.iter().find(|ed| ed.id == this_id).map(|ed| ed.value.clone()).unwrap_or(orig)
+            edits
+                .iter()
+                .find(|ed| ed.id == this_id)
+                .map(|ed| ed.value.clone())
+                .unwrap_or(orig)
         } else {
             orig
         };
@@ -175,13 +185,17 @@ pub fn apply_edits(xml: &str, edits: &[Edit]) -> Result<String, String> {
                 let n = element_slots(&e).len();
                 let out = edited_start(&e, id, edits);
                 id += n;
-                writer.write_event(Event::Start(out)).map_err(|e| e.to_string())?;
+                writer
+                    .write_event(Event::Start(out))
+                    .map_err(|e| e.to_string())?;
             }
             Ok(Event::Empty(e)) => {
                 let n = element_slots(&e).len();
                 let out = edited_start(&e, id, edits);
                 id += n;
-                writer.write_event(Event::Empty(out)).map_err(|e| e.to_string())?;
+                writer
+                    .write_event(Event::Empty(out))
+                    .map_err(|e| e.to_string())?;
             }
             Ok(ev) => writer.write_event(ev).map_err(|e| e.to_string())?,
         }
@@ -203,7 +217,10 @@ pub fn find_files(user_dir: &Path, mod_name: &str) -> Vec<PathBuf> {
     if let Ok(rd) = std::fs::read_dir(&dir) {
         for e in rd.flatten() {
             let p = e.path();
-            if p.extension().map(|x| x.eq_ignore_ascii_case("xml")).unwrap_or(false) {
+            if p.extension()
+                .map(|x| x.eq_ignore_ascii_case("xml"))
+                .unwrap_or(false)
+            {
                 out.push(p);
             }
         }
@@ -233,7 +250,10 @@ pub fn load_file(path: &Path) -> Result<SettingsFile, String> {
     let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
     Ok(SettingsFile {
         path: path.to_string_lossy().into_owned(),
-        name: path.file_name().map(|f| f.to_string_lossy().into_owned()).unwrap_or_default(),
+        name: path
+            .file_name()
+            .map(|f| f.to_string_lossy().into_owned())
+            .unwrap_or_default(),
         fields: parse(&raw),
         raw,
     })
@@ -273,8 +293,14 @@ mod tests {
     #[test]
     fn edits_only_change_targeted_values() {
         let edits = vec![
-            Edit { id: 0, value: "5".into() },
-            Edit { id: 1, value: "false".into() },
+            Edit {
+                id: 0,
+                value: "5".into(),
+            },
+            Edit {
+                id: 1,
+                value: "false".into(),
+            },
         ];
         let out = apply_edits(SAMPLE, &edits).unwrap();
         assert!(out.contains("integer=\"5\""));

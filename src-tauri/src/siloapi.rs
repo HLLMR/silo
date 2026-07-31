@@ -258,25 +258,26 @@ pub fn resolve_download(
     let detail = detail(base, id)?;
 
     let usable = |s: &&ModSource| s.installable && s.download_url.is_some();
-    let pick = match want {
-        Some(name) => detail
-            .sources
-            .iter()
-            .find(|s| s.source == name)
-            .ok_or_else(|| format!("{name} doesn't list this mod"))
-            .and_then(|s| {
-                if usable(&s) {
-                    Ok(s)
-                } else {
-                    Err(format!("{name} doesn't allow direct downloads — open its page instead"))
-                }
+    let pick =
+        match want {
+            Some(name) => detail
+                .sources
+                .iter()
+                .find(|s| s.source == name)
+                .ok_or_else(|| format!("{name} doesn't list this mod"))
+                .and_then(|s| {
+                    if usable(&s) {
+                        Ok(s)
+                    } else {
+                        Err(format!(
+                            "{name} doesn't allow direct downloads — open its page instead"
+                        ))
+                    }
+                })?,
+            None => detail.sources.iter().find(usable).ok_or_else(|| {
+                "No source allows a direct download — open the mod page".to_string()
             })?,
-        None => detail
-            .sources
-            .iter()
-            .find(usable)
-            .ok_or_else(|| "No source allows a direct download — open the mod page".to_string())?,
-    };
+        };
 
     let url = pick
         .download_url
@@ -398,7 +399,9 @@ mod tests {
     #[test]
     fn filename_parsing() {
         assert_eq!(
-            filename_from_url("https://cdn27.giants-software.com/modHub/storage/00360212/FS25_Schmiechtal.zip"),
+            filename_from_url(
+                "https://cdn27.giants-software.com/modHub/storage/00360212/FS25_Schmiechtal.zip"
+            ),
             Some("FS25_Schmiechtal.zip".to_string())
         );
         assert_eq!(

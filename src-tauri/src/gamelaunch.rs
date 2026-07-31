@@ -40,7 +40,10 @@ fn steam_roots() -> Vec<PathBuf> {
         roots.push(h.join(".steam/steam"));
         roots.push(h.join(".local/share/Steam"));
     }
-    roots.into_iter().filter(|r| r.join("steamapps").is_dir()).collect()
+    roots
+        .into_iter()
+        .filter(|r| r.join("steamapps").is_dir())
+        .collect()
 }
 
 /// Library paths from a Steam root's `libraryfolders.vdf` (plus the root itself).

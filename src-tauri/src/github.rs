@@ -40,15 +40,13 @@ pub fn latest_release(owner: &str, repo: &str, token: Option<&str>) -> Result<Re
     if let Some(t) = token {
         req = req.set("Authorization", &format!("Bearer {t}"));
     }
-    let resp = req
-        .call()
-        .map_err(|e| match e {
-            ureq::Error::Status(404, _) => "No releases found for this repo".to_string(),
-            ureq::Error::Status(403, _) => {
-                "GitHub rate limit hit (60/hr unauthenticated) — try again later".to_string()
-            }
-            other => other.to_string(),
-        })?;
+    let resp = req.call().map_err(|e| match e {
+        ureq::Error::Status(404, _) => "No releases found for this repo".to_string(),
+        ureq::Error::Status(403, _) => {
+            "GitHub rate limit hit (60/hr unauthenticated) — try again later".to_string()
+        }
+        other => other.to_string(),
+    })?;
     let v: serde_json::Value = resp.into_json().map_err(|e| e.to_string())?;
 
     let tag = v["tag_name"].as_str().unwrap_or("").to_string();
@@ -100,7 +98,12 @@ pub fn is_newer(latest_tag: &str, current: &str) -> bool {
 }
 
 /// Check a repo and compare to the installed version.
-pub fn check(owner: &str, repo: &str, current: &str, token: Option<&str>) -> Result<UpdateInfo, String> {
+pub fn check(
+    owner: &str,
+    repo: &str,
+    current: &str,
+    token: Option<&str>,
+) -> Result<UpdateInfo, String> {
     let release = latest_release(owner, repo, token)?;
     Ok(UpdateInfo {
         has_update: is_newer(&release.tag, current),
@@ -145,13 +148,18 @@ pub fn device_start(client_id: &str, scope: &str) -> Result<DeviceCode, String> 
         return Err(format!(
             "{}: {}",
             err,
-            v["error_description"].as_str().unwrap_or("device code request failed")
+            v["error_description"]
+                .as_str()
+                .unwrap_or("device code request failed")
         ));
     }
     Ok(DeviceCode {
         device_code: v["device_code"].as_str().unwrap_or("").to_string(),
         user_code: v["user_code"].as_str().unwrap_or("").to_string(),
-        verification_uri: v["verification_uri"].as_str().unwrap_or("https://github.com/login/device").to_string(),
+        verification_uri: v["verification_uri"]
+            .as_str()
+            .unwrap_or("https://github.com/login/device")
+            .to_string(),
         interval: v["interval"].as_u64().unwrap_or(5),
         expires_in: v["expires_in"].as_u64().unwrap_or(900),
     })
@@ -170,7 +178,11 @@ pub fn device_poll(client_id: &str, device_code: &str) -> Result<PollResult, Str
         .map_err(|e| e.to_string())?;
     let v: serde_json::Value = resp.into_json().map_err(|e| e.to_string())?;
     if let Some(tok) = v["access_token"].as_str() {
-        return Ok(PollResult { status: "ok".into(), token: Some(tok.to_string()), error: None });
+        return Ok(PollResult {
+            status: "ok".into(),
+            token: Some(tok.to_string()),
+            error: None,
+        });
     }
     let err = v["error"].as_str().unwrap_or("error");
     let status = match err {
@@ -180,7 +192,11 @@ pub fn device_poll(client_id: &str, device_code: &str) -> Result<PollResult, Str
         "access_denied" => "denied",
         _ => "error",
     };
-    Ok(PollResult { status: status.into(), token: None, error: Some(err.to_string()) })
+    Ok(PollResult {
+        status: status.into(),
+        token: None,
+        error: Some(err.to_string()),
+    })
 }
 
 /// Download a release .zip asset and install it in place at `dest`, backing up the
@@ -275,12 +291,18 @@ fn gh_err(e: ureq::Error) -> String {
 
 /// GET /repos/{owner}/{repo} plus (when authenticated) the user's star/watch state.
 pub fn repo_stats(owner: &str, repo: &str, token: Option<&str>) -> Result<RepoStats, String> {
-    let v = gh_get(&format!("https://api.github.com/repos/{owner}/{repo}"), token)?;
+    let v = gh_get(
+        &format!("https://api.github.com/repos/{owner}/{repo}"),
+        token,
+    )?;
     if v["full_name"].as_str().unwrap_or("").is_empty() {
         return Err("Repo not found on GitHub".into());
     }
     let (you_starred, you_watching) = match token {
-        Some(t) => (star_state(owner, repo, t).ok(), watch_state(owner, repo, t).ok()),
+        Some(t) => (
+            star_state(owner, repo, t).ok(),
+            watch_state(owner, repo, t).ok(),
+        ),
         None => (None, None),
     };
     Ok(RepoStats {
@@ -316,7 +338,10 @@ fn present_check(url: &str, token: &str) -> Result<bool, String> {
 
 /// GET /user/starred/{owner}/{repo} — 204 starred, 404 not.
 pub fn star_state(owner: &str, repo: &str, token: &str) -> Result<bool, String> {
-    present_check(&format!("https://api.github.com/user/starred/{owner}/{repo}"), token)
+    present_check(
+        &format!("https://api.github.com/user/starred/{owner}/{repo}"),
+        token,
+    )
 }
 
 /// GET /repos/{owner}/{repo}/subscription — 200 watching, 404 not.
@@ -331,11 +356,15 @@ pub fn watch_state(owner: &str, repo: &str, token: &str) -> Result<bool, String>
 /// the Starring permission. Returns the new starred state (= `on`).
 pub fn set_star(owner: &str, repo: &str, token: &str, on: bool) -> Result<bool, String> {
     let url = format!("https://api.github.com/user/starred/{owner}/{repo}");
-    let req = if on { ureq::put(&url) } else { ureq::delete(&url) }
-        .set("Accept", "application/vnd.github+json")
-        .set("User-Agent", UA)
-        .set("Content-Length", "0")
-        .set("Authorization", &format!("Bearer {token}"));
+    let req = if on {
+        ureq::put(&url)
+    } else {
+        ureq::delete(&url)
+    }
+    .set("Accept", "application/vnd.github+json")
+    .set("User-Agent", UA)
+    .set("Content-Length", "0")
+    .set("Authorization", &format!("Bearer {token}"));
     req.call().map_err(gh_err)?;
     Ok(on)
 }
@@ -370,7 +399,15 @@ pub fn find_repo_in_text(text: &str) -> Option<(String, String)> {
             .take_while(|c| c.is_alphanumeric() || *c == '-' || *c == '_' || *c == '.')
             .collect::<String>()
     };
-    let skip = ["sponsors", "settings", "orgs", "topics", "about", "features", "marketplace"];
+    let skip = [
+        "sponsors",
+        "settings",
+        "orgs",
+        "topics",
+        "about",
+        "features",
+        "marketplace",
+    ];
 
     let mut from = 0;
     while let Some(i) = text[from..].find("github.com/") {
@@ -400,9 +437,15 @@ mod tests {
             find_repo_in_text(t),
             Some(("Stephan-S".into(), "FS25_AutoDrive".into()))
         );
-        assert_eq!(find_repo_in_text("visit github.com/loki79uk/FS25_UniversalAutoload.git"), Some(("loki79uk".into(), "FS25_UniversalAutoload".into())));
+        assert_eq!(
+            find_repo_in_text("visit github.com/loki79uk/FS25_UniversalAutoload.git"),
+            Some(("loki79uk".into(), "FS25_UniversalAutoload".into()))
+        );
         assert_eq!(find_repo_in_text("no links here"), None);
-        assert_eq!(find_repo_in_text("github.com/sponsors/foo then github.com/real/repo"), Some(("real".into(), "repo".into())));
+        assert_eq!(
+            find_repo_in_text("github.com/sponsors/foo then github.com/real/repo"),
+            Some(("real".into(), "repo".into()))
+        );
     }
 
     #[test]

@@ -60,7 +60,11 @@ pub fn cached_thumbnail(
 }
 
 /// Extract + decode + thumbnail a mod's icon, returning PNG bytes.
-pub fn extract_icon_png(mod_path: &Path, kind: &str, icon_filename: &str) -> Result<Vec<u8>, String> {
+pub fn extract_icon_png(
+    mod_path: &Path,
+    kind: &str,
+    icon_filename: &str,
+) -> Result<Vec<u8>, String> {
     let raw = read_icon_bytes(mod_path, kind, icon_filename)?;
     let img = decode(&raw, icon_filename)?;
     let thumb = img.resize(THUMB, THUMB, FilterType::Triangle);

@@ -58,7 +58,9 @@ fn map_store_category(raw: &str) -> Option<Cat> {
         "beetvehicles" | "sugarbeetharvesters" | "potatovehicles" | "potatoharvesters" => {
             Some(cat("Harvesters", Some("Root Crop")))
         }
-        "grapeharvesters" | "grapevehicles" | "oliveshakers" => Some(cat("Harvesters", Some("Fruit"))),
+        "grapeharvesters" | "grapevehicles" | "oliveshakers" => {
+            Some(cat("Harvesters", Some("Fruit")))
+        }
         "cutters" | "cornheaders" | "draperheaders" | "cottonheaders" | "headers" => {
             Some(cat("Implements", Some("Headers")))
         }
@@ -77,12 +79,17 @@ fn map_store_category(raw: &str) -> Option<Cat> {
         "fertilizerspreaders" | "manurespreaders" | "slurrytanks" | "spreaders" => {
             Some(cat("Implements", Some("Spreaders")))
         }
-        "mowers" | "tedders" | "windrowers" | "rakes" => Some(cat("Implements", Some("Hay & Forage"))),
-        "balers" | "balewrappers" | "baleloaders" => Some(cat("Implements", Some("Balers"))),
-        "frontloaders" | "frontloadertools" | "wheelloadertools" | "telehandlertools"
-        | "skidsteertools" | "weights" | "frontloaderattachertools" => {
-            Some(cat("Implements", Some("Attachments")))
+        "mowers" | "tedders" | "windrowers" | "rakes" => {
+            Some(cat("Implements", Some("Hay & Forage")))
         }
+        "balers" | "balewrappers" | "baleloaders" => Some(cat("Implements", Some("Balers"))),
+        "frontloaders"
+        | "frontloadertools"
+        | "wheelloadertools"
+        | "telehandlertools"
+        | "skidsteertools"
+        | "weights"
+        | "frontloaderattachertools" => Some(cat("Implements", Some("Attachments"))),
         "wheelloaders" | "telehandlers" | "skidsteers" | "forklifts" => {
             Some(cat("Vehicles", Some("Loaders")))
         }
@@ -101,7 +108,9 @@ fn map_store_category(raw: &str) -> Option<Cat> {
         "beehives" => Some(cat("Placeables", Some("Bees"))),
         "pallets" | "bigbags" | "palletsmisc" => Some(cat("Objects", Some("Pallets"))),
         "bales" | "palletbaling" => Some(cat("Objects", Some("Bales"))),
-        "dieseltanks" | "watertanks" | "fillabletanks" | "barrels" => Some(cat("Objects", Some("Tanks"))),
+        "dieseltanks" | "watertanks" | "fillabletanks" | "barrels" => {
+            Some(cat("Objects", Some("Tanks")))
+        }
         "shippingcontainers" => Some(cat("Objects", Some("Containers"))),
         _ => None,
     };
@@ -153,11 +162,45 @@ pub fn categorize(
         // Unrecognized store category: route by name + structure; readable sub.
         let low = sc.to_lowercase();
         let sub = decamel(sc);
-        return if any(&low, &["pallet", "tank", "barrel", "container", "bigbag", "bag", "fillable", "belt"]) {
+        return if any(
+            &low,
+            &[
+                "pallet",
+                "tank",
+                "barrel",
+                "container",
+                "bigbag",
+                "bag",
+                "fillable",
+                "belt",
+            ],
+        ) {
             cat("Objects", Some(&sub))
         } else if any(
             &low,
-            &["placeable", "point", "station", "shed", "silo", "fence", "house", "pen", "greenhouse", "hive", "generator", "solar", "wind", "panel", "building", "decoration", "light", "sign", "garden", "stable", "barn"],
+            &[
+                "placeable",
+                "point",
+                "station",
+                "shed",
+                "silo",
+                "fence",
+                "house",
+                "pen",
+                "greenhouse",
+                "hive",
+                "generator",
+                "solar",
+                "wind",
+                "panel",
+                "building",
+                "decoration",
+                "light",
+                "sign",
+                "garden",
+                "stable",
+                "barn",
+            ],
         ) {
             cat("Placeables", Some(&sub))
         } else if has_placeable {
@@ -174,26 +217,91 @@ pub fn categorize(
         .iter()
         .any(|r| r.kind == "specialization" || r.kind.ends_with("Specialization"));
 
-    if any(&hay, &["texture", "skin", "colorpack", "color pack", "appearance", "livery", "decal", "wrap"]) {
+    if any(
+        &hay,
+        &[
+            "texture",
+            "skin",
+            "colorpack",
+            "color pack",
+            "appearance",
+            "livery",
+            "decal",
+            "wrap",
+        ],
+    ) {
         return cat("Textures", None);
     }
-    if any(&hay, &["soundpack", "sound pack", "engine sound", "exhaust sound"]) {
+    if any(
+        &hay,
+        &["soundpack", "sound pack", "engine sound", "exhaust sound"],
+    ) {
         return cat("Sounds", None);
     }
-    if any(&hay, &["decor", "sign ", "fence", "flag", "bench", "streetlamp", "billboard", "statue"]) {
+    if any(
+        &hay,
+        &[
+            "decor",
+            "sign ",
+            "fence",
+            "flag",
+            "bench",
+            "streetlamp",
+            "billboard",
+            "statue",
+        ],
+    ) {
         return cat("Decorations", None);
     }
     if has_placeable
-        || any(&hay, &["placeable", "building", "shed", "barn", "silo ", "garage", "warehouse", "greenhouse", "stable", "factory", "production", "sellpoint", "farmhouse"])
+        || any(
+            &hay,
+            &[
+                "placeable",
+                "building",
+                "shed",
+                "barn",
+                "silo ",
+                "garage",
+                "warehouse",
+                "greenhouse",
+                "stable",
+                "factory",
+                "production",
+                "sellpoint",
+                "farmhouse",
+            ],
+        )
     {
         return cat("Placeables", None);
     }
-    if any(&hay, &["cheat", "moneycheat", "unlimited", "godmode", "freemoney"]) {
+    if any(
+        &hay,
+        &["cheat", "moneycheat", "unlimited", "godmode", "freemoney"],
+    ) {
         return cat("Cheats", None);
     }
     // Realism sub-types (money / time / speed / …)
-    if any(&hay, &["realism", "realistic", "hardcore", "difficulty", "seasons", "economy", "price", "money", "wage", "daylength", "speed"]) {
-        let sub = if any(&hay, &["money", "economy", "price", "wage", "cost", "income"]) {
+    if any(
+        &hay,
+        &[
+            "realism",
+            "realistic",
+            "hardcore",
+            "difficulty",
+            "seasons",
+            "economy",
+            "price",
+            "money",
+            "wage",
+            "daylength",
+            "speed",
+        ],
+    ) {
+        let sub = if any(
+            &hay,
+            &["money", "economy", "price", "wage", "cost", "income"],
+        ) {
             Some("Money")
         } else if any(&hay, &["time", "daylength", "hour", "clock"]) {
             Some("Time")
@@ -228,22 +336,49 @@ mod tests {
 
     #[test]
     fn store_category_drives_vehicles() {
-        assert_eq!(categorize(&md(), Some("tractorsM"), "FS25_Fendt", Some("Fendt 1050")), cat("Tractors", Some("Medium")));
-        assert_eq!(categorize(&md(), Some("tractorsL"), "FS25_X", Some("X")), cat("Tractors", Some("Large")));
-        assert_eq!(categorize(&md(), Some("harvesters"), "FS25_X", Some("X")), cat("Harvesters", Some("Combines")));
-        assert_eq!(categorize(&md(), Some("plows"), "FS25_X", Some("X")), cat("Implements", Some("Plows")));
-        assert_eq!(categorize(&md(), Some("cars"), "FS25_X", Some("X")), cat("Cars & Trucks", Some("Cars")));
+        assert_eq!(
+            categorize(&md(), Some("tractorsM"), "FS25_Fendt", Some("Fendt 1050")),
+            cat("Tractors", Some("Medium"))
+        );
+        assert_eq!(
+            categorize(&md(), Some("tractorsL"), "FS25_X", Some("X")),
+            cat("Tractors", Some("Large"))
+        );
+        assert_eq!(
+            categorize(&md(), Some("harvesters"), "FS25_X", Some("X")),
+            cat("Harvesters", Some("Combines"))
+        );
+        assert_eq!(
+            categorize(&md(), Some("plows"), "FS25_X", Some("X")),
+            cat("Implements", Some("Plows"))
+        );
+        assert_eq!(
+            categorize(&md(), Some("cars"), "FS25_X", Some("X")),
+            cat("Cars & Trucks", Some("Cars"))
+        );
     }
 
     #[test]
     fn keyword_fallback_without_store() {
         let mut script = md();
         script.scripts.push("foo.lua".into());
-        assert_eq!(categorize(&script, None, "FS25_Helper", Some("Helper")), cat("Scripts & Tools", None));
-        assert_eq!(categorize(&md(), None, "FS25_RealMoney", Some("Realistic Money")), cat("Realism", Some("Money")));
+        assert_eq!(
+            categorize(&script, None, "FS25_Helper", Some("Helper")),
+            cat("Scripts & Tools", None)
+        );
+        assert_eq!(
+            categorize(&md(), None, "FS25_RealMoney", Some("Realistic Money")),
+            cat("Realism", Some("Money"))
+        );
 
         let mut place = md();
-        place.registrations.push(Registration { kind: "placeableType".into(), name: "x".into() });
-        assert_eq!(categorize(&place, None, "FS25_Barn", Some("Barn")), cat("Placeables", None));
+        place.registrations.push(Registration {
+            kind: "placeableType".into(),
+            name: "x".into(),
+        });
+        assert_eq!(
+            categorize(&place, None, "FS25_Barn", Some("Barn")),
+            cat("Placeables", None)
+        );
     }
 }

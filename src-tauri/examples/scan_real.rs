@@ -57,8 +57,14 @@ fn main() {
 
     println!("\n=== Silo scan ===");
     println!("mods:        {}", r.total);
-    println!("maps:        {maps}   script mods: {scripts}   with deps: {with_deps}   errors: {errors}");
-    println!("COLD scan:   {} ms ({} parsed fresh)", cold.result.took_ms, cold.fresh_paths.len());
+    println!(
+        "maps:        {maps}   script mods: {scripts}   with deps: {with_deps}   errors: {errors}"
+    );
+    println!(
+        "COLD scan:   {} ms ({} parsed fresh)",
+        cold.result.took_ms,
+        cold.fresh_paths.len()
+    );
     println!(
         "WARM scan:   {} ms ({} parsed fresh)  <- cache hit on the rest",
         warm.result.took_ms,

@@ -1,0 +1,80 @@
+name: Release
+
+# Cut a release by pushing a version tag, e.g. `git tag v0.1.0 && git push origin v0.1.0`.
+# tauri-action builds native installers per-OS and attaches them to a DRAFT prerelease,
+# so you review before publishing. No code signing (open-source; unsigned bundles are
+# expected — users can build from source to verify).
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest # Apple Silicon
+            args: --target aarch64-apple-darwin
+            rust-target: aarch64-apple-darwin
+          - platform: macos-latest # Intel
+            args: --target x86_64-apple-darwin
+            rust-target: x86_64-apple-darwin
+          - platform: ubuntu-22.04
+            args: ''
+            rust-target: ''
+          - platform: windows-latest
+            args: ''
+            rust-target: ''
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Tauri system dependencies (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # tauri-action runs the frontend build via tauri.conf's beforeBuildCommand
+      # (`npm run build`), but the deps must be installed first.
+      - run: npm ci
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Silo ${{ github.ref_name }}'
+          releaseBody: |
+            Beta release. Download the installer for your OS below.
+
+            Silo is open source and unsigned — Windows SmartScreen / macOS Gatekeeper
+            may warn on first launch. You can inspect or build from source at any time.
+          releaseDraft: true
+          prerelease: true
+          args: ${{ matrix.args }}

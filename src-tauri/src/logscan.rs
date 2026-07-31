@@ -112,7 +112,10 @@ fn strip_prefix(line: &str) -> &str {
 fn mod_from_path(s: &str) -> Option<String> {
     let idx = s.find("mods/")?;
     let after = &s[idx + 5..];
-    let name: String = after.chars().take_while(|&c| c != '/' && c != '\\').collect();
+    let name: String = after
+        .chars()
+        .take_while(|&c| c != '/' && c != '\\')
+        .collect();
     if name.starts_with("FS25_") || name.starts_with("FS22_") {
         Some(name)
     } else {
@@ -140,7 +143,9 @@ fn classify(msg: &str) -> Category {
         Category::Lua
     } else if m.contains("out of memory") || m.contains("oom") {
         Category::Memory
-    } else if m.contains("could not") || m.contains("failed to load") || m.contains("failed to open")
+    } else if m.contains("could not")
+        || m.contains("failed to load")
+        || m.contains("failed to open")
     {
         Category::Load
     } else if m.contains("not found") || m.contains("missing") || m.contains("unknown") {
@@ -338,16 +343,27 @@ Error: Out of memory";
     #[test]
     fn clean_run_is_clean_and_noise_is_benign() {
         let r = parse(CLEAN);
-        assert_eq!(r.engine_version.as_deref(), Some("10.0.0 (46522) 64bit Steam (Build Date: May 28 2026)"));
+        assert_eq!(
+            r.engine_version.as_deref(),
+            Some("10.0.0 (46522) 64bit Steam (Build Date: May 28 2026)")
+        );
         assert_eq!(r.mod_count, 2);
         assert!(r.clean_exit);
         assert!(!r.crashed);
         // Both mods appear, both with only cosmetic l10n warnings.
-        let dash = r.mods.iter().find(|m| m.mod_name == "FS25_FarmOperationsDashboard").unwrap();
+        let dash = r
+            .mods
+            .iter()
+            .find(|m| m.mod_name == "FS25_FarmOperationsDashboard")
+            .unwrap();
         assert_eq!(dash.errors, 0);
         assert_eq!(dash.warnings, 1);
         assert_eq!(dash.benign, 1);
-        let honk = r.mods.iter().find(|m| m.mod_name == "FS25_actionHonk").unwrap();
+        let honk = r
+            .mods
+            .iter()
+            .find(|m| m.mod_name == "FS25_actionHonk")
+            .unwrap();
         assert_eq!(honk.warnings, 1);
         assert_eq!(honk.benign, 1); // attributed via `in mod '...'`
     }
@@ -359,7 +375,11 @@ Error: Out of memory";
         assert!(!r.clean_exit);
         // The Lua error is attributed via the mods/ path folded in from its stack-frame
         // continuation line — not the "Error:" line itself.
-        let v = r.mods.iter().find(|m| m.mod_name == "FS25_SomeVehicle").unwrap();
+        let v = r
+            .mods
+            .iter()
+            .find(|m| m.mod_name == "FS25_SomeVehicle")
+            .unwrap();
         assert_eq!(v.errors, 1);
         assert_eq!(v.benign, 0);
         // "Error: Out of memory" names no mod, so it's honestly unattributed rather than
@@ -377,15 +397,24 @@ Error: Out of memory";
 
     #[test]
     fn strip_prefix_handles_timestamp_and_indent() {
-        assert_eq!(strip_prefix("2026-07-11 21:19:53.981   Warning: x"), "Warning: x");
+        assert_eq!(
+            strip_prefix("2026-07-11 21:19:53.981   Warning: x"),
+            "Warning: x"
+        );
         assert_eq!(strip_prefix("  Warning: y"), "Warning: y");
         assert_eq!(strip_prefix("Warning: z"), "Warning: z");
     }
 
     #[test]
     fn attribution_helpers() {
-        assert_eq!(mod_from_path("in 'C:/x/mods/FS25_Foo/l10n/a.xml'"), Some("FS25_Foo".into()));
-        assert_eq!(mod_from_clause("Missing l10n 'k' in mod 'FS25_Bar'"), Some("FS25_Bar".into()));
+        assert_eq!(
+            mod_from_path("in 'C:/x/mods/FS25_Foo/l10n/a.xml'"),
+            Some("FS25_Foo".into())
+        );
+        assert_eq!(
+            mod_from_clause("Missing l10n 'k' in mod 'FS25_Bar'"),
+            Some("FS25_Bar".into())
+        );
         assert_eq!(mod_from_path("no mod here"), None);
     }
 }

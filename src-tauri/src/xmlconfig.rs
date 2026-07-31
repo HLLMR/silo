@@ -107,14 +107,20 @@ fn rebuild_start<'a>(e: &BytesStart<'a>, path: &str, edits: &[Edit]) -> BytesSta
     let mut out = BytesStart::new(name);
     for a in e.attributes().flatten() {
         let key = local(a.key.as_ref());
-        let orig = a.unescape_value().map(|c| c.into_owned()).unwrap_or_default();
+        let orig = a
+            .unescape_value()
+            .map(|c| c.into_owned())
+            .unwrap_or_default();
         let target = format!("{path}@{key}");
         let value = edits
             .iter()
             .find(|ed| ed.path == target)
             .map(|ed| ed.value.clone())
             .unwrap_or(orig);
-        out.push_attribute((String::from_utf8_lossy(a.key.as_ref()).as_ref(), value.as_str()));
+        out.push_attribute((
+            String::from_utf8_lossy(a.key.as_ref()).as_ref(),
+            value.as_str(),
+        ));
     }
     out
 }
@@ -136,20 +142,29 @@ pub fn set_values(xml: &str, edits: &[Edit]) -> Result<String, String> {
                 stack.push(local(e.name().as_ref()));
                 let path = stack.join(".");
                 let out = rebuild_start(&e, &path, edits);
-                writer.write_event(Event::Start(out)).map_err(|e| e.to_string())?;
-                pending_text = edits.iter().find(|ed| ed.path == path).map(|ed| ed.value.clone());
+                writer
+                    .write_event(Event::Start(out))
+                    .map_err(|e| e.to_string())?;
+                pending_text = edits
+                    .iter()
+                    .find(|ed| ed.path == path)
+                    .map(|ed| ed.value.clone());
             }
             Ok(Event::Empty(e)) => {
                 stack.push(local(e.name().as_ref()));
                 let path = stack.join(".");
                 let out = rebuild_start(&e, &path, edits);
                 stack.pop();
-                writer.write_event(Event::Empty(out)).map_err(|e| e.to_string())?;
+                writer
+                    .write_event(Event::Empty(out))
+                    .map_err(|e| e.to_string())?;
             }
             Ok(Event::End(e)) => {
                 stack.pop();
                 pending_text = None;
-                writer.write_event(Event::End(e)).map_err(|e| e.to_string())?;
+                writer
+                    .write_event(Event::End(e))
+                    .map_err(|e| e.to_string())?;
             }
             Ok(Event::Text(t)) => {
                 if let Some(v) = pending_text.take() {
@@ -157,7 +172,9 @@ pub fn set_values(xml: &str, edits: &[Edit]) -> Result<String, String> {
                         .write_event(Event::Text(BytesText::new(&v)))
                         .map_err(|e| e.to_string())?;
                 } else {
-                    writer.write_event(Event::Text(t)).map_err(|e| e.to_string())?;
+                    writer
+                        .write_event(Event::Text(t))
+                        .map_err(|e| e.to_string())?;
                 }
             }
             Ok(ev) => writer.write_event(ev).map_err(|e| e.to_string())?,
@@ -195,8 +212,16 @@ mod tests {
                 "game.graphic.scalability.fsr@quality".into(),
             ],
         );
-        assert_eq!(v.get("game.graphic.scalability.shadowMapSize").map(|s| s.as_str()), Some("2048"));
-        assert_eq!(v.get("game.graphic.scalability.fsr@quality").map(|s| s.as_str()), Some("1"));
+        assert_eq!(
+            v.get("game.graphic.scalability.shadowMapSize")
+                .map(|s| s.as_str()),
+            Some("2048")
+        );
+        assert_eq!(
+            v.get("game.graphic.scalability.fsr@quality")
+                .map(|s| s.as_str()),
+            Some("1")
+        );
     }
 
     #[test]
@@ -204,9 +229,18 @@ mod tests {
         let out = set_values(
             G,
             &[
-                Edit { path: "game.graphic.scalability.shadowMapSize".into(), value: "4096".into() },
-                Edit { path: "game.graphic.scalability.softShadows".into(), value: "false".into() },
-                Edit { path: "game.graphic.scalability.fsr@quality".into(), value: "3".into() },
+                Edit {
+                    path: "game.graphic.scalability.shadowMapSize".into(),
+                    value: "4096".into(),
+                },
+                Edit {
+                    path: "game.graphic.scalability.softShadows".into(),
+                    value: "false".into(),
+                },
+                Edit {
+                    path: "game.graphic.scalability.fsr@quality".into(),
+                    value: "3".into(),
+                },
             ],
         )
         .unwrap();

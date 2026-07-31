@@ -87,11 +87,16 @@ fn your_endorsed(mod_id: u64, key: &str) -> Option<bool> {
         if id != Some(mod_id) {
             continue;
         }
-        let domain = e["domain_name"].as_str().or_else(|| e["domainName"].as_str());
+        let domain = e["domain_name"]
+            .as_str()
+            .or_else(|| e["domainName"].as_str());
         if matches!(domain, Some(d) if d != FS25_DOMAIN) {
             continue;
         }
-        let status = e["status"].as_str().or_else(|| e["endorse_status"].as_str()).unwrap_or("");
+        let status = e["status"]
+            .as_str()
+            .or_else(|| e["endorse_status"].as_str())
+            .unwrap_or("");
         if status.to_lowercase().contains("endors") {
             return Some(true);
         }
@@ -104,7 +109,13 @@ fn your_endorsed(mod_id: u64, key: &str) -> Option<bool> {
 pub fn mod_stats(mod_id: u64, key: Option<&str>) -> Result<NexusMod, String> {
     let (name, endorsements, downloads) = read_counts(mod_id)?;
     let you_endorsed = key.and_then(|k| your_endorsed(mod_id, k));
-    Ok(NexusMod { mod_id, name, endorsements, downloads, you_endorsed })
+    Ok(NexusMod {
+        mod_id,
+        name,
+        endorsements,
+        downloads,
+        you_endorsed,
+    })
 }
 
 /// Full mod body from the keyless v2 GraphQL `description` (BBCode + <br/>), cleaned
@@ -124,7 +135,9 @@ pub fn mod_description(mod_id: u64) -> Result<String, String> {
         .send_json(body)
         .map_err(nexus_err)?;
     let v: serde_json::Value = resp.into_json().map_err(|e| e.to_string())?;
-    let raw = v["data"]["mods"]["nodes"][0]["description"].as_str().unwrap_or("");
+    let raw = v["data"]["mods"]["nodes"][0]["description"]
+        .as_str()
+        .unwrap_or("");
     Ok(clean_bbcode(raw))
 }
 
@@ -214,7 +227,10 @@ pub fn set_endorse(
 /// Parse a Nexus mod id out of a source URL (…/farmingsimulator25/mods/12345).
 pub fn parse_mod_id(url: &str) -> Option<u64> {
     let i = url.find("/mods/")? + "/mods/".len();
-    let digits: String = url[i..].chars().take_while(|c| c.is_ascii_digit()).collect();
+    let digits: String = url[i..]
+        .chars()
+        .take_while(|c| c.is_ascii_digit())
+        .collect();
     digits.parse().ok()
 }
 
