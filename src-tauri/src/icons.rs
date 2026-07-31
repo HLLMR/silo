@@ -6,7 +6,7 @@
 use image::imageops::FilterType;
 use image::ImageFormat;
 use std::hash::{Hash, Hasher};
-use std::io::{Cursor, Read};
+use std::io::Cursor;
 use std::path::Path;
 
 /// Thumbnail edge length. Mod icons are typically 256² (store) / 512²; a 128²
@@ -96,10 +96,9 @@ fn read_icon_bytes(mod_path: &Path, kind: &str, icon_filename: &str) -> Result<V
             let f = std::fs::File::open(mod_path).map_err(|e| e.to_string())?;
             let mut ar = zip::ZipArchive::new(f).map_err(|e| e.to_string())?;
             for cand in icon_candidates(icon_filename) {
-                if let Ok(mut entry) = ar.by_name(&cand) {
-                    let mut buf = Vec::new();
-                    entry.read_to_end(&mut buf).map_err(|e| e.to_string())?;
-                    return Ok(buf);
+                if let Ok(entry) = ar.by_name(&cand) {
+                    // Cap the read so a zip-bombed "icon" can't exhaust memory.
+                    return crate::scan::read_capped(entry, 64 * 1024 * 1024, &cand);
                 }
             }
             Err(format!("icon '{icon_filename}' not found in archive"))

@@ -22,7 +22,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
-use std::io::Read;
 use std::path::Path;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -84,10 +83,9 @@ fn read_member(path: &str, kind: &str, member: &str) -> Option<Vec<u8>> {
     if kind == "zip" {
         let f = std::fs::File::open(path).ok()?;
         let mut ar = zip::ZipArchive::new(f).ok()?;
-        let mut e = ar.by_name(&member).ok()?;
-        let mut buf = Vec::new();
-        e.read_to_end(&mut buf).ok()?;
-        Some(buf)
+        let e = ar.by_name(&member).ok()?;
+        // Cap the read — a compared member could be a zip-bombed script.
+        crate::scan::read_capped(e, 32 * 1024 * 1024, &member).ok()
     } else {
         std::fs::read(Path::new(path).join(&member)).ok()
     }

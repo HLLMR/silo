@@ -159,20 +159,45 @@ pub fn read_moddesc_xml(mod_path: &Path, kind: &str) -> Result<String, String> {
     }
 }
 
+/// Largest we'll read for a single member. modDesc.xml is normally a few KB; a script or
+/// icon a few MB. These caps stop a hostile/broken archive from decompressing a tiny
+/// entry into gigabytes of memory (a zip bomb) — the game trusts the mod folder, but Silo
+/// parses arbitrary downloads, so it must not.
+pub(crate) const MODDESC_LIMIT: u64 = 16 * 1024 * 1024;
+
+/// Read a (possibly-decompressing) reader with a hard byte cap. Errors — never
+/// truncates — if the content exceeds `limit`, so a zip bomb can't exhaust memory.
+pub(crate) fn read_capped<R: Read>(r: R, limit: u64, what: &str) -> Result<Vec<u8>, String> {
+    let mut buf = Vec::new();
+    // Read one past the limit so we can tell "exactly at the cap" from "over it".
+    r.take(limit + 1)
+        .read_to_end(&mut buf)
+        .map_err(|e| e.to_string())?;
+    if buf.len() as u64 > limit {
+        return Err(format!(
+            "{what} is larger than the {limit}-byte safety limit"
+        ));
+    }
+    Ok(buf)
+}
+
 fn read_moddesc_from_zip(path: &Path) -> Result<String, String> {
     let file = fs::File::open(path).map_err(|e| e.to_string())?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
     // modDesc.xml lives at the archive root per FS conventions.
-    let mut f = archive
+    let f = archive
         .by_name("modDesc.xml")
         .map_err(|_| "modDesc.xml not found in archive".to_string())?;
-    let mut s = String::new();
-    f.read_to_string(&mut s).map_err(|e| e.to_string())?;
-    Ok(s)
+    let bytes = read_capped(f, MODDESC_LIMIT, "modDesc.xml")?;
+    String::from_utf8(bytes).map_err(|e| e.to_string())
 }
 
 fn read_moddesc_from_dir(path: &Path) -> Result<String, String> {
-    fs::read_to_string(path.join("modDesc.xml")).map_err(|e| e.to_string())
+    let p = path.join("modDesc.xml");
+    if fs::metadata(&p).map(|m| m.len()).unwrap_or(0) > MODDESC_LIMIT {
+        return Err("modDesc.xml is larger than the safety limit".to_string());
+    }
+    fs::read_to_string(p).map_err(|e| e.to_string())
 }
 
 fn build_entry(c: &Candidate) -> ModEntry {
@@ -391,4 +416,16 @@ where
     F: Fn(usize, usize) + Sync + Send,
 {
     scan_cached(roots, &HashMap::new(), progress).result
+}
+
+#[cfg(test)]
+mod cap_tests {
+    use super::read_capped;
+
+    #[test]
+    fn capped_read_errors_past_limit_never_truncates() {
+        assert_eq!(read_capped(&b"hello"[..], 100, "x").unwrap(), b"hello");
+        assert!(read_capped(&b"hello"[..], 5, "x").is_ok()); // exactly at cap
+        assert!(read_capped(&vec![0u8; 200][..], 100, "big").is_err()); // over cap
+    }
 }
