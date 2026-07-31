@@ -63,7 +63,7 @@ folder is a direct, felt differentiator — "native, fast, tiny."
 
 | Tool | Notes |
 |------|-------|
-| `MarkThor11/fs25-mt-mod-manager` | Electron. Good core idea (symlink-projected active set, per-savegame virtual folder), poor execution (blocks main thread, no virtualization, scraping-first, self-obfuscated). Teardown in `reference/incumbent-teardown.md`. |
+| `MarkThor11/fs25-mt-mod-manager` | Electron. Good core idea (symlink-projected active set, per-savegame virtual folder), poor execution (blocks main thread, no virtualization, scraping-first, self-obfuscated). |
 | Farm Sim Guy "game creator" | Very new; different emphasis. Evaluate for feature gaps. |
 
 ## Non-goals (for now)

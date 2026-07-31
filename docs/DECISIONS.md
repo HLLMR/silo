@@ -8,8 +8,7 @@ reverse or that a newcomer would ask "why?" about.
 **Decision:** Build fresh. **Why:** its problems are architectural (main-thread
 blocking, whole-store re-renders, scraping backbone, self-obfuscation), not
 spot-fixable; and there's no clean fork point ("initial commit" is already the full
-monolith, 27 commits over 5 days). We harvest its ideas as spec instead
-(`reference/incumbent-teardown.md`).
+monolith, 27 commits over 5 days). We harvest its ideas as spec instead.
 
 ## 2026-07-14 — Stack: Tauri (Rust core)
 **Context:** the incumbent's headline weakness is speed/stability from doing heavy

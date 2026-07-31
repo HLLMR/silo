@@ -17,8 +17,6 @@ deeper background. Suggested reading order:
 
 Reference (mined knowledge):
 
-- **[reference/incumbent-teardown.md](reference/incumbent-teardown.md)** — good
-  ideas + every do-not-repeat from the existing Electron tool.
 - **[reference/fs25-modding-notes.md](reference/fs25-modding-notes.md)** — how FS25
   loads mods, `modDesc.xml` fields, conflict signals, projection mechanics.
 

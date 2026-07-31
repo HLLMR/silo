@@ -86,7 +86,7 @@ unit tests (42+ Rust tests). Frontend panels in `src/lib/components/`.
 
 - Incumbent source (for spec-mining, NOT copying):
   `../fs25-mt-mod-manager/` — Electron app. Teardown + bug list in
-  `docs/reference/incumbent-teardown.md`.
+  `docs/internal/incumbent-teardown.md` (internal, git-ignored).
 - FS25 SDK / game source: see workspace root `CLAUDE.md` and the memory index
   (`fs25-sdk-resource-locations`). Authoritative schemas live at
   `<game install>/shared/xml/schema/*.xsd` (88 of them; `modDesc.xsd`,
