@@ -2330,7 +2330,9 @@
     align-items: center;
     gap: 12px 20px;
     flex-wrap: wrap;
-    padding: 12px 20px;
+    /* Reserve room on the right for an open detail drawer (the subheader tucks left
+       of it instead of being clipped). */
+    padding: 12px calc(20px + var(--drawer-w, 0px)) 12px 20px;
     border-bottom: 1px solid var(--border);
     background: var(--surface);
   }
@@ -2616,11 +2618,16 @@
     flex: 1 1 auto;
     min-height: 0;
     display: flex;
+    /* Reserve room for an open detail drawer so the list tucks left of it. */
+    padding-right: var(--drawer-w, 0px);
   }
   .browse-scroll {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
+    /* Reserve room for an open detail drawer (Browse content is centered, so this
+       shifts it left of the drawer instead of hiding under it). */
+    padding-right: var(--drawer-w, 0px);
   }
   .list {
     flex: 1 1 auto;

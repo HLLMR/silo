@@ -28,6 +28,9 @@ export function resizable(node: HTMLElement, opts: Opts = {}) {
     handle.style.top = `${r.top}px`;
     handle.style.height = `${r.height}px`;
     handle.style.left = `${r.left - 3}px`;
+    // Publish the live drawer width so the view can reserve space beside it (the top
+    // chrome + list tuck to the drawer's left instead of hiding under it).
+    document.documentElement.style.setProperty("--drawer-w", `${Math.round(r.width)}px`);
   };
 
   const apply = (w: number) => {
@@ -79,6 +82,8 @@ export function resizable(node: HTMLElement, opts: Opts = {}) {
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("resize", sync);
       handle.remove();
+      // Drawer closed — release the reserved space.
+      document.documentElement.style.setProperty("--drawer-w", "0px");
     },
   };
 }
