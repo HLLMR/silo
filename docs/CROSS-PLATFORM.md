@@ -91,8 +91,7 @@ receives projected links/copies.
 - Tauri v2 cross-compiles per target: `.msi`/`.exe` (Win), `.dmg`/`.app` (mac,
   signed+notarized eventually), `.AppImage`/`.deb`/`.rpm` (Linux).
 - GitHub Actions matrix: `windows-latest`, `macos-latest` (arm64 + x64),
-  `ubuntu-latest`. (The incumbent's CI was a tangle of Mac-build hacks — keep ours
-  a clean matrix.)
+  `ubuntu-latest`.
 
 ## Verification checklist (do on-device before shipping detection)
 - [ ] Confirm FS25 Steam AppID and macOS user-dir path on a Mac.

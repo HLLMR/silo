@@ -79,7 +79,7 @@ npm run tauri:build   # produce an installer in src-tauri/target/release/bundle/
 
 Tauri v2 (Rust core, all heavy work off the UI thread) + Svelte 5 + TypeScript, SQLite
 cache (path + mtime + size), quick-xml parsing. See [`docs/`](docs/) —
-`ARCHITECTURE.md`, `VISION.md`, and per-feature notes.
+`ARCHITECTURE.md`, `MVP.md`, and per-feature notes.
 
 ## Contributing
 

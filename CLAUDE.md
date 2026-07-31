@@ -12,20 +12,19 @@ The management layer FS25 lacks: organize a curated **source library**, define
 **profiles/loadouts**, detect **conflicts**, track **updates**, and bind mods to
 **savegames** — projecting the active set into the game's flat `mods/` folder only
 at launch (via symlink/junction, with a copy fallback). See [docs/](docs/):
-`VISION.md`, `MVP.md`, `ARCHITECTURE.md`, `SMOKE_TEST.md`, and `reference/`.
+`MVP.md`, `ARCHITECTURE.md`, `SMOKE_TEST.md`, and `reference/`.
 
 ### Feature set (shipped as of 2026-07)
 
-Well past the incumbents (FSG Mod Assistant, FarmSim Hub, MarkThor11 — see the
-`fs25-mod-manager-decision` memory). Beyond the MVP management layer above:
+Beyond the MVP management layer above:
 
 - **Browse tab** — the SiloAPI canonical catalog (GitHub + ModHub + Nexus), search,
   category filter, pagination, per-source buttons w/ versions, in-app GitHub install
   with a streaming progress bar, detail drawer. ModHub/Nexus are index-only
   (open-page; their CDNs gate direct download).
 - **Catalog-routed updates** — "⟳ Updates" checks the whole library against the
-  catalog's latest-across-sources (fixes the GitHub-vs-ModHub false-"outdated" bug the
-  incumbents have); per-mod update status also in the detail drawer.
+  catalog's latest-across-sources (fixes the GitHub-vs-ModHub false-"outdated" bug);
+  per-mod update status also in the detail drawer.
 - **Crash & log triage** (`◆ diagnose`) — parses `log.txt`, names the culprit mod,
   separates real errors from cosmetic noise.
 - **Guided bisection** — automates "disable half, relaunch" to isolate a crash the log
@@ -57,7 +56,7 @@ unit tests (42+ Rust tests). Frontend panels in `src/lib/components/`.
   tokens, no heavyweight UI kit. Virtualized lists mandatory. Design language in
   `docs/DESIGN.md`.
 - Rust does ALL heavy work (zip parsing, hashing, DDS/image decode, tree walks)
-  on a thread pool — never block the UI. This is the #1 lesson from the incumbent.
+  on a thread pool — never block the UI.
 - SQLite (rusqlite/sqlx) with real indexes; cache keyed by path+mtime+size.
 - **Cross-platform: Windows + macOS + Linux** (see `docs/CROSS-PLATFORM.md`).
   Per-OS game-file discovery and projection; never hardcode Windows paths.
@@ -72,10 +71,10 @@ unit tests (42+ Rust tests). Frontend panels in `src/lib/components/`.
   image, or walks a tree, it lives in Rust on a worker — not in an `invoke`
   handler that blocks, and never in the frontend.
 - **Parse, don't regex.** `modDesc.xml` and savegame XML go through `quick-xml`,
-  not string scraping. (The incumbent's regex XML parsing is a top bug source.)
+  not string scraping.
 - **Windows-first, but symlink-safe.** File symlinks need Developer Mode/admin;
   dir junctions don't; hardlinks fail across volumes. Detect capability and fall
-  back to copy-projection. This is the exact seam where the incumbent is "buggy."
+  back to copy-projection.
 - **Cache aggressively, invalidate honestly** (path+mtime+size). Never wipe the
   whole cache on version bumps.
 - Small, testable Rust modules; keep the scan/library/projection/conflict
@@ -84,9 +83,6 @@ unit tests (42+ Rust tests). Frontend panels in `src/lib/components/`.
 
 ## Reference material
 
-- Incumbent source (for spec-mining, NOT copying):
-  `../fs25-mt-mod-manager/` — Electron app. Teardown + bug list in
-  `docs/internal/incumbent-teardown.md` (internal, git-ignored).
 - FS25 SDK / game source: see workspace root `CLAUDE.md` and the memory index
   (`fs25-sdk-resource-locations`). Authoritative schemas live at
   `<game install>/shared/xml/schema/*.xsd` (88 of them; `modDesc.xsd`,
@@ -97,8 +93,8 @@ unit tests (42+ Rust tests). Frontend panels in `src/lib/components/`.
   in `docs/reference/fs25-modding-notes.md`.
 - Reference mod corpus: `Documents/My Games/FarmingSimulator2025/mods/` (**729**
   real mods on this machine) — the scan/conflict engine's test fixtures. NOTE:
-  `modManagerTemplates/` and `modManagerArchives/` there are the incumbent's leftover
-  folders — do not reuse those names.
+  `modManagerTemplates/` and `modManagerArchives/` there are folders used by another
+  mod manager — do not reuse those names.
 
 ## Per-change validation
 

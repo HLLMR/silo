@@ -3,9 +3,7 @@
 ## Principles
 
 1. **The UI thread never does heavy work.** Archive parsing, hashing, image
-   decode, and tree walks live in Rust on a worker pool. This is the single
-   biggest lesson from the incumbent, whose sluggishness is 100% self-inflicted
-   main-thread blocking.
+   decode, and tree walks live in Rust on a worker pool.
 2. **Library originals are sacred and untouched.** The game folder is a
    *projection* of a chosen profile, always reversible.
 3. **Parse, don't regex.** XML via `quick-xml`.
@@ -70,7 +68,7 @@ running app.
 
 ## Data model (SQLite — first pass)
 
-Real tables with real indexes (contrast the incumbent's `LIKE 'mods_%'` KV scans):
+Real tables with real indexes:
 
 - `mod_file(path PK, root, mtime, size, hash, kind)` — physical presence + cache key.
 - `mod_meta(hash PK, mod_id, title, author, version, icon_ref, raw_moddesc_json)` —
@@ -101,8 +99,8 @@ A loadout generated from a save must include every `required="true"` mod; `fileH
 place we compute **MD5** (to match GIANTS' value) rather than blake3.
 
 Decoded icons cached as PNG files under the app data dir (referenced by
-`icon_ref`), **not** as base64 blobs in SQLite rows (another incumbent mistake —
-it bloats rows and the IPC payload).
+`icon_ref`), **not** as base64 blobs in SQLite rows (it bloats rows and the IPC
+payload).
 
 ## The projection engine (the delicate part)
 
@@ -176,7 +174,7 @@ hatch is always available beside the generated form.
 - Styling: hand-authored CSS design tokens (`tokens.css`), in-house primitives — no
   heavyweight UI kit.
 
-## Explicitly rejected (from incumbent teardown)
+## Explicitly rejected
 
 - Synchronous archive/image work anywhere near the UI thread.
 - Regex XML parsing.

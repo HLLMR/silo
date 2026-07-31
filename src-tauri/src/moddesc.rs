@@ -1,6 +1,6 @@
 //! Streaming parser for `modDesc.xml`, grounded in the authoritative
 //! `shared/xml/schema/modDesc.xsd` (descVersion 105-era). Uses quick-xml — never
-//! regex (the incumbent's regex XML parsing was a top bug source).
+//! regex (regex XML parsing is a top bug source in this class of tool).
 //!
 //! We extract exactly what the library + conflict engines need and nothing more:
 //! identity/metadata, map detection, dependencies (tech-name strings), the six

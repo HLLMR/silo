@@ -1,6 +1,6 @@
 # Silo — MVP Scope
 
-The MVP attacks the incumbents' weakness (speed + stability + real management) and
+The MVP focuses on speed, stability, and real management, and
 **deliberately excludes the ModHub scraper.** Everything here works offline against
 a local library.
 
@@ -35,8 +35,7 @@ a local library.
   - l10n / store-item / input-binding collisions (**info/warning**),
   - same mod present twice / version clash.
 - Surface conflicts **before launch**, grouped by severity, with the offending mods.
-- (Real modDesc `<conflicts>`/`<dependency>` declarations parsed properly, not
-  hardcoded empty like the incumbent.)
+- (Real modDesc `<conflicts>`/`<dependency>` declarations parsed properly.)
 
 ### 5. Update & health tracking (offline-honest)
 - Track local versions with **real** version comparison (semver-ish, dotted).
@@ -65,8 +64,8 @@ a local library.
 - In-app editing of mod **content/assets** (models, scripts, balancing) — that's
   GIANTS Editor/Studio territory. (Editing a mod's **settings** XML *is* in scope —
   item 7.)
-- Radio, system/graphics "optimization," cloud sync, DLC management (all incumbent
-  scope-creep that distracted from the core).
+- Radio, system/graphics "optimization," cloud sync, DLC management (out of scope
+  for v0.1).
 - Auto-update of the app itself (add once there's something to update to).
 
 ## Risks / open questions

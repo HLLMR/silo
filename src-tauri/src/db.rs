@@ -1,7 +1,7 @@
 //! SQLite persistence. First use: a scan cache keyed by path+mtime+size that lets
 //! warm rescans skip opening/parsing archives entirely. Real indexed tables (a PK
-//! on path) — never the incumbent's `LIKE 'mods_%'` KV scans. Additive migrations;
-//! we never wipe the cache on version bumps.
+//! on path), not `LIKE 'mods_%'` key-value scans. Additive migrations; we never
+//! wipe the cache on version bumps.
 
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};

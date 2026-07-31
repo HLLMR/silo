@@ -18,8 +18,8 @@ A local (gitignored) mirror of the schema + samples lives in `../../reference/`.
     placeables/etc.). The save's mod list lives in `careerSavegame.xml` (below).
   - `modSettings/<modName>/` — per-mod settings the game persists.
   - `pdlc/` — paid DLC (`pdlc_*`), tracked in saves like mods but not user mods.
-  - **`modManagerTemplates/` and `modManagerArchives/` are the INCUMBENT's folders**
-    (MarkThor's app), not the game's. Silo must NOT reuse those names — pick our
+  - **`modManagerTemplates/` and `modManagerArchives/` are another mod manager's
+    folders**, not the game's. Silo must NOT reuse those names — pick our
     own (e.g. a single app-data dir under the OS-appropriate location).
 - **Game install (Steam):** e.g. `E:\SteamLibrary\steamapps\common\Farming Simulator 25`
   - `sdk/debugger/scriptBinding.xml`, `sdk/debugger/gameSource.zip` — engine + game
@@ -81,8 +81,7 @@ FS25; gates the min game patch). Parse with `quick-xml`, never regex.
 installed for this mod to be used." So a dependency is a **tech name**, not a
 struct. (Some community mods non-canonically append a URL in the text/attrs — parse
 defensively: take the tech-name token, optionally recover a `mod_id` from any URL,
-but never assume a shape. The incumbent's blank-library crash was exactly this
-assumption.)
+but never assume a shape. A blank library must not crash — parse defensively.)
 
 **Namespace-collision surfaces (the raw material for conflict detection).** Each is
 a place two mods can register the same name and clash:

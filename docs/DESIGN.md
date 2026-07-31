@@ -2,9 +2,8 @@
 
 The brief: a tool for tinkerers that advanced simmers respect and newcomers aren't
 scared of; not a wall of tiny icons and boxes; a genuinely pleasant place to be;
-farm/outdoor color theory carried through every decision; and unmistakably the one
-that's *doing it right*. This doc is the source of truth for look, feel, stack, and
-language.
+farm/outdoor color theory carried through every decision. This doc is the source of
+truth for look, feel, stack, and language.
 
 ## Design pillars
 
@@ -12,7 +11,7 @@ language.
    primary action per screen. Depth comes from *progressive disclosure*, not
    density. A newcomer sees a clean library; a tinkerer opens the drawers.
 2. **Earn trust visibly.** Every file-touching action shows what it will do and how
-   to undo it. Nothing about the game folder happens invisibly. Trust is the moat.
+   to undo it. Nothing about the game folder happens invisibly. Trust is essential.
 3. **Approachable surface, deep floor.** Plain-language defaults up top; power
    (rules, diffs, graphs, CLI) one layer down. Never make the beginner pay the
    complexity tax, never cap the expert.
@@ -20,15 +19,15 @@ language.
    "gamer" chrome and not sterile enterprise gray. It should feel like good tools
    in a clean workshop.
 5. **Fast is a feature you can see.** Instant scans, smooth 60fps lists, immediate
-   feedback. The incumbent feels broken; we feel *solid*.
+   feedback. It should feel solid and immediate.
 
 ## Stack decisions (committed)
 
 - **Shell:** Tauri v2 (Rust core) — decided; see `DECISIONS.md` / `ARCHITECTURE.md`.
 - **Frontend framework: Svelte 5 (runes) + Vite + TypeScript.** Why: smallest
   runtime and no virtual-DOM overhead (aligns with "native, fast, tiny"); fine-
-  grained reactivity avoids the whole-store re-render storms that sank the
-  incumbent; and its low ceremony lets us pour effort into *bespoke* visuals rather
+  grained reactivity avoids whole-store re-render storms; and its low ceremony lets
+  us pour effort into *bespoke* visuals rather
   than fighting a component framework. TypeScript throughout for a tinkerer-friendly,
   refactorable codebase.
 - **Styling: hand-authored CSS with design tokens** (CSS custom properties), no
@@ -146,7 +145,7 @@ evangelize it:
 
 ## What "doing it right" looks like at a glance
 
-Set beside the incumbent, the first ten seconds should read as: it opened
+In the first ten seconds, it should read as: it opened
 instantly; the library is calm and beautiful, not a grid of tiny boxes; it clearly
 knows my mods (icons, versions, conflicts) without me configuring anything; and the
 one big warm-gold button tells me exactly what to do next. Fast, honest, handsome.

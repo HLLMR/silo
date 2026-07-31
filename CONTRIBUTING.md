@@ -46,7 +46,7 @@ Silo is one app split across two halves:
   `src/lib/components/`. Design tokens are hand-authored CSS; no heavyweight UI
   kit. Long lists are virtualized.
 - **`docs/`** — architecture and per-feature notes (`ARCHITECTURE.md`,
-  `VISION.md`, `DESIGN.md`, `CROSS-PLATFORM.md`, and more). Read these before a
+  `DESIGN.md`, `CROSS-PLATFORM.md`, `MVP.md`, and more). Read these before a
   large change.
 
 ## Working principles
@@ -57,13 +57,13 @@ full version). PRs are reviewed against them:
 - **Off-thread by construction.** If it parses an archive, hashes, decodes an
   image, or walks a tree, it belongs in Rust on a worker thread — never in a
   blocking `invoke` handler, and never in the frontend. Keeping heavy work off
-  the UI thread is the number-one lesson from the incumbent apps.
+  the UI thread is the number-one performance rule here.
 - **Every file write is reversible.** Never touch the user's game files
   destructively without an undo path. Prefer symlink/junction projection over
   moving or copying originals; back up before writing into
   `Documents/My Games/FarmingSimulator2025/`.
 - **Parse, don't regex.** `modDesc.xml` and savegame XML go through `quick-xml`,
-  not string scraping. Regex XML parsing is a top bug source in the incumbents.
+  not string scraping. Regex XML parsing is a common bug source in this class of app.
 - **Small, testable modules.** Keep the scan / library / projection / conflict
   engines as pure logic behind thin Tauri command wrappers, so they unit-test
   without launching the app.

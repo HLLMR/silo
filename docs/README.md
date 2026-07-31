@@ -4,16 +4,15 @@ Design, reference, and process material for the (now-built) app. Start with the 
 [README](../README.md) and [CONTRIBUTING](../CONTRIBUTING.md); the files below are the
 deeper background. Suggested reading order:
 
-1. **[VISION.md](VISION.md)** — the problem, the insight, positioning, competitors.
-2. **[MVP.md](MVP.md)** — v0.1 scope (and what's deliberately excluded).
-3. **[DESIGN.md](DESIGN.md)** — design language, stack picks, farm color system,
+1. **[MVP.md](MVP.md)** — v0.1 scope (and what's deliberately excluded).
+2. **[DESIGN.md](DESIGN.md)** — design language, stack picks, farm color system,
    terminology approach, and the tinkerer power-layer (incl. the XML settings-form
    generator).
-4. **[ARCHITECTURE.md](ARCHITECTURE.md)** — Tauri/Rust design, data model, conflict
+3. **[ARCHITECTURE.md](ARCHITECTURE.md)** — Tauri/Rust design, data model, conflict
    engine, the projection engine.
-5. **[CROSS-PLATFORM.md](CROSS-PLATFORM.md)** — Windows/macOS/Linux game-file
+4. **[CROSS-PLATFORM.md](CROSS-PLATFORM.md)** — Windows/macOS/Linux game-file
    discovery and per-OS projection.
-6. **[DECISIONS.md](DECISIONS.md)** — why we chose what we chose.
+5. **[DECISIONS.md](DECISIONS.md)** — why we chose what we chose.
 
 Reference (mined knowledge):
 
