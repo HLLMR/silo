@@ -33,16 +33,18 @@ jobs:
       - uses: actions/checkout@v4
       # Tauri v2 links webkit2gtk-4.1 at build time, so the deps are needed even to
       # compile the crate for `cargo test`.
+      # Tauri v2's official Linux deps. On Ubuntu 24.04 (noble) the old
+      # libappindicator3-dev CONFLICTS with libayatana-appindicator3-dev — use ayatana
+      # only, or apt aborts with held broken packages.
       - name: Install Tauri system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev
+            build-essential curl wget file \
+            libxdo-dev libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev patchelf
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
