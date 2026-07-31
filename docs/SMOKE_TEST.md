@@ -19,13 +19,13 @@ closes the app). A packaged build is `npm run tauri:build`.
 ## 1. Library scan & organize  _(auto-verified: scan/organize/moddesc engines)_
 - [x] `[app]` Initial scan lists the full library; counts (mods/maps/scripts/DLC) look right; "scanned in N ms" shows.
 - [x] `[app]` Rescan re-reads without error; warm scan is fast.
-- [-] `[app]` Organize moves loose zips into `mods/archive/<Category>/`; dev **folder** mods are left untouched (zip-only).
+- [x] `[app]` Organize moves loose zips into `mods/archive/<Category>/`; dev **folder** mods are left untouched (zip-only).
 - [x] `[app]` Category rail filters; search filters by title/author/tech name; Favorites/Hidden toggles work.
 - [x] `[app]` Select-all checkbox activates/deactivates the filtered set.
 
 ## 2. Curation & detail drawer  _(auto-verified: curation/tags/rating store)_
-- [ ] `[app]` Click a mod row → detail drawer opens with icon, metadata, deps (with present/missing status).
-- [ ] `[app]` Favorite / Broken / Hidden toggles persist across a rescan; star rating persists; tags add/remove & filter; notes save on blur.
+- [x] `[app]` Click a mod row → detail drawer opens with icon, metadata, deps (with present/missing status).
+- [x] `[app]` Favorite / Broken / Hidden toggles persist across a rescan; star rating persists; tags add/remove & filter; notes save on blur.
 - [ ] `[app]` **Last run** section shows this mod's log health (see §8) — errors/cosmetic/clean.
 - [ ] `[net]` **Catalog** section shows latest version / "update available (source)" / "not in catalog".
 - [ ] `[app]` Reveal opens the file in Explorer; activate/deactivate toggles the active dot.
