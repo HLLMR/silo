@@ -240,6 +240,11 @@ pub fn download_zip(url: &str, token: Option<&str>, dest: &std::path::Path) -> R
     if bytes.len() < 4 || &bytes[..2] != b"PK" {
         return Err("Downloaded file is not a valid .zip".to_string());
     }
+    // Validate the WHOLE archive opens (central directory intact), not just the PK magic,
+    // so a truncated or corrupt download can't overwrite a working mod with garbage.
+    zip::ZipArchive::new(std::io::Cursor::new(&bytes)).map_err(|_| {
+        "Downloaded file is not a valid .zip archive (corrupt or truncated)".to_string()
+    })?;
     // Back up the existing file FIRST, and abort if that fails — never overwrite a mod we
     // couldn't preserve a copy of. (Previously the backup error was ignored.)
     if dest.exists() {
