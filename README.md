@@ -70,7 +70,7 @@ reversible (see [`CLAUDE.md`](CLAUDE.md) for conventions).
 
 ## License
 
-_To be finalized before 1.0 — see [issues](https://github.com/HLLMR/silo/issues)._
+[MIT](LICENSE) © HLLMR. Use it, fork it, ship it.
 
 ---
 
