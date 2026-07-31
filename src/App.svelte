@@ -101,6 +101,8 @@
   >({});
   let showHidden = $state(false);
   let favoritesOnly = $state(false);
+  let flaggedOnly = $state(false);
+  let conflictedOnly = $state(false);
   let editing = $state<{ techName: string; x: number; y: number } | null>(null);
   let activeSet = $state<Set<string>>(new Set());
   let busy = $state<string | null>(null);
@@ -281,6 +283,17 @@
   const criticalCount = $derived(
     conflicts.filter((c) => c.severity === "critical").length,
   );
+
+  // Every mod named in a non-info conflict, for the "In conflict" library filter.
+  // Conflict.mods carries tech names (and sometimes titles), so we match on both.
+  const conflictedSet = $derived.by(() => {
+    const s = new Set<string>();
+    for (const c of conflicts) {
+      if (c.severity === "info") continue;
+      for (const name of c.mods) s.add(name);
+    }
+    return s;
+  });
 
   async function runConflictCheck() {
     const active = mods.filter((m) => activeSet.has(m.techName));
@@ -777,6 +790,14 @@
     if (favoritesOnly) {
       list = list.filter((m) => cur(m.techName).favorite);
     }
+    if (flaggedOnly) {
+      list = list.filter((m) => cur(m.techName).broken);
+    }
+    if (conflictedOnly) {
+      list = list.filter(
+        (m) => conflictedSet.has(m.techName) || conflictedSet.has(m.title ?? ""),
+      );
+    }
     if (selectedTag) {
       list = list.filter((m) => tagsOf(m.techName).includes(selectedTag!));
     }
@@ -791,7 +812,7 @@
     return list;
   });
 
-  type SortKey = "name" | "category" | "size" | "added" | "version";
+  type SortKey = "name" | "category" | "size" | "added" | "version" | "rating";
   let sortBy = $state<SortKey>("name");
   let sortDir = $state<"asc" | "desc">("asc");
 
@@ -813,6 +834,10 @@
           break;
         case "version":
           r = (a.version ?? "").localeCompare(b.version ?? "", undefined, { numeric: true });
+          break;
+        case "rating":
+          // My own star rating (0 = unrated sorts last on desc, which is the default use).
+          r = cur(a.techName).rating - cur(b.techName).rating;
           break;
         case "category":
           r =
@@ -1664,6 +1689,23 @@
     >
       Hidden
     </button>
+    <button
+      class="toggle"
+      class:on={flaggedOnly}
+      title="Show only mods you've flagged as broken"
+      onclick={() => (flaggedOnly = !flaggedOnly)}
+    >
+      ⚑ Flagged
+    </button>
+    <button
+      class="toggle"
+      class:on={conflictedOnly}
+      title="Show only mods involved in a conflict"
+      onclick={() => (conflictedOnly = !conflictedOnly)}
+      disabled={conflictedSet.size === 0}
+    >
+      ⚠ In conflict{conflictedSet.size > 0 ? ` (${conflictedSet.size})` : ""}
+    </button>
 
     <input
       class="search"
@@ -1716,6 +1758,7 @@
               <option value="size">Size</option>
               <option value="added">Recently added</option>
               <option value="version">Version</option>
+              <option value="rating">My rating</option>
             </select>
           </label>
           <button
