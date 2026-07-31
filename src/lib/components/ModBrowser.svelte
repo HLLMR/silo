@@ -12,6 +12,7 @@
     onInstallProgress,
     openExternal,
     ghStatus,
+    nexusStatus,
   } from "../api";
   import type {
     BrowseMod,
@@ -22,28 +23,35 @@
   } from "../types";
   import type { UnlistenFn } from "@tauri-apps/api/event";
   import GithubCard from "./GithubCard.svelte";
+  import NexusCard from "./NexusCard.svelte";
 
   interface Props {
     /** Tech names already in the local library, to flag "in library". */
     installed: Set<string>;
     /** Called after a successful install so the parent can rescan. */
     onInstalled: (filename: string) => void;
-    /** Route the user to the GitHub connect UI (Settings) from a source card. */
-    onNeedGithubAuth?: () => void;
+    /** Route the user to the source-connect UI (Settings) from a source card. */
+    onNeedAuth?: () => void;
   }
-  let { installed, onInstalled, onNeedGithubAuth }: Props = $props();
+  let { installed, onInstalled, onNeedAuth }: Props = $props();
 
-  // GitHub connection state, for the interactive source cards in the drawer.
+  // Source connection state, for the interactive cards in the drawer.
   let gh = $state<{ connected: boolean; canWrite: boolean }>({
     connected: false,
     canWrite: false,
   });
+  let nexusConnected = $state(false);
   async function refreshGh() {
     try {
       const s = await ghStatus();
       gh = { connected: !!s.user, canWrite: s.canWrite };
     } catch {
       gh = { connected: false, canWrite: false };
+    }
+    try {
+      nexusConnected = !!(await nexusStatus()).user;
+    } catch {
+      nexusConnected = false;
     }
   }
   refreshGh();
@@ -53,6 +61,12 @@
     const m = url.match(/github\.com\/([^/]+)\/([^/?#]+)/i);
     if (!m) return null;
     return { owner: m[1], repo: m[2].replace(/\.git$/i, "") };
+  }
+
+  /** Pull the numeric Nexus mod id out of a source URL (…/mods/12345). */
+  function parseNexusId(url: string): number | null {
+    const m = url.match(/\/mods\/(\d+)/);
+    return m ? Number(m[1]) : null;
   }
 
   let query = $state("");
@@ -490,10 +504,12 @@
             </ul>
           {/if}
 
-          {#if d.sources.some((s) => s.source === "github" && parseRepo(s.sourceUrl))}
+          {#if d.sources.some((s) => (s.source === "github" && parseRepo(s.sourceUrl)) || (s.source === "nexus" && parseNexusId(s.sourceUrl)))}
+            {@const ghSrcs = d.sources.filter((s) => s.source === "github" && parseRepo(s.sourceUrl))}
+            {@const nxSrcs = d.sources.filter((s) => s.source === "nexus" && parseNexusId(s.sourceUrl))}
             <div class="drawer-sec">Interact</div>
             <div class="src-cards">
-              {#each d.sources.filter((s) => s.source === "github") as s (s.sourceUrl)}
+              {#each ghSrcs as s (s.sourceUrl)}
                 {@const r = parseRepo(s.sourceUrl)}
                 {#if r}
                   <GithubCard
@@ -501,7 +517,19 @@
                     repo={r.repo}
                     connected={gh.connected}
                     canWrite={gh.canWrite}
-                    onConnect={() => onNeedGithubAuth?.()}
+                    onConnect={() => onNeedAuth?.()}
+                  />
+                {/if}
+              {/each}
+              {#each nxSrcs as s (s.sourceUrl)}
+                {@const id = parseNexusId(s.sourceUrl)}
+                {#if id != null}
+                  <NexusCard
+                    modId={id}
+                    version={s.version}
+                    sourceUrl={s.sourceUrl}
+                    connected={nexusConnected}
+                    onConnect={() => onNeedAuth?.()}
                   />
                 {/if}
               {/each}

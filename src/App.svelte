@@ -78,6 +78,7 @@
   import ModDetail from "./lib/components/ModDetail.svelte";
   import ConfigEditor from "./lib/components/ConfigEditor.svelte";
   import GitHubAuth from "./lib/components/GitHubAuth.svelte";
+  import NexusAuth from "./lib/components/NexusAuth.svelte";
   import ModBrowser from "./lib/components/ModBrowser.svelte";
   import LogTriage from "./lib/components/LogTriage.svelte";
   import BindingsView from "./lib/components/BindingsView.svelte";
@@ -1273,6 +1274,11 @@
       </div>
 
       <div class="set-section">
+        <div class="set-label">Nexus Mods account</div>
+        {#if settingsOpen}<NexusAuth />{/if}
+      </div>
+
+      <div class="set-section">
         <div class="set-row">
           <div class="set-label">Diagnostics</div>
           <button class="set-link" onclick={exportReport}>Export report ↗</button>
@@ -1599,7 +1605,7 @@
       <ModBrowser
         installed={libraryTechNames}
         onInstalled={() => runScan(true)}
-        onNeedGithubAuth={() => (settingsOpen = true)}
+        onNeedAuth={() => (settingsOpen = true)}
       />
     </div>
   {:else}

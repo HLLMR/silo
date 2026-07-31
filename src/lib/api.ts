@@ -24,6 +24,8 @@ import type {
   UpdateInfo,
   GhStatus,
   RepoStats,
+  NexusStatus,
+  NexusModStats,
   DeviceCode,
   PollResult,
   BrowseMod,
@@ -226,6 +228,29 @@ export function ghStar(owner: string, repo: string, on: boolean): Promise<boolea
 /** Watch (on=true) / unwatch the repo through the user's own GitHub account. */
 export function ghWatch(owner: string, repo: string, on: boolean): Promise<boolean> {
   return invoke<boolean>("gh_watch", { owner, repo, on });
+}
+
+// ── Nexus source card (keyless reads + endorse via the user's own API key) ──
+export function nexusStatus(): Promise<NexusStatus> {
+  return invoke<NexusStatus>("nexus_status");
+}
+/** Verify + store a Nexus personal API key. Returns the account name. */
+export function nexusSetKey(key: string): Promise<string> {
+  return invoke<string>("nexus_set_key", { key });
+}
+export function nexusLogout(): Promise<void> {
+  return invoke("nexus_logout");
+}
+export function nexusModStats(modId: number): Promise<NexusModStats> {
+  return invoke<NexusModStats>("nexus_mod", { modId });
+}
+/** Endorse (on=true) / abstain the mod through the user's own Nexus account. */
+export function nexusEndorse(
+  modId: number,
+  on: boolean,
+  version?: string | null,
+): Promise<boolean> {
+  return invoke<boolean>("nexus_endorse", { modId, on, version: version ?? null });
 }
 
 /** Download a release .zip and install it in place (backs up the old file). */
