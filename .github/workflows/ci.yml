@@ -47,13 +47,34 @@ jobs:
             librsvg2-dev patchelf
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
       - name: Format check
         working-directory: src-tauri
         run: cargo fmt --all --check
+      - name: Clippy (deny warnings)
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
       - name: Test
         working-directory: src-tauri
         run: cargo test
+
+  audit:
+    name: Security audit (cargo-audit)
+    runs-on: ubuntu-latest
+    # Informational for now: surfaces advisories in the log without blocking a build we
+    # can't hotfix instantly. Flip to a hard gate once the first run is reviewed.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      - name: Audit dependencies
+        working-directory: src-tauri
+        run: cargo audit

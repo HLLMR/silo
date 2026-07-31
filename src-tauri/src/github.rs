@@ -81,7 +81,7 @@ pub fn latest_release(owner: &str, repo: &str, token: Option<&str>) -> Result<Re
 pub fn is_newer(latest_tag: &str, current: &str) -> bool {
     let norm = |s: &str| {
         s.trim_start_matches(['v', 'V'])
-            .split(|c: char| c == '.' || c == '-' || c == '+' || c == '_')
+            .split(['.', '-', '+', '_'])
             .filter_map(|p| p.parse::<u64>().ok())
             .collect::<Vec<u64>>()
     };

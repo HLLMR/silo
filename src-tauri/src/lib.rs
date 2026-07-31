@@ -43,6 +43,9 @@ struct Progress {
 /// user-provided id from Settings.
 const SILO_GH_CLIENT_ID: &str = "Ov23lizY2TSJF2P5CRyx";
 
+// The client id is a compile-time toggle: empty = fall back to a user-provided id. For a
+// build with it baked in, `is_empty()` is const-false — that's intentional, not a bug.
+#[allow(clippy::const_is_empty)]
 fn effective_client_id(conn: &rusqlite::Connection) -> Option<String> {
     if !SILO_GH_CLIENT_ID.is_empty() {
         Some(SILO_GH_CLIENT_ID.to_string())
@@ -205,6 +208,7 @@ struct GhStatus {
 }
 
 #[tauri::command]
+#[allow(clippy::const_is_empty)]
 fn gh_status(app: tauri::AppHandle) -> Result<GhStatus, String> {
     let conn = db::open(&db_path(&app)?)?;
     Ok(GhStatus {

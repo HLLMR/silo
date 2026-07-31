@@ -63,7 +63,7 @@ fn pick_localized(langs: &BTreeMap<String, String>) -> Option<String> {
         .filter(|s| !s.is_empty())
 }
 
-fn attr<'a>(e: &'a quick_xml::events::BytesStart, key: &[u8]) -> Option<String> {
+fn attr(e: &quick_xml::events::BytesStart, key: &[u8]) -> Option<String> {
     e.attributes()
         .flatten()
         .find(|a| a.key.as_ref() == key)

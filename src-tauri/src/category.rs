@@ -201,9 +201,8 @@ pub fn categorize(
                 "stable",
                 "barn",
             ],
-        ) {
-            cat("Placeables", Some(&sub))
-        } else if has_placeable {
+        ) || has_placeable
+        {
             cat("Placeables", Some(&sub))
         } else {
             cat("Vehicles", Some(&sub))
