@@ -1,14 +1,33 @@
-# Silo
+<p align="center">
+  <img src="landing/og.png" alt="Silo — the Farming Simulator 25 mod manager" width="720" />
+</p>
 
-**The mod manager Farming Simulator 25 should have shipped with.** A fast, native
-desktop app that organizes your FS25 mod library, names the mod that crashed you,
-catches conflicts before they bite, and pulls ModHub, GitHub and Nexus into one honest
-catalog — without ever touching your saves destructively.
+<h1 align="center">Silo</h1>
 
-Free and open source. Windows · macOS · Linux. → **[silo.hllmr.com](https://silo.hllmr.com)**
+<p align="center"><em>The mod manager Farming Simulator 25 should have shipped with.</em></p>
 
-> **Status: public beta.** [Download a build](https://github.com/HLLMR/silo/releases) or
-> build from source (below).
+<p align="center">
+  <a href="https://github.com/HLLMR/silo/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/HLLMR/silo?include_prereleases&sort=semver&color=4a7330&label=release"></a>
+  <a href="https://github.com/HLLMR/silo/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/HLLMR/silo/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-4a7330"></a>
+  <img alt="Platforms" src="https://img.shields.io/badge/platforms-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-4a7330">
+  <a href="https://github.com/HLLMR/silo/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/HLLMR/silo/total?color=e3b23c&label=downloads"></a>
+  <a href="https://silo.hllmr.com"><img alt="Website" src="https://img.shields.io/badge/web-silo.hllmr.com-4a90c2"></a>
+</p>
+
+A fast, native desktop app that organizes your FS25 mod library, names the mod that
+crashed you, catches conflicts before they bite, and pulls ModHub, GitHub and Nexus into
+one honest catalog — without ever touching your saves destructively. **Free and open
+source. Windows · macOS · Linux.**
+
+<p align="center">
+  <b><a href="https://github.com/HLLMR/silo/releases/latest">⬇ Download the beta</a></b>
+  &nbsp;·&nbsp; <a href="https://silo.hllmr.com">silo.hllmr.com</a>
+  &nbsp;·&nbsp; <a href="#install">Build from source</a>
+</p>
+
+> **Status: public beta.** Builds are unsigned (open source), so Windows SmartScreen /
+> macOS Gatekeeper may warn on first launch.
 
 ## Why
 
