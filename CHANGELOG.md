@@ -59,8 +59,9 @@ First public beta.
 - **Per-source interaction** — star/watch a repo on GitHub, endorse on Nexus, and
   deep-link to the ModHub page to rate — all through *your own* accounts. Silo
   brokers the action and holds none of your credentials.
-- **Cross-platform** — Windows, macOS, and Linux, with per-OS game-file discovery
-  and projection.
+- **Cross-platform** — Windows, macOS, and Linux, with per-OS projection and
+  game-install discovery. Automatic mods-folder detection covers Windows and macOS;
+  on Linux (Proton) the mods folder is set manually for now.
 
 [Unreleased]: https://github.com/HLLMR/silo/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/HLLMR/silo/releases/tag/v0.1.0

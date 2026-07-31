@@ -20,5 +20,5 @@ Reference (mined knowledge):
 - **[reference/fs25-modding-notes.md](reference/fs25-modding-notes.md)** — how FS25
   loads mods, `modDesc.xml` fields, conflict signals, projection mechanics.
 
-Plus per-feature notes: `ENRICHMENT.md` (catalog signals), `BASE_SAVES.md`,
-`SMOKE_TEST.md` (the release checklist), and `RELEASE_CHECKLIST.md`.
+Plus per-feature notes: [BASE_SAVES.md](BASE_SAVES.md) and the pre-release
+[SMOKE_TEST.md](SMOKE_TEST.md) checklist.
