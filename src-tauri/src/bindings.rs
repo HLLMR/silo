@@ -94,14 +94,13 @@ pub fn parse(xml: &str) -> BindingReport {
 
     // Group by device, preserving encounter order within each.
     let mut by_device: BTreeMap<String, Vec<(String, String)>> = BTreeMap::new();
-    let total_bindings = raw.len();
     let mut distinct_actions = std::collections::HashSet::new();
     for (device, action, input) in raw {
         distinct_actions.insert(action.clone());
         by_device.entry(device).or_default().push((action, input));
     }
 
-    let devices = by_device
+    let devices: Vec<DeviceBindings> = by_device
         .into_iter()
         .map(|(device, mut pairs)| {
             // Shared inputs: input -> distinct actions, keep those with >= 2.
@@ -119,6 +118,13 @@ pub fn parse(xml: &str) -> BindingReport {
                 .collect();
 
             pairs.sort();
+            // Collapse identical (action, input) pairs. The parser ignores each
+            // <binding>'s index/component attributes, so a real profile emits the same
+            // (action, input) more than once (e.g. compound MOUSE_BUTTON_* AXIS_* inputs).
+            // Those are true duplicates in this model — and a duplicate `(action, input)`
+            // key crashed the keyed {#each} in the bindings view. Dedup here also makes
+            // total_bindings the accurate distinct count.
+            pairs.dedup();
             let bindings = pairs
                 .into_iter()
                 .map(|(action, input)| Bind { action, input })
@@ -131,6 +137,7 @@ pub fn parse(xml: &str) -> BindingReport {
         })
         .collect();
 
+    let total_bindings = devices.iter().map(|d| d.bindings.len()).sum();
     BindingReport {
         total_actions: distinct_actions.len(),
         total_bindings,
@@ -206,5 +213,28 @@ mod tests {
     fn empty_or_garbage_is_safe() {
         assert_eq!(parse("").total_bindings, 0);
         assert_eq!(parse("<inputBinding></inputBinding>").total_bindings, 0);
+    }
+
+    #[test]
+    fn collapses_duplicate_action_input_pairs() {
+        // Same (action, input) twice, differing only by the ignored index/component —
+        // a real profile does this for compound inputs, and it must NOT yield a duplicate
+        // Bind (which crashed the keyed {#each} in the UI).
+        let xml = r#"<inputBinding>
+  <actionBinding action="AXIS_MOVE">
+    <binding device="KB_MOUSE_DEFAULT" input="MOUSE_X" index="1" component="0"/>
+    <binding device="KB_MOUSE_DEFAULT" input="MOUSE_X" index="1" component="1"/>
+    <binding device="KB_MOUSE_DEFAULT" input="KEY_w"/>
+  </actionBinding>
+</inputBinding>"#;
+        let r = parse(xml);
+        let kb = &r.devices[0];
+        // MOUSE_X collapsed to one; KEY_w stays → 2 distinct bindings, not 3.
+        assert_eq!(kb.bindings.len(), 2);
+        assert_eq!(r.total_bindings, 2);
+        assert_eq!(
+            kb.bindings.iter().filter(|b| b.input == "MOUSE_X").count(),
+            1
+        );
     }
 }
