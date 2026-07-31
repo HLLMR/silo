@@ -9,6 +9,12 @@ can't do.
 Launch for testing: from `Silo/`, `npm run tauri:dev` (leave the terminal open — closing it
 closes the app). A packaged build is `npm run tauri:build`.
 
+> **Revised for v0.1.1.** The entire frontend was refactored into focused
+> components/panels — so **re-run every section**: a change that compiles and builds can
+> still have a runtime wiring regression. Two earlier bugs should now pass on re-check:
+> §6 Browse thumbnails (were blank — CSP fix) and §10 Bindings map (stuck on "Reading…" —
+> dedup fix). Plus the new **§14 Security & reliability** checks below.
+
 ---
 
 ## 0. Launch & shell
@@ -86,6 +92,14 @@ closes the app). A packaged build is `npm run tauri:build`.
 - [ ] `[app]` Diagnostics report exports a markdown summary.
 
 ---
+
+## 14. Security & reliability (v0.1.1 hardening)
+- [ ] `[app]` **Token in the OS keychain.** Connect GitHub (Settings) and, if you have a key, Nexus. Then check the OS credential store — Windows: `Credential Manager → Windows Credentials`, look for `com.hllmr.silo`; macOS: Keychain Access, search "Silo". The token should appear there. It should NOT be readable in the app's `silo.db` (it lives in `app_data_dir`).
+- [ ] `[app]` **Token persists + still works.** Restart the app: still "Connected as …", and a source action (⭐ Star / 👍 Endorse) still works.
+- [ ] `[app]` **Disconnect clears it.** Disconnect GitHub → the `com.hllmr.silo`/`gh_token` entry is gone from the credential store.
+- [ ] `[net]` **Corrupt-update guard.** (If practical) point an update at a truncated/non-zip file → it errors ("not a valid .zip archive") and does NOT replace the existing mod; a `.zip.bak` is only written when a real overwrite happens.
+- [ ] `[app]` **Organize is non-destructive.** After an Organize + Flatten round-trip, no mod files are missing (count returns to baseline). If Silo reports "kept an unrecognized file in archive/", it did NOT delete it — that's the safety guard working.
+- [ ] `[app]` **Scans stay fast + safe.** A full rescan of the large library completes without error (zip-read caps don't reject normal mods).
 
 ## Sign-off
 - [ ] All `[app]` items pass.
