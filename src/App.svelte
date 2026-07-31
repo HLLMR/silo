@@ -170,6 +170,17 @@
   let bisectRecovery = $state<string[] | null>(null);
   // Top-level view: the local library, or the remote catalog browser.
   let view = $state<"library" | "browse">("library");
+  // Measured so the fixed detail drawers can sit *below* the header instead of over it
+  // (the topbar wraps, so its height isn't constant).
+  let topbarH = $state(56);
+
+  /** Switch views and close the Library drawer so it doesn't hang over Browse. The
+   *  Browse drawer lives inside ModBrowser, which unmounts on switch, so it self-closes. */
+  function switchView(v: "library" | "browse") {
+    if (view === v) return;
+    view = v;
+    detailMod = null;
+  }
   let userDir = $state<string | null>(null);
   let configEditor = $state<{
     title: string;
@@ -978,8 +989,8 @@
   }
 </script>
 
-<div class="app">
-  <header class="topbar">
+<div class="app" style="--topbar-h:{topbarH}px">
+  <header class="topbar" bind:clientHeight={topbarH}>
     <div class="brand">
       <div class="logo">S</div>
       <div>
@@ -989,10 +1000,10 @@
     </div>
 
     <nav class="tabs" aria-label="Views">
-      <button class="tab" class:on={view === "library"} onclick={() => (view = "library")}>
+      <button class="tab" class:on={view === "library"} onclick={() => switchView("library")}>
         Library
       </button>
-      <button class="tab" class:on={view === "browse"} onclick={() => (view = "browse")}>
+      <button class="tab" class:on={view === "browse"} onclick={() => switchView("browse")}>
         Browse
       </button>
     </nav>

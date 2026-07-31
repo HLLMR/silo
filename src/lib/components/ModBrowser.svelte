@@ -26,6 +26,7 @@
   import GithubCard from "./GithubCard.svelte";
   import NexusCard from "./NexusCard.svelte";
   import ModHubCard from "./ModHubCard.svelte";
+  import { resizable } from "../resize";
 
   interface Props {
     /** Tech names already in the local library, to flag "in library". */
@@ -486,7 +487,7 @@
   {#if detailLoading || detail}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="drawer-backdrop" onclick={() => (detail = null)}></div>
-    <aside class="drawer">
+    <aside class="drawer" use:resizable>
       {#if detailLoading}
         <div class="empty">Loading…</div>
       {:else if detail}
@@ -997,12 +998,13 @@
   .drawer-backdrop {
     position: fixed;
     inset: 0;
+    top: var(--topbar-h, 0px);
     background: rgba(0, 0, 0, 0.35);
     z-index: 40;
   }
   .drawer {
     position: fixed;
-    top: 0;
+    top: var(--topbar-h, 0px);
     right: 0;
     bottom: 0;
     width: min(420px, 92vw);

@@ -52,3 +52,26 @@ button {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Drag handle injected on <body> by the `resizable` action, kept aligned to a detail
+   drawer's left edge (top/left/height set in JS). Widens the drawer as you drag inward. */
+.drawer-resize-handle {
+  position: fixed;
+  width: 7px;
+  cursor: ew-resize;
+  z-index: 60;
+  touch-action: none;
+}
+.drawer-resize-handle::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 3px;
+  width: 1px;
+  height: 100%;
+  background: transparent;
+  transition: background 0.12s;
+}
+.drawer-resize-handle:hover::before {
+  background: var(--green-300, #9cc06e);
+}

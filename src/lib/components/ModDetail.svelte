@@ -20,6 +20,7 @@
     scanLog,
     catalogCheckUpdates,
   } from "../api";
+  import { resizable } from "../resize";
 
   type Flag = "favorite" | "hidden" | "broken";
   interface Props {
@@ -231,8 +232,8 @@
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-<div class="backdrop" onclick={onClose}></div>
-<aside class="drawer">
+<div class="backdrop" style="top: var(--topbar-h, 0px)" onclick={onClose}></div>
+<aside class="drawer" use:resizable>
   <div class="d-top">
     {#if icon}
       <img class="d-icon" src={icon} alt="" />
@@ -456,9 +457,9 @@
   .drawer {
     position: fixed;
     z-index: 50;
-    top: 0;
+    top: var(--topbar-h, 0px);
     right: 0;
-    height: 100vh;
+    height: calc(100vh - var(--topbar-h, 0px));
     width: 420px;
     max-width: calc(100vw - 40px);
     overflow-y: auto;
