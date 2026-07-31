@@ -237,6 +237,10 @@ export interface BrowseMod {
   author: string | null;
   category: string | null;
   description: string | null;
+  // Full body + changelog (SiloAPI docs/ENRICHMENT.md), separate from the short
+  // `description` summary. Null until the server ingests them.
+  descriptionFull?: string | null;
+  changelog?: string | null;
   imageUrl: string | null;
   latestVersion: string | null;
   trustScore: number | null;

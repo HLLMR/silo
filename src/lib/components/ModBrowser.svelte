@@ -13,6 +13,7 @@
     openExternal,
     ghStatus,
     nexusStatus,
+    nexusModDescription,
   } from "../api";
   import type {
     BrowseMod,
@@ -92,8 +93,54 @@
   // Detail drawer state.
   let detail = $state<CatalogModDetail | null>(null);
   let detailLoading = $state(false);
-  // Full-description modal (the drawer shows a clamped snippet).
-  let descModal = $state<{ title: string; text: string; url: string | null } | null>(null);
+  // Full-description modal (the drawer shows a clamped snippet). `source` records where
+  // the body came from so we can label it honestly.
+  let descModal = $state<{
+    title: string;
+    text: string;
+    url: string | null;
+    loading: boolean;
+    source: "catalog" | "nexus" | "summary";
+  } | null>(null);
+
+  /** Whether a "Read more" affordance is worth showing: a long summary, an ingested
+   *  full body, or a Nexus source we can pull the full body from live. */
+  function canExpand(d: CatalogModDetail): boolean {
+    return (
+      !!d.descriptionFull ||
+      (d.description != null && d.description.length > 160) ||
+      d.sources.some((s) => s.source === "nexus" && parseNexusId(s.sourceUrl))
+    );
+  }
+
+  /** Open the description modal, filling it with the best body available: the ingested
+   *  full text if the catalog has it, else a live Nexus fetch, else the short summary. */
+  async function openDesc(d: CatalogModDetail) {
+    const summary = d.description ?? "";
+    if (d.descriptionFull) {
+      descModal = { title: d.title, text: d.descriptionFull, url: d.pageUrl, loading: false, source: "catalog" };
+      return;
+    }
+    const nx = d.sources.find((s) => s.source === "nexus" && parseNexusId(s.sourceUrl));
+    if (!nx) {
+      descModal = { title: d.title, text: summary, url: d.pageUrl, loading: false, source: "summary" };
+      return;
+    }
+    // Show the summary immediately, then upgrade to the full Nexus body when it arrives.
+    descModal = { title: d.title, text: summary, url: d.pageUrl, loading: true, source: "summary" };
+    const id = parseNexusId(nx.sourceUrl)!;
+    try {
+      const full = await nexusModDescription(id);
+      if (descModal && full && full.length > summary.length) {
+        descModal.text = full;
+        descModal.source = "nexus";
+      }
+    } catch {
+      // Keep the summary; the deep-link still gets them the full page.
+    } finally {
+      if (descModal) descModal.loading = false;
+    }
+  }
 
   let debounce: ReturnType<typeof setTimeout> | null = null;
   let unlisten: UnlistenFn | null = null;
@@ -472,13 +519,8 @@
 
           {#if d.description}
             <p class="drawer-desc clamped">{d.description}</p>
-            {#if d.description.length > 160}
-              <button
-                class="read-more"
-                onclick={() => (descModal = { title: d.title, text: d.description ?? "", url: d.pageUrl })}
-              >
-                Read more →
-              </button>
+            {#if canExpand(d)}
+              <button class="read-more" onclick={() => openDesc(d)}>Read more →</button>
             {/if}
           {/if}
 
@@ -581,10 +623,25 @@
         <button class="drawer-x" title="Close" onclick={() => (descModal = null)}>✕</button>
       </div>
       <div class="modal-body">
-        <p>{descModal.text}</p>
+        {#if descModal.text}
+          <p>{descModal.text}</p>
+        {:else}
+          <p class="modal-empty">No description text available.</p>
+        {/if}
+        {#if descModal.loading}
+          <p class="modal-loading">Loading the full description…</p>
+        {/if}
       </div>
       <div class="modal-foot">
-        <span class="modal-note">This is the catalog summary — the full write-up lives on the mod's page.</span>
+        <span class="modal-note">
+          {#if descModal.source === "nexus"}
+            Full body from Nexus. Formatting, tables and images are on the mod page.
+          {:else if descModal.source === "catalog"}
+            Full body from the catalog. The source page has the original formatting.
+          {:else}
+            Catalog summary — the full write-up lives on the mod's page.
+          {/if}
+        </span>
         {#if descModal.url}
           <button class="modal-link" onclick={() => openExternal(descModal!.url!)}>
             Open full mod page ↗
@@ -1083,6 +1140,12 @@
     font-size: 0.9rem;
     line-height: 1.6;
     white-space: pre-wrap;
+  }
+  .modal-loading,
+  .modal-empty {
+    color: var(--text-muted) !important;
+    font-size: 0.8rem !important;
+    margin-top: 10px !important;
   }
   .modal-foot {
     display: flex;

@@ -25,6 +25,12 @@ pub struct BrowseMod {
     pub category: Option<String>,
     #[serde(default)]
     pub description: Option<String>,
+    // Full mod body + changelog (see SiloAPI docs/ENRICHMENT.md), separate from the
+    // short `description` summary. None until the server ingests them.
+    #[serde(default)]
+    pub description_full: Option<String>,
+    #[serde(default)]
+    pub changelog: Option<String>,
     #[serde(default)]
     pub image_url: Option<String>,
     #[serde(default)]
@@ -94,32 +100,9 @@ pub struct ModSource {
     pub stars: Option<i64>,
 }
 
-/// Full record from `GET /mods/:id` — the catalog's view of one mod, including every
-/// source it was seen on. Powers the Browse tab's detail drawer.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ModDetail {
-    pub id: String,
-    #[serde(default)]
-    pub tech_name: Option<String>,
-    pub title: String,
-    #[serde(default)]
-    pub author: Option<String>,
-    #[serde(default)]
-    pub category: Option<String>,
-    #[serde(default)]
-    pub description: Option<String>,
-    #[serde(default)]
-    pub image_url: Option<String>,
-    #[serde(default)]
-    pub latest_version: Option<String>,
-    #[serde(default)]
-    pub trust_score: Option<i64>,
-    #[serde(default)]
-    pub updated_at: Option<String>,
-    #[serde(default)]
-    pub sources: Vec<ModSource>,
-}
+// The detail endpoint (`GET /mods/:id`) returns the same shape as a list row, so it
+// deserializes straight into `BrowseMod` — see `detail()`. (A former `ModDetail` struct
+// dropped the aggregate popularity fields + pageUrl and is gone.)
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -253,7 +236,11 @@ pub fn stats(base: &str) -> Result<Stats, String> {
 }
 
 /// One mod's full catalog record, including its cross-source pointers.
-pub fn detail(base: &str, id: &str) -> Result<ModDetail, String> {
+/// One mod's full catalog record. Returns `BrowseMod` (a superset of the old
+/// `ModDetail`) so the drawer gets the aggregate popularity fields + pageUrl the list
+/// rows carry — the detail endpoint sends them, and dropping them here is exactly what
+/// left the drawer showing "rating not synced" while the grid card had it.
+pub fn detail(base: &str, id: &str) -> Result<BrowseMod, String> {
     let resp = get(&format!("{}/mods/{}", base.trim_end_matches('/'), id))?;
     resp.into_json().map_err(|e| e.to_string())
 }

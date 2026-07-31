@@ -416,6 +416,14 @@ async fn nexus_endorse(
     .map_err(|e| e.to_string())?
 }
 
+/// Full Nexus mod body (keyless), cleaned to readable text — for the description modal.
+#[tauri::command]
+async fn nexus_description(mod_id: u64) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || nexus::mod_description(mod_id))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 async fn download_update(
     app: tauri::AppHandle,
@@ -482,7 +490,7 @@ async fn browse_mods(
 async fn siloapi_mod_detail(
     app: tauri::AppHandle,
     id: String,
-) -> Result<siloapi::ModDetail, String> {
+) -> Result<siloapi::BrowseMod, String> {
     let base = siloapi_base(&app)?;
     tauri::async_runtime::spawn_blocking(move || siloapi::detail(&base, &id))
         .await
@@ -1030,6 +1038,7 @@ pub fn run() {
             nexus_logout,
             nexus_mod,
             nexus_endorse,
+            nexus_description,
             download_update,
             siloapi_status,
             siloapi_set_base,

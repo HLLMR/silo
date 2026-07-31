@@ -107,6 +107,71 @@ pub fn mod_stats(mod_id: u64, key: Option<&str>) -> Result<NexusMod, String> {
     Ok(NexusMod { mod_id, name, endorsements, downloads, you_endorsed })
 }
 
+/// Full mod body from the keyless v2 GraphQL `description` (BBCode + <br/>), cleaned
+/// to readable plain text. This is where advanced mods put keybinds, capacities, and
+/// filltype notes — worth having a click away.
+pub fn mod_description(mod_id: u64) -> Result<String, String> {
+    let body = ureq::json!({
+        "query": "query($f:ModsFilter){mods(filter:$f,count:1){nodes{description}}}",
+        "variables": { "f": {
+            "gameId": [{ "value": FS25_GAME_ID, "op": "EQUALS" }],
+            "modId":  [{ "value": mod_id.to_string(), "op": "EQUALS" }]
+        }}
+    });
+    let resp = ureq::post(V2)
+        .set("User-Agent", UA)
+        .set("Content-Type", "application/json")
+        .send_json(body)
+        .map_err(nexus_err)?;
+    let v: serde_json::Value = resp.into_json().map_err(|e| e.to_string())?;
+    let raw = v["data"]["mods"]["nodes"][0]["description"].as_str().unwrap_or("");
+    Ok(clean_bbcode(raw))
+}
+
+/// Strip BBCode tags and `<br/>`, decode a few HTML entities, tidy blank lines — enough
+/// to make a Nexus description readable as plain text without a BBCode renderer.
+fn clean_bbcode(s: &str) -> String {
+    let s = s
+        .replace("<br />", "\n")
+        .replace("<br/>", "\n")
+        .replace("<br>", "\n");
+    // Drop anything between [ and ] (BBCode tags), keeping the inner text.
+    let mut stripped = String::with_capacity(s.len());
+    let mut depth: u32 = 0;
+    for ch in s.chars() {
+        match ch {
+            '[' => depth += 1,
+            ']' if depth > 0 => depth -= 1,
+            _ if depth == 0 => stripped.push(ch),
+            _ => {}
+        }
+    }
+    let stripped = stripped
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&nbsp;", " ");
+    // Collapse runs of blank lines to at most one, trim trailing spaces.
+    let mut out = String::new();
+    let mut blanks = 0;
+    for line in stripped.lines() {
+        let t = line.trim_end();
+        if t.trim().is_empty() {
+            blanks += 1;
+            if blanks <= 1 {
+                out.push('\n');
+            }
+        } else {
+            blanks = 0;
+            out.push_str(t);
+            out.push('\n');
+        }
+    }
+    out.trim().to_string()
+}
+
 /// Verify a personal API key and return the account name.
 pub fn validate_key(key: &str) -> Result<String, String> {
     let resp = ureq::get(&format!("{V1}/users/validate.json"))
@@ -168,5 +233,16 @@ mod tests {
             Some(4567)
         );
         assert_eq!(parse_mod_id("https://example.com/nope"), None);
+    }
+
+    #[test]
+    fn cleans_bbcode() {
+        let raw = "[b][size=3]Title[/size]\n<br />\n<br />Keybinds:\n<br />[/b]\n<br />CTRL+ALT+0 for $1M";
+        let out = clean_bbcode(raw);
+        assert!(out.starts_with("Title"), "got: {out:?}");
+        assert!(out.contains("Keybinds:"));
+        assert!(out.contains("CTRL+ALT+0 for $1M"));
+        assert!(!out.contains('['), "tags not stripped: {out:?}");
+        assert!(!out.contains("<br"), "br not stripped: {out:?}");
     }
 }

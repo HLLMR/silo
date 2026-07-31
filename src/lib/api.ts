@@ -244,6 +244,10 @@ export function nexusLogout(): Promise<void> {
 export function nexusModStats(modId: number): Promise<NexusModStats> {
   return invoke<NexusModStats>("nexus_mod", { modId });
 }
+/** Full Nexus mod body (keyless), cleaned to readable text — for the description modal. */
+export function nexusModDescription(modId: number): Promise<string> {
+  return invoke<string>("nexus_description", { modId });
+}
 /** Endorse (on=true) / abstain the mod through the user's own Nexus account. */
 export function nexusEndorse(
   modId: number,
