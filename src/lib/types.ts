@@ -363,6 +363,19 @@ export interface BindingReport {
   devices: DeviceBindings[];
 }
 
+// ── Update checking (library-wide, catalog + linked GitHub repos) ──
+export interface UpdateRow {
+  techName: string;
+  title: string;
+  path: string;
+  current?: string;
+  latest?: string;
+  hasUpdate?: boolean;
+  assetUrl?: string | null;
+  source?: string;
+  error?: string;
+}
+
 // ── Guided bisection ──
 export type BisectStep =
   | { kind: "split"; test: string[]; rest: string[]; roundsLeft: number }

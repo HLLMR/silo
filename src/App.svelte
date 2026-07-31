@@ -29,7 +29,6 @@
     checkModUpdate,
     catalogCheckUpdates,
     downloadUpdate,
-    openFolder,
     saveTextFile,
     userDirPath,
     bisectSnapshotGet,
@@ -52,6 +51,7 @@
     Savegame,
     Conflict,
     GameInfo,
+    UpdateRow,
   } from "./lib/types";
 
   const CATEGORIES = [
@@ -77,13 +77,23 @@
   import ModSettings from "./lib/components/ModSettings.svelte";
   import ModDetail from "./lib/components/ModDetail.svelte";
   import ConfigEditor from "./lib/components/ConfigEditor.svelte";
-  import GitHubAuth from "./lib/components/GitHubAuth.svelte";
-  import NexusAuth from "./lib/components/NexusAuth.svelte";
   import ModBrowser from "./lib/components/ModBrowser.svelte";
   import LogTriage from "./lib/components/LogTriage.svelte";
   import BindingsView from "./lib/components/BindingsView.svelte";
   import MpSync from "./lib/components/MpSync.svelte";
   import BridgeTool from "./lib/components/BridgeTool.svelte";
+  import ConflictsPanel from "./lib/components/panels/ConflictsPanel.svelte";
+  import HealthPanel from "./lib/components/panels/HealthPanel.svelte";
+  import StatsPanel from "./lib/components/panels/StatsPanel.svelte";
+  import UpdatesPanel from "./lib/components/panels/UpdatesPanel.svelte";
+  import LoadoutsPanel from "./lib/components/panels/LoadoutsPanel.svelte";
+  import SavegamesPanel from "./lib/components/panels/SavegamesPanel.svelte";
+  import SettingsPanel from "./lib/components/panels/SettingsPanel.svelte";
+  import CategoryMenu from "./lib/components/panels/CategoryMenu.svelte";
+  import Topbar from "./lib/components/panels/Topbar.svelte";
+  import StatBar from "./lib/components/panels/StatBar.svelte";
+  import LibraryToolbar from "./lib/components/panels/LibraryToolbar.svelte";
+  import { fmtSize } from "./lib/format";
 
   let roots = $state<string[]>([]);
   let mods = $state<ModEntry[]>([]);
@@ -214,13 +224,6 @@
     };
   }
 
-  function fmtSize(b: number): string {
-    if (b >= 1024 ** 3) return (b / 1024 ** 3).toFixed(1) + " GB";
-    if (b >= 1024 ** 2) return (b / 1024 ** 2).toFixed(0) + " MB";
-    if (b >= 1024) return (b / 1024).toFixed(0) + " KB";
-    return b + " B";
-  }
-
   const libStats = $derived.by(() => {
     let totalSize = 0;
     let rated = 0;
@@ -344,6 +347,8 @@
     const missing = userMods.filter((m) => !libraryTechNames.has(m.modName));
     return { total: userMods.length, present, missing };
   }
+
+  const saveRows = $derived(savegames.map((s) => ({ s, st: saveStats(s) })));
 
   async function loadSavegames() {
     try {
@@ -683,17 +688,6 @@
     }
   }
 
-  interface UpdateRow {
-    techName: string;
-    title: string;
-    path: string;
-    current?: string;
-    latest?: string;
-    hasUpdate?: boolean;
-    assetUrl?: string | null;
-    source?: string;
-    error?: string;
-  }
   let updatesOpen = $state(false);
   let updateChecking = $state(false);
   let updateResults = $state<UpdateRow[]>([]);
@@ -870,13 +864,6 @@
   const allFilteredActive = $derived(
     filtered.length > 0 && filteredActiveCount === filtered.length,
   );
-  let selectAllEl = $state<HTMLInputElement>();
-  $effect(() => {
-    if (selectAllEl) {
-      selectAllEl.indeterminate =
-        filteredActiveCount > 0 && filteredActiveCount < filtered.length;
-    }
-  });
 
   // Bulk activate/deactivate the currently-filtered set (fast loadout building).
   async function setActiveForFiltered(active: boolean) {
@@ -990,99 +977,35 @@
 </script>
 
 <div class="app" style="--topbar-h:{topbarH}px">
-  <header class="topbar" bind:clientHeight={topbarH}>
-    <div class="brand">
-      <div class="logo">S</div>
-      <div>
-        <h1>Silo</h1>
-        <p class="tagline">Farming Simulator 25 mod library</p>
-      </div>
-    </div>
-
-    <nav class="tabs" aria-label="Views">
-      <button class="tab" class:on={view === "library"} onclick={() => switchView("library")}>
-        Library
-      </button>
-      <button class="tab" class:on={view === "browse"} onclick={() => switchView("browse")}>
-        Browse
-      </button>
-    </nav>
-
-    <div class="topbar-spacer"></div>
-
-    {#if savegames.length > 0}
-      <button
-        class="btn"
-        class:on={savesOpen}
-        onclick={() => (savesOpen = !savesOpen)}
-        disabled={!!busy}
-      >
-        Savegames
-      </button>
-    {/if}
-
-    <button
-      class="btn loadout-btn"
-      class:on={loadoutsOpen}
-      onclick={() => (loadoutsOpen = !loadoutsOpen)}
-      disabled={!!busy}
-    >
-      {#if activeLoadoutId !== null}
-        ● {loadouts.find((l) => l.id === activeLoadoutId)?.name}
-      {:else}
-        Loadouts
-      {/if}
-    </button>
-
-    <button
-      class="btn"
-      class:on={mpOpen}
-      title="Multiplayer: share or verify your mod set so friends can join"
-      onclick={() => (mpOpen = !mpOpen)}
-      disabled={!!busy}
-    >
-      Multiplayer
-    </button>
-
-    {#if unorganizedCount > 0 && !autoFileNew}
-      <button class="btn" onclick={organizeNew} disabled={!!busy || scanning}>
-        Organize {unorganizedCount}
-      </button>
-    {/if}
-    {#if mods.length > 0}
-      <button
-        class="btn"
-        title="Check the SiloAPI catalog (and any linked GitHub repos) for updates"
-        onclick={checkAllUpdates}
-        disabled={!!busy || updateChecking}
-      >
-        {updateChecking ? "Checking…" : "⟳ Updates"}
-      </button>
-    {/if}
-    <button class="btn" onclick={() => runScan()} disabled={scanning || !!busy}>
-      {scanning ? "Scanning…" : "Rescan"}
-    </button>
-    {#if gameInfo}
-      <button
-        class="btn primary launch-btn"
-        title="Launch Farming Simulator 25 with the current active set"
-        onclick={launch}
-        disabled={!!busy}
-      >
-        ▶ Launch{activeSet.size ? ` (${activeSet.size})` : ""}
-      </button>
-    {/if}
-    <button
-      class="btn icon-btn"
-      class:on={settingsOpen}
-      title="Settings"
-      aria-label="Settings"
-      onclick={() => (settingsOpen = !settingsOpen)}
-      disabled={!!busy}
-    >
-      ⚙
-    </button>
-  </header>
+  <Topbar
+    bind:topbarH
+    {view}
+    hasSavegames={savegames.length > 0}
+    {savesOpen}
+    {loadoutsOpen}
+    activeLoadoutName={activeLoadoutId !== null
+      ? loadouts.find((l) => l.id === activeLoadoutId)?.name ?? null
+      : null}
+    {mpOpen}
+    showOrganize={unorganizedCount > 0 && !autoFileNew}
+    {unorganizedCount}
+    hasMods={mods.length > 0}
+    {updateChecking}
+    {scanning}
+    {busy}
+    hasGame={!!gameInfo}
+    activeCount={activeSet.size}
+    {settingsOpen}
+    onSwitchView={switchView}
+    onToggleSaves={() => (savesOpen = !savesOpen)}
+    onToggleLoadouts={() => (loadoutsOpen = !loadoutsOpen)}
+    onToggleMp={() => (mpOpen = !mpOpen)}
+    onOrganize={organizeNew}
+    onCheckUpdates={checkAllUpdates}
+    onRescan={() => runScan()}
+    onLaunch={launch}
+    onToggleSettings={() => (settingsOpen = !settingsOpen)}
+  />
 
   {#if bisectRecovery}
     <div class="recover-banner">
@@ -1101,264 +1024,66 @@
   {/if}
 
   {#if loadoutsOpen}
-    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="backdrop" onclick={() => (loadoutsOpen = false)}></div>
-    <div class="loadouts-panel">
-      <div class="lp-head">
-        <span>Loadouts</span>
-        <span class="lp-sub tnum">{activeSet.size} active</span>
-      </div>
-      {#if loadouts.length === 0}
-        <div class="lp-empty">
-          No loadouts yet. Activate the mods you want, then save them as a set.
-        </div>
-      {/if}
-      {#each loadouts as l (l.id)}
-        <div class="lp-row" class:active={l.id === activeLoadoutId}>
-          <button class="lp-apply" onclick={() => applyLoadout(l)} title="Apply this loadout">
-            <span class="lp-dot" class:on={l.id === activeLoadoutId}></span>
-            <span class="lp-name">{l.name}</span>
-            <span class="lp-count tnum">{l.mods.length}</span>
-          </button>
-          <button
-            class="lp-icon"
-            title="Overwrite with current active set"
-            onclick={() => overwriteLoadout(l)}>⭯</button
-          >
-          <button class="lp-icon" title="Export to a .silo file" onclick={() => exportLoadout(l)}
-            >⇪</button
-          >
-          <button class="lp-icon danger" title="Delete loadout" onclick={() => removeLoadout(l)}
-            >✕</button
-          >
-        </div>
-      {/each}
-      <button class="lp-save" onclick={saveCurrentLoadout} disabled={activeSet.size === 0}>
-        + Save current active set as a loadout
-      </button>
-      <button class="lp-import" onclick={importLoadout}>↧ Import a .silo file</button>
-    </div>
+    <LoadoutsPanel
+      {loadouts}
+      activeCount={activeSet.size}
+      {activeLoadoutId}
+      onApply={applyLoadout}
+      onOverwrite={overwriteLoadout}
+      onExport={exportLoadout}
+      onRemove={removeLoadout}
+      onSaveCurrent={saveCurrentLoadout}
+      onImport={importLoadout}
+      onClose={() => (loadoutsOpen = false)}
+    />
   {/if}
 
   {#if savesOpen}
-    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="backdrop" onclick={() => (savesOpen = false)}></div>
-    <div class="loadouts-panel saves">
-      <div class="lp-head"><span>Savegames</span></div>
-      {#each savegames as s (s.folder)}
-        {@const st = saveStats(s)}
-        <div class="sg-row">
-          <div class="sg-info">
-            <div class="sg-name">{s.name}</div>
-            <div class="sg-meta">
-              slot {s.index}{s.mapTitle ? ` · ${s.mapTitle}` : ""} ·
-              <span class="tnum">{st.present.length}</span>/{st.total} mods in library{#if st.missing.length > 0}, <span
-                  class="sg-missing tnum">{st.missing.length} missing</span
-                >{/if}
-            </div>
-          </div>
-          <button
-            class="sg-make"
-            title="Edit this savegame's difficulty and gameplay settings"
-            onclick={() => openSaveConfig(s)}
-          >
-            Configure
-          </button>
-          <button
-            class="sg-make"
-            title="Back up this savegame (a safe copy — original untouched)"
-            onclick={() => backupSave(s)}
-            disabled={!!busy}
-          >
-            Back up
-          </button>
-          <button
-            class="sg-make"
-            title={st.missing.length
-              ? `Build a loadout from the ${st.present.length} mods you have (${st.missing.length} missing)`
-              : "Build a loadout from this save's mods"}
-            onclick={() => loadoutFromSave(s)}
-            disabled={st.present.length === 0}
-          >
-            → Loadout
-          </button>
-        </div>
-      {/each}
-    </div>
+    <SavegamesPanel
+      rows={saveRows}
+      {busy}
+      onConfigure={openSaveConfig}
+      onBackup={backupSave}
+      onLoadout={loadoutFromSave}
+      onClose={() => (savesOpen = false)}
+    />
   {/if}
 
   {#if conflictsOpen}
-    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="backdrop" onclick={() => (conflictsOpen = false)}></div>
-    <div class="conflicts-panel">
-      <div class="lp-head">
-        <span>Conflicts in the active set</span>
-        <span class="lp-sub tnum">{criticalCount} critical</span>
-      </div>
-      {#if conflicts.length === 0}
-        <div class="lp-empty">
-          No conflicts in the {activeSet.size} active mod(s). Activate more and Silo re-checks automatically.
-        </div>
-      {/if}
-      {#each conflicts as c (c.severity + c.kind + c.name)}
-        <div class="cf-row" class:crit={c.severity === "critical"} class:info={c.severity === "info"}>
-          <div class="cf-top">
-            <span class="cf-sev">{c.severity}</span>
-            <span class="cf-kind">{c.kind}</span>
-            <span class="cf-name">{c.name}</span>
-          </div>
-          <div class="cf-mods">{c.mods.join("  ·  ")}</div>
-          <div class="cf-why">{c.explanation}</div>
-        </div>
-      {/each}
-    </div>
+    <ConflictsPanel
+      {conflicts}
+      {criticalCount}
+      activeCount={activeSet.size}
+      onClose={() => (conflictsOpen = false)}
+    />
   {/if}
 
   {#if settingsOpen}
-    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="backdrop" onclick={() => (settingsOpen = false)}></div>
-    <div class="loadouts-panel settings">
-      <div class="lp-head"><span>Settings</span></div>
-
-      <div class="set-section">
-        <div class="set-label">Appearance</div>
-        <div class="seg">
-          {#each ["system", "light", "dark"] as t (t)}
-            <button class="seg-btn" class:on={theme === t} onclick={() => setTheme(t as any)}>
-              {t}
-            </button>
-          {/each}
-        </div>
-      </div>
-
-      <div class="set-section">
-        <div class="set-row">
-          <div class="set-label">Mods folder</div>
-          {#if roots.length}
-            <button class="set-link" onclick={() => openFolder(roots[0]).catch(() => {})}>
-              Open ↗
-            </button>
-          {/if}
-        </div>
-        {#if roots.length}
-          {#each roots as r (r)}
-            <div class="set-path">{r}</div>
-          {/each}
-        {:else}
-          <div class="set-path muted">No mods folder detected.</div>
-        {/if}
-      </div>
-
-      <div class="set-section">
-        <div class="set-row">
-          <div class="set-label">Game</div>
-          {#if gameInfo}
-            <button class="set-link" onclick={() => gameInfo && openFolder(gameInfo.installDir).catch(() => {})}>
-              Open ↗
-            </button>
-          {/if}
-        </div>
-        {#if gameInfo}
-          <div class="set-path">{gameInfo.installDir}</div>
-        {:else}
-          <div class="set-path muted">
-            Farming Simulator 25 install not found. The Launch button is hidden.
-          </div>
-        {/if}
-      </div>
-
-      {#if userDir}
-        <div class="set-section">
-          <div class="set-row">
-            <div class="set-label">Graphics &amp; performance</div>
-            <button class="set-link" onclick={openGameGraphics}>Edit game.xml ↗</button>
-          </div>
-          <div class="set-hint">
-            Tune graphics settings (presets: Performance / Balanced / Quality) without launching the game.
-          </div>
-        </div>
-      {/if}
-
-      <div class="set-section">
-        <div class="set-label">GitHub account</div>
-        {#if settingsOpen}<GitHubAuth />{/if}
-      </div>
-
-      <div class="set-section">
-        <div class="set-label">Nexus Mods account</div>
-        {#if settingsOpen}<NexusAuth />{/if}
-      </div>
-
-      <div class="set-section">
-        <div class="set-row">
-          <div class="set-label">Diagnostics</div>
-          <button class="set-link" onclick={exportReport}>Export report ↗</button>
-        </div>
-        <div class="set-hint">A shareable summary of your library, conflicts, and health issues.</div>
-      </div>
-
-      <div class="set-section">
-        <div class="set-row">
-          <div>
-            <div class="set-label">Auto-file new mods</div>
-            <div class="set-hint">
-              On load, move newly-downloaded .zip mods into the library and keep them active.
-            </div>
-          </div>
-          <button
-            class="switch"
-            class:on={autoFileNew}
-            role="switch"
-            aria-checked={autoFileNew}
-            aria-label="Auto-file new mods"
-            onclick={() => setAutoFile(!autoFileNew)}
-          >
-            <span class="knob"></span>
-          </button>
-        </div>
-      </div>
-
-      <div class="set-section">
-        <div class="set-label">Library layout</div>
-        <div class="set-hint">
-          Organize sorts your <code>.zip</code> mods into <code>mods/archive/&lt;Category&gt;/</code>
-          (subfolders the game ignores) and projects the active set via hardlinks — no
-          duplication, fully reversible. {#if organizedCount > 0}{organizedCount} mod(s) currently organized.{/if}
-        </div>
-        <div class="set-btnrow">
-          <button
-            class="set-btn"
-            onclick={() => {
-              settingsOpen = false;
-              organizeNew();
-            }}
-            disabled={!!busy || scanning}
-          >
-            Organize {unorganizedCount > 0 ? unorganizedCount : "library"}
-          </button>
-          <button class="set-btn" onclick={rebuildLibrary} disabled={!!busy || scanning}>
-            ↻ Rebuild categories
-          </button>
-        </div>
-        <div class="set-hint" style="margin-top:8px">
-          Rebuild re-scans every mod from scratch — use it after a Silo update improves
-          categorization, so existing mods pick up the better categories.
-        </div>
-        {#if organizedCount > 0}
-          <button
-            class="set-danger"
-            style="margin-top:10px"
-            onclick={() => {
-              settingsOpen = false;
-              restoreVanilla();
-            }}
-            disabled={!!busy || scanning}
-          >
-            Restore vanilla layout
-          </button>
-        {/if}
-      </div>
-    </div>
+    <SettingsPanel
+      {theme}
+      {roots}
+      {gameInfo}
+      {userDir}
+      {autoFileNew}
+      {organizedCount}
+      {unorganizedCount}
+      {busy}
+      {scanning}
+      onSetTheme={setTheme}
+      onOpenGameGraphics={openGameGraphics}
+      onExportReport={exportReport}
+      onSetAutoFile={setAutoFile}
+      onOrganize={() => {
+        settingsOpen = false;
+        organizeNew();
+      }}
+      onRebuild={rebuildLibrary}
+      onRestoreVanilla={() => {
+        settingsOpen = false;
+        restoreVanilla();
+      }}
+      onClose={() => (settingsOpen = false)}
+    />
   {/if}
 
   {#if settingsMod}
@@ -1421,138 +1146,29 @@
   {/if}
 
   {#if updatesOpen}
-    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="backdrop" onclick={() => (updatesOpen = false)}></div>
-    <div class="conflicts-panel">
-      <div class="lp-head">
-        <span>Mod updates</span>
-        <span class="lp-sub tnum">
-          {updateChecking ? "checking…" : `${availableUpdates.length} available`}
-        </span>
-      </div>
-      {#if updateResults.length === 0 && !updateChecking}
-        <div class="lp-empty">
-          No matches in the catalog. Mods on GitHub can also be linked to their repo in
-          the detail panel.
-        </div>
-      {/if}
-      {#each availableUpdates as r (r.techName)}
-        <div class="hz-row">
-          <div class="up-row">
-            <div>
-              <div class="hz-name">
-                {r.title}
-                {#if r.source}<span class="up-src">{r.source}</span>{/if}
-              </div>
-              <div class="hz-detail">{r.current} → <b class="up-new">{r.latest}</b></div>
-            </div>
-            {#if r.assetUrl}
-              <button class="sg-make" onclick={() => installFromRow(r)} disabled={!!busy}>Install</button>
-            {/if}
-          </div>
-        </div>
-      {/each}
-      {#if !updateChecking && updateResults.length > 0}
-        <div class="hz-group">
-          Up to date ({updateResults.filter((r) => r.hasUpdate === false).length}) ·
-          Errors ({updateResults.filter((r) => r.error).length})
-        </div>
-      {/if}
-    </div>
+    <UpdatesPanel
+      {updateResults}
+      {availableUpdates}
+      {updateChecking}
+      {busy}
+      onInstall={installFromRow}
+      onClose={() => (updatesOpen = false)}
+    />
   {/if}
 
   {#if statsOpen}
-    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="backdrop" onclick={() => (statsOpen = false)}></div>
-    <div class="conflicts-panel">
-      <div class="lp-head">
-        <span>Library statistics</span>
-        <span class="lp-sub tnum">{fmtSize(libStats.totalSize)}</span>
-      </div>
-
-      <div class="st-tiles">
-        <div class="st-tile"><b class="tnum">{mods.length}</b><span>mods</span></div>
-        <div class="st-tile"><b class="tnum">{organizedCount}</b><span>organized</span></div>
-        <div class="st-tile"><b class="tnum">{activeSet.size}</b><span>active</span></div>
-        <div class="st-tile"><b class="tnum">{stats.maps}</b><span>maps</span></div>
-        <div class="st-tile"><b class="tnum">{libStats.tagged}</b><span>tagged</span></div>
-        <div class="st-tile">
-          <b class="tnum">{libStats.avgRating ? libStats.avgRating.toFixed(1) : "–"}</b>
-          <span>avg ★ ({libStats.rated})</span>
-        </div>
-      </div>
-
-      <div class="hz-group">Disk usage by category</div>
-      {#each libStats.cats as c (c.name)}
-        <div class="st-cat">
-          <div class="st-cat-top">
-            <span class="st-cat-name">{c.name}</span>
-            <span class="st-cat-size tnum">{fmtSize(c.size)} · {c.count}</span>
-          </div>
-          <div class="st-bar">
-            <div class="st-bar-fill" style="width: {(c.size / libStats.maxCatSize) * 100}%"></div>
-          </div>
-        </div>
-      {/each}
-
-      <div class="hz-group">Largest mods</div>
-      {#each libStats.largest as m (m.techName)}
-        <div class="st-big">
-          <span class="st-big-name">{m.title ?? m.techName}</span>
-          <span class="st-big-size tnum">{fmtSize(m.size)}</span>
-        </div>
-      {/each}
-    </div>
+    <StatsPanel
+      modCount={mods.length}
+      {organizedCount}
+      activeCount={activeSet.size}
+      mapsCount={stats.maps}
+      {libStats}
+      onClose={() => (statsOpen = false)}
+    />
   {/if}
 
   {#if healthOpen}
-    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="backdrop" onclick={() => (healthOpen = false)}></div>
-    <div class="conflicts-panel">
-      <div class="lp-head">
-        <span>Library health</span>
-        <span class="lp-sub tnum">{healthCount} issue{healthCount === 1 ? "" : "s"}</span>
-      </div>
-
-      {#if healthCount === 0}
-        <div class="lp-empty">Everything looks healthy — no problems found.</div>
-      {/if}
-
-      {#if health.missingDeps.length > 0}
-        <div class="hz-group">Missing dependencies ({health.missingDeps.length})</div>
-        {#each health.missingDeps as d (d.mod.techName)}
-          <div class="hz-row">
-            <div class="hz-name">{d.mod.title ?? d.mod.techName}</div>
-            <div class="hz-detail">
-              needs {#each d.missing as dep, i (dep)}<span class="hz-dep">{dep}</span>{#if i < d.missing.length - 1}, {/if}{/each}
-              — not in your library
-            </div>
-          </div>
-        {/each}
-      {/if}
-
-      {#if health.ignored.length > 0}
-        <div class="hz-group">Ignored by the game — name starts with a digit ({health.ignored.length})</div>
-        {#each health.ignored as m (m.techName)}
-          <div class="hz-row">
-            <div class="hz-name">{m.title ?? m.techName}</div>
-            <div class="hz-detail">
-              <span class="tnum">{m.techName}</span> — FS won't load a mod whose name starts with a number.
-            </div>
-          </div>
-        {/each}
-      {/if}
-
-      {#if health.corrupt.length > 0}
-        <div class="hz-group">Corrupt / unreadable ({health.corrupt.length})</div>
-        {#each health.corrupt as m (m.techName)}
-          <div class="hz-row">
-            <div class="hz-name">{m.title ?? m.techName}</div>
-            <div class="hz-detail">{m.error}</div>
-          </div>
-        {/each}
-      {/if}
-    </div>
+    <HealthPanel {health} {healthCount} onClose={() => (healthOpen = false)} />
   {/if}
 
   {#if logOpen}
@@ -1620,117 +1236,29 @@
       />
     </div>
   {:else}
-  <div class="statbar">
-    <button class="stat statbtn" title="Library statistics" onclick={() => (statsOpen = !statsOpen)}>
-      <span class="stat-num tnum">{mods.length}</span>
-      <span class="stat-label">mods</span>
-    </button>
-    <div class="stat">
-      <span class="stat-num tnum">{stats.maps}</span>
-      <span class="stat-label">maps</span>
-    </div>
-    <div class="stat">
-      <span class="stat-num tnum">{stats.scripts}</span>
-      <span class="stat-label">script mods</span>
-    </div>
-    <div class="stat">
-      <span class="stat-num tnum">{stats.unique}</span>
-      <span class="stat-label">uniqueType</span>
-    </div>
-    <div class="stat">
-      <span class="stat-num tnum">{activeSet.size}</span>
-      <span class="stat-label">active</span>
-    </div>
-    <button
-      class="stat statbtn"
-      class:flag={conflicts.length > 0}
-      class:crit={criticalCount > 0}
-      title="Conflicts within the active set"
-      onclick={() => (conflictsOpen = !conflictsOpen)}
-    >
-      <span class="stat-num tnum">{conflicts.length}</span>
-      <span class="stat-label">conflict{conflicts.length === 1 ? "" : "s"}</span>
-    </button>
-    <button
-      class="stat statbtn"
-      class:flag={healthCount > 0}
-      title="Library health: missing dependencies, corrupt mods, ignored names"
-      onclick={() => (healthOpen = !healthOpen)}
-    >
-      <span class="stat-num tnum">{healthCount}</span>
-      <span class="stat-label">need attention</span>
-    </button>
-    <button
-      class="stat statbtn"
-      title="Crash & log triage: did the last run crash, and which mod is at fault?"
-      onclick={() => (logOpen = true)}
-    >
-      <span class="stat-num">◆</span>
-      <span class="stat-label">diagnose</span>
-    </button>
-    <button
-      class="stat statbtn"
-      title="The full control-binding map — every action and key, grouped by device"
-      onclick={() => (bindingsOpen = true)}
-    >
-      <span class="stat-num">⌨</span>
-      <span class="stat-label">bindings</span>
-    </button>
-    <button
-      class="stat statbtn"
-      title="Filltype bridge: make a stubborn map filltype work with your equipment"
-      onclick={() => (bridgeOpen = true)}
-    >
-      <span class="stat-num">⛓</span>
-      <span class="stat-label">bridge</span>
-    </button>
-    {#if result}
-      <div class="took tnum" title="Scan wall-clock time">
-        scanned in {result.tookMs} ms
-      </div>
-    {/if}
-
-    <button
-      class="toggle"
-      class:on={favoritesOnly}
-      title="Show favorites only"
-      onclick={() => (favoritesOnly = !favoritesOnly)}
-    >
-      {favoritesOnly ? "★" : "☆"} Favorites
-    </button>
-    <button
-      class="toggle"
-      class:on={showHidden}
-      title="Show hidden mods"
-      onclick={() => (showHidden = !showHidden)}
-    >
-      Hidden
-    </button>
-    <button
-      class="toggle"
-      class:on={flaggedOnly}
-      title="Show only mods you've flagged as broken"
-      onclick={() => (flaggedOnly = !flaggedOnly)}
-    >
-      ⚑ Flagged
-    </button>
-    <button
-      class="toggle"
-      class:on={conflictedOnly}
-      title="Show only mods involved in a conflict"
-      onclick={() => (conflictedOnly = !conflictedOnly)}
-      disabled={conflictedSet.size === 0}
-    >
-      ⚠ In conflict{conflictedSet.size > 0 ? ` (${conflictedSet.size})` : ""}
-    </button>
-
-    <input
-      class="search"
-      type="search"
-      placeholder="Filter by title, author, or tech name…"
-      bind:value={query}
-    />
-  </div>
+  <StatBar
+    modCount={mods.length}
+    mapsCount={stats.maps}
+    scriptsCount={stats.scripts}
+    uniqueCount={stats.unique}
+    activeCount={activeSet.size}
+    conflictCount={conflicts.length}
+    {criticalCount}
+    {healthCount}
+    conflictedCount={conflictedSet.size}
+    tookMs={result ? result.tookMs : null}
+    bind:favoritesOnly
+    bind:showHidden
+    bind:flaggedOnly
+    bind:conflictedOnly
+    bind:query
+    onOpenStats={() => (statsOpen = !statsOpen)}
+    onOpenConflicts={() => (conflictsOpen = !conflictsOpen)}
+    onOpenHealth={() => (healthOpen = !healthOpen)}
+    onOpenLog={() => (logOpen = true)}
+    onOpenBindings={() => (bindingsOpen = true)}
+    onOpenBridge={() => (bridgeOpen = true)}
+  />
 
   <div class="body">
     <CategoryRail
@@ -1740,53 +1268,18 @@
     />
 
     <main class="list">
-      <div class="crumb">
-        <input
-          type="checkbox"
-          class="select-all"
-          bind:this={selectAllEl}
-          checked={allFilteredActive}
-          disabled={!!busy || filtered.length === 0}
-          title="Activate / deactivate everything in this view"
-          onchange={(e) => setActiveForFiltered(e.currentTarget.checked)}
-        />
-        <span class="crumb-path">
-          {#if selected.category}
-            {selected.category}{selected.subcategory ? " › " + selected.subcategory : ""}
-          {:else}
-            All mods
-          {/if}
-        </span>
-        {#if selectedTag}
-          <button class="crumb-tag" onclick={() => (selectedTag = null)} title="Clear tag filter">
-            #{selectedTag} ✕
-          </button>
-        {/if}
-        <span class="crumb-count tnum">{filtered.length} shown</span>
-
-        <div class="tb-spacer"></div>
-
-        <div class="tb-group">
-          <label class="tb-sort">
-            Sort
-            <select bind:value={sortBy}>
-              <option value="name">Name</option>
-              <option value="category">Category</option>
-              <option value="size">Size</option>
-              <option value="added">Recently added</option>
-              <option value="version">Version</option>
-              <option value="rating">My rating</option>
-            </select>
-          </label>
-          <button
-            class="tb-dir"
-            title={sortDir === "asc" ? "Ascending" : "Descending"}
-            onclick={() => (sortDir = sortDir === "asc" ? "desc" : "asc")}
-          >
-            {sortDir === "asc" ? "↑" : "↓"}
-          </button>
-        </div>
-      </div>
+      <LibraryToolbar
+        {selected}
+        {selectedTag}
+        shownCount={filtered.length}
+        allActive={allFilteredActive}
+        activeInFilter={filteredActiveCount}
+        disabled={!!busy || filtered.length === 0}
+        bind:sortBy
+        bind:sortDir
+        onSelectAll={setActiveForFiltered}
+        onClearTag={() => (selectedTag = null)}
+      />
 
       <div class="list-body">
         {#if filtered.length === 0 && !scanning}
@@ -1822,25 +1315,14 @@
   {/if}
 
   {#if editing}
-    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="backdrop" onclick={() => (editing = null)}></div>
-    <div
-      class="menu"
-      style="left: {Math.min(editing.x, window.innerWidth - 220)}px; top: {Math.min(
-        editing.y,
-        window.innerHeight - 420,
-      )}px"
-    >
-      <div class="menu-head">Set category</div>
-      {#each CATEGORIES as c (c)}
-        <button class="menu-item" onclick={() => setCategory(editing!.techName, c)}>
-          {c}
-        </button>
-      {/each}
-      <button class="menu-item reset" onclick={() => resetCategory(editing!.techName)}>
-        ↺ Reset to auto
-      </button>
-    </div>
+    <CategoryMenu
+      categories={CATEGORIES}
+      x={editing.x}
+      y={editing.y}
+      onSelect={(c) => setCategory(editing!.techName, c)}
+      onReset={() => resetCategory(editing!.techName)}
+      onClose={() => (editing = null)}
+    />
   {/if}
 </div>
 
@@ -1849,49 +1331,6 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-  }
-  .topbar {
-    display: flex;
-    align-items: center;
-    gap: 12px 16px;
-    flex-wrap: wrap;
-    padding: 12px 20px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-  }
-  /* The spacer pushes actions right on a wide bar, but must not force a blank row when
-     things wrap — collapse it once the bar is narrow enough to wrap. */
-  @media (max-width: 900px) {
-    .topbar-spacer {
-      display: none;
-    }
-  }
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .logo {
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius);
-    display: grid;
-    place-items: center;
-    font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 22px;
-    color: var(--on-primary);
-    background: linear-gradient(135deg, var(--green-500), var(--green-700));
-    box-shadow: var(--shadow-1);
-  }
-  h1 {
-    font-size: 20px;
-    line-height: 1.1;
-  }
-  .tagline {
-    margin: 0;
-    font-size: 12px;
-    color: var(--text-muted);
   }
   .btn {
     border: 1px solid var(--border);
@@ -1910,48 +1349,6 @@
   .btn.primary:hover:not(:disabled) {
     background: var(--primary-hover);
   }
-  .tabs {
-    display: flex;
-    gap: 4px;
-    margin-left: 20px;
-    padding: 3px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-  }
-  .tab {
-    padding: 7px 16px;
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    font-weight: 600;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
-  }
-  .tab:hover {
-    color: var(--text);
-  }
-  .tab.on {
-    background: var(--surface-raised);
-    color: var(--text);
-    box-shadow: var(--shadow-1);
-  }
-  .topbar-spacer {
-    flex: 1 1 auto;
-  }
-  .icon-btn {
-    padding: 9px 12px;
-    font-size: 16px;
-    line-height: 1;
-  }
-  .icon-btn.on {
-    color: var(--primary);
-    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
-  }
-  .launch-btn {
-    font-weight: 700;
-  }
   .btn:hover:not(:disabled):not(.primary) {
     color: var(--text);
     border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
@@ -1966,341 +1363,6 @@
     color: var(--gold-700);
     font-size: 13px;
     font-weight: 600;
-  }
-  .loadout-btn.on {
-    border-color: color-mix(in srgb, var(--primary) 50%, var(--border));
-    color: var(--primary);
-  }
-  .loadouts-panel {
-    position: fixed;
-    z-index: 50;
-    top: 66px;
-    right: 20px;
-    width: 320px;
-    max-height: 70vh;
-    overflow-y: auto;
-    background: var(--surface-raised);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-2);
-    padding: 8px;
-    scrollbar-width: thin;
-  }
-  .lp-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    padding: 6px 8px 10px;
-    font-family: var(--font-display);
-    font-weight: 600;
-  }
-  .lp-sub {
-    font-size: 11.5px;
-    color: var(--text-muted);
-    font-family: var(--font-ui);
-  }
-  .lp-empty {
-    padding: 10px 8px 14px;
-    font-size: 12.5px;
-    color: var(--text-muted);
-    line-height: 1.5;
-  }
-  .lp-row {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    border-radius: var(--radius-sm);
-  }
-  .lp-row.active {
-    background: color-mix(in srgb, var(--primary) 12%, transparent);
-  }
-  .lp-apply {
-    flex: 1 1 auto;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    min-width: 0;
-    border: none;
-    background: transparent;
-    color: var(--text);
-    padding: 9px 10px;
-    border-radius: var(--radius-sm);
-    font-size: 13px;
-  }
-  .lp-apply:hover {
-    background: color-mix(in srgb, var(--primary) 10%, transparent);
-  }
-  .lp-dot {
-    flex: 0 0 auto;
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    border: 2px solid var(--border);
-  }
-  .lp-dot.on {
-    background: var(--primary);
-    border-color: var(--primary);
-  }
-  .lp-name {
-    flex: 1 1 auto;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-align: left;
-    font-weight: 600;
-  }
-  .lp-count {
-    flex: 0 0 auto;
-    font-size: 11.5px;
-    color: var(--text-muted);
-  }
-  .lp-icon {
-    flex: 0 0 auto;
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    width: 28px;
-    height: 30px;
-    border-radius: var(--radius-sm);
-    font-size: 14px;
-  }
-  .lp-icon:hover {
-    background: color-mix(in srgb, var(--primary) 12%, transparent);
-    color: var(--text);
-  }
-  .lp-icon.danger:hover {
-    background: color-mix(in srgb, var(--danger) 14%, transparent);
-    color: var(--danger);
-  }
-  .lp-save {
-    display: block;
-    width: 100%;
-    margin-top: 6px;
-    border: 1px dashed var(--border);
-    background: transparent;
-    color: var(--primary);
-    padding: 10px;
-    border-radius: var(--radius-sm);
-    font-size: 12.5px;
-    font-weight: 600;
-  }
-  .lp-save:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--primary) 10%, transparent);
-  }
-  .lp-save:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-  .lp-import {
-    display: block;
-    width: 100%;
-    margin-top: 6px;
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    padding: 8px;
-    border-radius: var(--radius-sm);
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .lp-import:hover {
-    background: color-mix(in srgb, var(--primary) 8%, transparent);
-    color: var(--text);
-  }
-  .loadouts-panel.saves {
-    width: 380px;
-  }
-  .loadouts-panel.settings {
-    width: 380px;
-  }
-  .set-section {
-    padding: 10px 8px;
-    border-top: 1px solid var(--border);
-  }
-  .set-section:first-of-type {
-    border-top: none;
-  }
-  .set-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 6px;
-  }
-  .set-hint {
-    font-size: 12px;
-    color: var(--text-muted);
-    line-height: 1.5;
-    margin-bottom: 8px;
-  }
-  .set-link {
-    border: none;
-    background: transparent;
-    color: var(--info);
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .set-link:hover {
-    text-decoration: underline;
-  }
-  .seg {
-    display: flex;
-    gap: 4px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 3px;
-  }
-  .seg-btn {
-    flex: 1 1 0;
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    padding: 6px;
-    border-radius: 5px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: capitalize;
-  }
-  .seg-btn.on {
-    background: var(--surface-raised);
-    color: var(--primary);
-    box-shadow: var(--shadow-1);
-  }
-  .set-path {
-    font-size: 12px;
-    color: var(--text-muted);
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 7px 9px;
-    word-break: break-all;
-    margin-bottom: 4px;
-  }
-  .set-path.muted {
-    font-style: italic;
-  }
-  .set-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
-  .switch {
-    flex: 0 0 auto;
-    width: 40px;
-    height: 23px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: var(--bg);
-    position: relative;
-    transition: background 0.15s ease, border-color 0.15s ease;
-  }
-  .switch .knob {
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 17px;
-    height: 17px;
-    border-radius: 50%;
-    background: var(--text-muted);
-    transition: transform 0.15s ease, background 0.15s ease;
-  }
-  .switch.on {
-    background: color-mix(in srgb, var(--primary) 30%, transparent);
-    border-color: var(--primary);
-  }
-  .switch.on .knob {
-    transform: translateX(17px);
-    background: var(--primary);
-  }
-  .set-btnrow {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .set-btn {
-    flex: 1 1 auto;
-    border: 1px solid var(--border);
-    background: var(--surface-raised);
-    color: var(--text);
-    padding: 9px 12px;
-    border-radius: var(--radius-sm);
-    font-size: 12.5px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .set-btn:hover:not(:disabled) {
-    border-color: var(--primary);
-    color: var(--primary);
-  }
-  .set-btn:disabled {
-    opacity: 0.55;
-    cursor: default;
-  }
-  .set-danger {
-    border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border));
-    background: transparent;
-    color: var(--danger);
-    padding: 9px 12px;
-    border-radius: var(--radius-sm);
-    font-size: 12.5px;
-    font-weight: 600;
-    width: 100%;
-    cursor: pointer;
-  }
-  .set-danger:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--danger) 10%, transparent);
-  }
-  .set-danger:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-  .sg-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px;
-    border-radius: var(--radius-sm);
-  }
-  .sg-row:hover {
-    background: color-mix(in srgb, var(--primary) 8%, transparent);
-  }
-  .sg-info {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-  .sg-name {
-    font-weight: 600;
-    font-size: 13px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .sg-meta {
-    font-size: 11.5px;
-    color: var(--text-muted);
-    margin-top: 2px;
-  }
-  .sg-missing {
-    color: var(--warn);
-  }
-  .sg-make {
-    flex: 0 0 auto;
-    border: 1px solid var(--border);
-    background: var(--bg);
-    color: var(--primary);
-    padding: 7px 12px;
-    border-radius: var(--radius-sm);
-    font-size: 12.5px;
-    font-weight: 600;
-  }
-  .sg-make:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--primary) 12%, transparent);
-  }
-  .sg-make:disabled {
-    opacity: 0.5;
-    cursor: default;
-    color: var(--text-muted);
   }
   .progress {
     position: relative;
@@ -2324,67 +1386,6 @@
     background: color-mix(in srgb, var(--danger) 12%, var(--surface));
     color: var(--danger);
     font-size: 13px;
-  }
-  .statbar {
-    display: flex;
-    align-items: center;
-    gap: 12px 20px;
-    flex-wrap: wrap;
-    /* Reserve room on the right for an open detail drawer (the subheader tucks left
-       of it instead of being clipped). */
-    padding: 12px calc(20px + var(--drawer-w, 0px)) 12px 20px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-  }
-  .stat {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-  }
-  .stat-num {
-    font-family: var(--font-display);
-    font-size: 18px;
-    font-weight: 600;
-  }
-  .stat-label {
-    font-size: 12px;
-    color: var(--text-muted);
-  }
-  .stat.flag .stat-num {
-    color: var(--warn);
-  }
-  .statbtn {
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    padding: 0;
-    font: inherit;
-  }
-  .statbtn:hover {
-    opacity: 0.8;
-  }
-  .statbtn.flag .stat-num {
-    color: var(--warn);
-  }
-  .statbtn.crit .stat-num {
-    color: var(--danger);
-  }
-  .conflicts-panel {
-    position: fixed;
-    z-index: 50;
-    top: 120px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 560px;
-    max-width: calc(100vw - 40px);
-    max-height: 70vh;
-    overflow-y: auto;
-    background: var(--surface-raised);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-2);
-    padding: 10px;
-    scrollbar-width: thin;
   }
   /* Log-triage panel owns its own padding (LogTriage.svelte), so no inner padding here. */
   .recover-banner {
@@ -2421,199 +1422,6 @@
     box-shadow: var(--shadow-2);
     scrollbar-width: thin;
   }
-  .cf-row {
-    padding: 10px 10px 12px;
-    border-radius: var(--radius-sm);
-    border-left: 3px solid var(--warn);
-    background: color-mix(in srgb, var(--warn) 6%, transparent);
-    margin-bottom: 8px;
-  }
-  .cf-row.crit {
-    border-left-color: var(--danger);
-    background: color-mix(in srgb, var(--danger) 6%, transparent);
-  }
-  .cf-row.info {
-    border-left-color: var(--info);
-    background: color-mix(in srgb, var(--info) 5%, transparent);
-  }
-  .cf-row.info .cf-sev {
-    color: var(--info);
-  }
-  .cf-top {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-  }
-  .cf-sev {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--warn);
-  }
-  .cf-row.crit .cf-sev {
-    color: var(--danger);
-  }
-  .cf-kind {
-    font-size: 11px;
-    color: var(--text-muted);
-  }
-  .cf-name {
-    font-weight: 600;
-    font-family: var(--font-display);
-  }
-  .cf-mods {
-    margin-top: 5px;
-    font-size: 12.5px;
-    color: var(--text);
-  }
-  .cf-why {
-    margin-top: 5px;
-    font-size: 12px;
-    color: var(--text-muted);
-    line-height: 1.5;
-  }
-  .hz-group {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
-    padding: 12px 8px 6px;
-  }
-  .hz-row {
-    padding: 7px 10px;
-    border-radius: var(--radius-sm);
-  }
-  .hz-row:hover {
-    background: color-mix(in srgb, var(--primary) 6%, transparent);
-  }
-  .hz-name {
-    font-weight: 600;
-    font-size: 13px;
-  }
-  .hz-detail {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 2px;
-  }
-  .hz-dep {
-    color: var(--warn);
-    font-weight: 600;
-  }
-  .st-tiles {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    padding: 8px 0 4px;
-  }
-  .st-tile {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 10px;
-    text-align: center;
-  }
-  .st-tile b {
-    display: block;
-    font-family: var(--font-display);
-    font-size: 20px;
-  }
-  .st-tile span {
-    font-size: 11px;
-    color: var(--text-muted);
-  }
-  .st-cat {
-    padding: 5px 8px;
-  }
-  .st-cat-top {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12.5px;
-    margin-bottom: 3px;
-  }
-  .st-cat-size {
-    color: var(--text-muted);
-    font-size: 11.5px;
-  }
-  .st-bar {
-    height: 6px;
-    background: var(--border);
-    border-radius: 999px;
-    overflow: hidden;
-  }
-  .st-bar-fill {
-    height: 100%;
-    background: var(--primary);
-    border-radius: 999px;
-  }
-  .st-big {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12.5px;
-    padding: 4px 8px;
-  }
-  .st-big-size {
-    color: var(--text-muted);
-  }
-  .up-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
-  .up-new {
-    color: var(--accent);
-  }
-  .up-src {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 1px 6px;
-    margin-left: 6px;
-    vertical-align: middle;
-  }
-  .took {
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-left: auto;
-  }
-  .toggle {
-    flex: 0 0 auto;
-    border: 1px solid var(--border);
-    background: var(--bg);
-    color: var(--text-muted);
-    padding: 8px 12px;
-    border-radius: var(--radius);
-    font-size: 12.5px;
-    font-weight: 600;
-  }
-  .toggle:hover {
-    color: var(--text);
-  }
-  .toggle.on {
-    background: color-mix(in srgb, var(--accent) 16%, transparent);
-    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-    color: var(--accent);
-  }
-  .search {
-    flex: 0 0 280px;
-    padding: 9px 14px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--bg);
-    color: var(--text);
-    font-family: inherit;
-    font-size: 13px;
-  }
-  .search:focus {
-    outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
-    outline-offset: 1px;
-  }
   .body {
     flex: 1 1 auto;
     min-height: 0;
@@ -2636,77 +1444,6 @@
     display: flex;
     flex-direction: column;
   }
-  .crumb {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 7px 16px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg);
-  }
-  .crumb-path {
-    font-family: var(--font-display);
-    font-size: 14px;
-    font-weight: 600;
-  }
-  .crumb-count {
-    font-size: 12px;
-    color: var(--text-muted);
-  }
-  .crumb-tag {
-    border: 1px solid color-mix(in srgb, var(--info) 40%, var(--border));
-    background: color-mix(in srgb, var(--info) 12%, transparent);
-    color: var(--info);
-    border-radius: 999px;
-    padding: 3px 10px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .select-all {
-    flex: 0 0 auto;
-    width: 15px;
-    height: 15px;
-    margin: 0 7px 0 0;
-    accent-color: var(--primary);
-    cursor: pointer;
-  }
-  .tb-spacer {
-    flex: 1 1 auto;
-  }
-  .tb-group {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .tb-sort {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--text-muted);
-  }
-  .tb-sort select {
-    font-family: inherit;
-    font-size: 12.5px;
-    color: var(--text);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 6px 8px;
-  }
-  .tb-dir {
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--text);
-    width: 30px;
-    height: 30px;
-    border-radius: var(--radius-sm);
-    font-size: 14px;
-  }
-  .tb-dir:hover {
-    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
-  }
   .list-body {
     flex: 1 1 auto;
     min-height: 0;
@@ -2715,47 +1452,6 @@
     position: fixed;
     inset: 0;
     z-index: 40;
-  }
-  .menu {
-    position: fixed;
-    z-index: 50;
-    width: 208px;
-    max-height: 400px;
-    overflow-y: auto;
-    background: var(--surface-raised);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-2);
-    padding: 6px;
-    scrollbar-width: thin;
-  }
-  .menu-head {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-    padding: 6px 10px;
-  }
-  .menu-item {
-    display: block;
-    width: 100%;
-    text-align: left;
-    border: none;
-    background: transparent;
-    color: var(--text);
-    padding: 8px 10px;
-    border-radius: var(--radius-sm);
-    font-size: 13px;
-  }
-  .menu-item:hover {
-    background: color-mix(in srgb, var(--primary) 14%, transparent);
-    color: var(--primary);
-  }
-  .menu-item.reset {
-    margin-top: 4px;
-    border-top: 1px solid var(--border);
-    border-radius: 0;
-    color: var(--text-muted);
   }
   .empty {
     display: grid;

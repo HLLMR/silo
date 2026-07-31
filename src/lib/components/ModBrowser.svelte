@@ -23,10 +23,10 @@
     ModSourceOption,
   } from "../types";
   import type { UnlistenFn } from "@tauri-apps/api/event";
-  import GithubCard from "./GithubCard.svelte";
-  import NexusCard from "./NexusCard.svelte";
-  import ModHubCard from "./ModHubCard.svelte";
-  import { resizable } from "../resize";
+  import ModCard from "./ModCard.svelte";
+  import DescModal from "./DescModal.svelte";
+  import BrowseDrawer from "./BrowseDrawer.svelte";
+  import { parseNexusId } from "../browse";
 
   interface Props {
     /** Tech names already in the local library, to flag "in library". */
@@ -59,19 +59,6 @@
   }
   refreshGh();
 
-  /** Pull owner/repo out of a github.com source URL, for the interactive card. */
-  function parseRepo(url: string): { owner: string; repo: string } | null {
-    const m = url.match(/github\.com\/([^/]+)\/([^/?#]+)/i);
-    if (!m) return null;
-    return { owner: m[1], repo: m[2].replace(/\.git$/i, "") };
-  }
-
-  /** Pull the numeric Nexus mod id out of a source URL (…/mods/12345). */
-  function parseNexusId(url: string): number | null {
-    const m = url.match(/\/mods\/(\d+)/);
-    return m ? Number(m[1]) : null;
-  }
-
   let query = $state("");
   let category = $state("");
   let sort = $state<"popular" | "recent" | "name" | "downloads" | "rating">(
@@ -103,16 +90,6 @@
     loading: boolean;
     source: "catalog" | "nexus" | "summary";
   } | null>(null);
-
-  /** Whether a "Read more" affordance is worth showing: a long summary, an ingested
-   *  full body, or a Nexus source we can pull the full body from live. */
-  function canExpand(d: CatalogModDetail): boolean {
-    return (
-      !!d.descriptionFull ||
-      (d.description != null && d.description.length > 160) ||
-      d.sources.some((s) => s.source === "nexus" && parseNexusId(s.sourceUrl))
-    );
-  }
 
   /** Open the description modal, filling it with the best body available: the ingested
    *  full text if the catalog has it, else a live Nexus fetch, else the short summary. */
@@ -160,52 +137,10 @@
     }
   }
 
-  const SOURCE_LABEL: Record<string, string> = {
-    github: "GitHub",
-    modhub: "ModHub",
-    nexus: "Nexus Mods",
-    kingmods: "KingMods",
-  };
-  // Compact codes for the card's source buttons, where space is tight.
-  const SOURCE_SHORT: Record<string, string> = {
-    github: "GH",
-    modhub: "MH",
-    nexus: "Nexus",
-    kingmods: "KM",
-  };
-  const shortLabel = (s: string) => SOURCE_SHORT[s] ?? s;
-  const label = (s: string) => SOURCE_LABEL[s] ?? s;
-
-  /** Why a source can't be installed directly — shown on hover and in the drawer. */
-  function gatedReason(source: string): string {
-    if (source === "modhub")
-      return "ModHub blocks downloads from outside its website, so Silo can't install this for you. Opens the mod page.";
-    if (source === "nexus")
-      return "Nexus requires downloads to go through its own site. Opens the mod page.";
-    return "This source doesn't allow direct downloads. Opens the mod page.";
-  }
-
   /** Click a source button: install it if we can, otherwise open its page. */
-  async function useSource(m: BrowseMod, s: ModSourceOption) {
+  async function useSource(m: { id: string }, s: ModSourceOption) {
     if (s.installable) await install(m, s.source);
     else await openExternal(s.sourceUrl);
-  }
-
-  function pct(id: string): number | null {
-    const p = progress[id];
-    if (!p || !p.total) return null;
-    return Math.min(100, Math.round((p.done / p.total) * 100));
-  }
-
-  function fmtMB(bytes: number): string {
-    return (bytes / (1024 * 1024)).toFixed(1);
-  }
-
-  /** Compact download counts: 980, 12k, 1.3M. */
-  function fmtCount(n: number): string {
-    if (n < 1000) return `${n}`;
-    if (n < 1_000_000) return `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k`;
-    return `${(n / 1_000_000).toFixed(1)}M`;
   }
 
   function hasLocally(m: BrowseMod): boolean {
@@ -275,7 +210,7 @@
     debounce = setTimeout(load, 300);
   }
 
-  async function install(m: BrowseMod, source?: string) {
+  async function install(m: { id: string }, source?: string) {
     installing = m.id;
     error = null;
     installedNote = null;
@@ -377,93 +312,14 @@
   {:else}
     <div class="grid">
       {#each results as m (m.id)}
-        {@const here = hasLocally(m)}
-        <div class="card" class:owned={here}>
-          <div class="thumb">
-            {#if m.imageUrl}
-              <img src={m.imageUrl} alt="" loading="lazy" />
-            {:else}
-              <div class="thumb-fallback">{(m.title || "?").slice(0, 1)}</div>
-            {/if}
-            {#if here}<span class="owned-badge">In library</span>{/if}
-          </div>
-          <div class="card-body">
-            <div class="card-title" title={m.title}>{m.title}</div>
-            <div class="card-meta">
-              {#if m.author}<span class="author">{m.author}</span>{/if}
-              {#if m.latestVersion}<span class="ver">v{m.latestVersion}</span>{/if}
-            </div>
-            {#if m.rating != null || m.downloads != null}
-              <div class="stats">
-                {#if m.rating != null}
-                  <span class="stat" title="Rating">
-                    ⭐ {m.rating.toFixed(1)}{#if m.ratingCount}<span class="stat-sub"
-                        >&nbsp;({fmtCount(m.ratingCount)})</span
-                      >{/if}
-                  </span>
-                {/if}
-                {#if m.downloads != null}
-                  <span class="stat" title="Downloads">⬇ {fmtCount(m.downloads)}</span>
-                {/if}
-              </div>
-            {/if}
-            {#if m.category}<div class="chip">{m.category}</div>{/if}
-            {#if installing === m.id}
-              {@const p = progress[m.id]}
-              <div class="dl">
-                <div class="dl-bar">
-                  <div
-                    class="dl-fill"
-                    class:indet={pct(m.id) === null}
-                    style={pct(m.id) !== null ? `width:${pct(m.id)}%` : ""}
-                  ></div>
-                </div>
-                <span class="dl-text tnum">
-                  {#if p && p.total}
-                    {fmtMB(p.done)} / {fmtMB(p.total)} MB
-                  {:else if p}
-                    {fmtMB(p.done)} MB…
-                  {:else}
-                    Starting…
-                  {/if}
-                </span>
-              </div>
-            {/if}
-            <!-- One button per source this mod actually lives on, each with that
-                 source's own version — they drift, and that's worth seeing. -->
-            <div class="srcbar">
-              {#each m.sources as s (s.source)}
-                <button
-                  class="srcbtn"
-                  class:can-install={s.installable}
-                  disabled={here || installing === m.id}
-                  title={here
-                    ? "Already in your library"
-                    : s.installable
-                      ? `Install from ${label(s.source)}`
-                      : gatedReason(s.source)}
-                  onclick={() => useSource(m, s)}
-                >
-                  <span class="srcbtn-name">{shortLabel(s.source)}</span>
-                  {#if s.version}<span class="srcbtn-ver tnum">{s.version}</span>{/if}
-                  <span class="srcbtn-icon">{s.installable ? "⬇" : "↗"}</span>
-                </button>
-              {:else}
-                <span class="srcbar-none">No sources</span>
-              {/each}
-            </div>
-            <div class="card-actions">
-              {#if here}<span class="card-owned">In library</span>{/if}
-              <button
-                class="btn ghost"
-                title="Show details and sources"
-                onclick={() => openDetail(m)}
-              >
-                Details
-              </button>
-            </div>
-          </div>
-        </div>
+        <ModCard
+          {m}
+          here={hasLocally(m)}
+          installing={installing === m.id}
+          progressEntry={progress[m.id]}
+          onUseSource={(s) => useSource(m, s)}
+          onOpenDetail={() => openDetail(m)}
+        />
       {/each}
     </div>
 
@@ -485,171 +341,22 @@
   {/if}
 
   {#if detailLoading || detail}
-    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="drawer-backdrop" onclick={() => (detail = null)}></div>
-    <aside class="drawer" use:resizable>
-      {#if detailLoading}
-        <div class="empty">Loading…</div>
-      {:else if detail}
-        {@const d = detail}
-        <div class="drawer-head">
-          <h3>{d.title}</h3>
-          <button class="drawer-x" title="Close" onclick={() => (detail = null)}>✕</button>
-        </div>
-        <div class="drawer-body">
-          {#if d.imageUrl}
-            <img class="drawer-img" src={d.imageUrl} alt="" />
-          {/if}
-          <dl class="facts">
-            {#if d.author}<dt>Author</dt><dd>{d.author}</dd>{/if}
-            {#if d.latestVersion}<dt>Version</dt><dd class="tnum">{d.latestVersion}</dd>{/if}
-            {#if d.category}<dt>Category</dt><dd>{d.category}</dd>{/if}
-            {#if d.techName}<dt>Tech name</dt><dd class="mono">{d.techName}</dd>{/if}
-            {#if d.trustScore != null}<dt>Trust</dt><dd class="tnum">{d.trustScore}/100</dd>{/if}
-            {#if d.rating != null}
-              <dt>Rating</dt>
-              <dd class="tnum">
-                ⭐ {d.rating.toFixed(1)}{#if d.ratingCount}
-                  &nbsp;({fmtCount(d.ratingCount)}){/if}
-              </dd>
-            {/if}
-            {#if d.downloads != null}
-              <dt>Downloads</dt><dd class="tnum">{fmtCount(d.downloads)}</dd>
-            {/if}
-          </dl>
-
-          {#if d.description}
-            <p class="drawer-desc clamped">{d.description}</p>
-            {#if canExpand(d)}
-              <button class="read-more" onclick={() => openDesc(d)}>Read more →</button>
-            {/if}
-          {/if}
-
-          <div class="drawer-sec">Available from</div>
-          {#if d.sources.length === 0}
-            <p class="drawer-none">No sources recorded.</p>
-          {:else}
-            <ul class="srcs">
-              {#each d.sources as s (s.source + s.sourceUrl)}
-                <li>
-                  <div class="src-head">
-                    <span class="src-name">{label(s.source)}</span>
-                    {#if s.version}<span class="src-ver tnum">{s.version}</span>{/if}
-                    <button
-                      class="src-action"
-                      class:can-install={s.installable}
-                      disabled={hasLocally(d) || installing === d.id}
-                      onclick={() => useSource(d, s)}
-                    >
-                      {#if hasLocally(d)}
-                        In library
-                      {:else if s.installable}
-                        {installing === d.id ? "Installing…" : "Install ⬇"}
-                      {:else}
-                        Open page ↗
-                      {/if}
-                    </button>
-                  </div>
-                  {#if !s.installable}
-                    <p class="src-why">{gatedReason(s.source)}</p>
-                  {/if}
-                </li>
-              {/each}
-            </ul>
-          {/if}
-
-          {#if d.sources.some((s) => (s.source === "github" && parseRepo(s.sourceUrl)) || (s.source === "nexus" && parseNexusId(s.sourceUrl)) || s.source === "modhub")}
-            {@const ghSrcs = d.sources.filter((s) => s.source === "github" && parseRepo(s.sourceUrl))}
-            {@const nxSrcs = d.sources.filter((s) => s.source === "nexus" && parseNexusId(s.sourceUrl))}
-            {@const mhSrcs = d.sources.filter((s) => s.source === "modhub")}
-            <div class="drawer-sec">Interact</div>
-            <div class="src-cards">
-              {#each ghSrcs as s (s.sourceUrl)}
-                {@const r = parseRepo(s.sourceUrl)}
-                {#if r}
-                  <GithubCard
-                    owner={r.owner}
-                    repo={r.repo}
-                    connected={gh.connected}
-                    canWrite={gh.canWrite}
-                    onConnect={() => onNeedAuth?.()}
-                  />
-                {/if}
-              {/each}
-              {#each nxSrcs as s (s.sourceUrl)}
-                {@const id = parseNexusId(s.sourceUrl)}
-                {#if id != null}
-                  <NexusCard
-                    modId={id}
-                    version={s.version}
-                    sourceUrl={s.sourceUrl}
-                    connected={nexusConnected}
-                    onConnect={() => onNeedAuth?.()}
-                  />
-                {/if}
-              {/each}
-              {#each mhSrcs as s (s.sourceUrl)}
-                <ModHubCard
-                  rating={d.rating}
-                  ratingCount={d.ratingCount}
-                  sourceUrl={s.sourceUrl}
-                />
-              {/each}
-            </div>
-          {/if}
-
-          {#if !hasLocally(d) && d.sources.length > 0 && !d.sources.some((s) => s.installable)}
-            <!-- Nothing here is directly installable — tell the user exactly what to do,
-                 and that Silo will still take it from there. -->
-            <p class="drawer-hint">
-              None of these sources allow apps to download for you. Grab the .zip from a
-              source above and drop it in your mods folder — Silo files it automatically
-              on the next scan.
-            </p>
-          {/if}
-          {#if hasLocally(d)}
-            <div class="drawer-owned">Already in your library</div>
-          {/if}
-        </div>
-      {/if}
-    </aside>
+    <BrowseDrawer
+      {detail}
+      {detailLoading}
+      installingId={installing}
+      {gh}
+      {nexusConnected}
+      {installed}
+      onClose={() => (detail = null)}
+      onUseSource={(d, s) => useSource(d, s)}
+      onOpenDesc={openDesc}
+      {onNeedAuth}
+    />
   {/if}
 
   {#if descModal}
-    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="modal-backdrop" onclick={() => (descModal = null)}></div>
-    <div class="modal" role="dialog" aria-modal="true">
-      <div class="modal-head">
-        <h3>{descModal.title}</h3>
-        <button class="drawer-x" title="Close" onclick={() => (descModal = null)}>✕</button>
-      </div>
-      <div class="modal-body">
-        {#if descModal.text}
-          <p>{descModal.text}</p>
-        {:else}
-          <p class="modal-empty">No description text available.</p>
-        {/if}
-        {#if descModal.loading}
-          <p class="modal-loading">Loading the full description…</p>
-        {/if}
-      </div>
-      <div class="modal-foot">
-        <span class="modal-note">
-          {#if descModal.source === "nexus"}
-            Full body from Nexus. Formatting, tables and images are on the mod page.
-          {:else if descModal.source === "catalog"}
-            Full body from the catalog. The source page has the original formatting.
-          {:else}
-            Catalog summary — the full write-up lives on the mod's page.
-          {/if}
-        </span>
-        {#if descModal.url}
-          <button class="modal-link" onclick={() => openExternal(descModal!.url!)}>
-            Open full mod page ↗
-          </button>
-        {/if}
-      </div>
-    </div>
+    <DescModal modal={descModal} onClose={() => (descModal = null)} />
   {/if}
 </div>
 
@@ -770,211 +477,6 @@
     gap: 16px;
     margin-top: 12px;
   }
-  .card {
-    background: var(--surface-raised);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    box-shadow: var(--shadow-1);
-    transition: box-shadow 0.15s, transform 0.15s;
-  }
-  .card:hover {
-    box-shadow: var(--shadow-2);
-    transform: translateY(-2px);
-  }
-  .card.owned {
-    opacity: 0.82;
-  }
-  .thumb {
-    position: relative;
-    aspect-ratio: 16 / 9;
-    background: var(--bg);
-    overflow: hidden;
-  }
-  .thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-  .thumb-fallback {
-    width: 100%;
-    height: 100%;
-    display: grid;
-    place-items: center;
-    font-family: var(--font-display);
-    font-size: 2.4rem;
-    color: var(--green-300);
-    background: linear-gradient(135deg, var(--green-700), var(--green-900));
-  }
-  .owned-badge {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background: var(--primary);
-    color: var(--on-primary);
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 999px;
-  }
-  .card-body {
-    padding: 10px 12px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: 1;
-  }
-  .card-title {
-    font-weight: 600;
-    color: var(--text);
-    line-height: 1.25;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .card-meta {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    font-size: 0.8rem;
-    color: var(--text-muted);
-  }
-  .card-meta .ver {
-    margin-left: auto;
-    font-variant-numeric: tabular-nums;
-  }
-  .stats {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    font-variant-numeric: tabular-nums;
-  }
-  .stat {
-    display: inline-flex;
-    align-items: center;
-    white-space: nowrap;
-  }
-  .stat-sub {
-    color: var(--text-faint, var(--text-muted));
-  }
-  .chip {
-    align-self: flex-start;
-    font-size: 0.72rem;
-    color: var(--soil-700);
-    background: color-mix(in srgb, var(--soil-500) 16%, transparent);
-    padding: 2px 8px;
-    border-radius: 999px;
-  }
-  .dl {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 2px;
-  }
-  .dl-bar {
-    flex: 1;
-    height: 6px;
-    background: var(--bg);
-    border-radius: 999px;
-    overflow: hidden;
-  }
-  .dl-fill {
-    height: 100%;
-    background: var(--primary);
-    border-radius: 999px;
-    transition: width 0.2s ease;
-  }
-  .dl-fill.indet {
-    width: 35%;
-    animation: indet 1.1s ease-in-out infinite;
-  }
-  @keyframes indet {
-    0% {
-      margin-left: -35%;
-    }
-    100% {
-      margin-left: 100%;
-    }
-  }
-  .dl-text {
-    font-size: 0.72rem;
-    color: var(--text-muted);
-    white-space: nowrap;
-  }
-  /* One button per source, each showing that source's own version. */
-  .srcbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: auto;
-    padding-top: 8px;
-  }
-  .srcbar-none {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-  }
-  .srcbtn {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 5px 8px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface);
-    color: var(--text-muted);
-    font: inherit;
-    font-size: 0.75rem;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
-  }
-  .srcbtn:hover:not(:disabled) {
-    background: var(--bg);
-    color: var(--text);
-  }
-  /* Directly installable reads as the primary action; the rest are link-outs. */
-  .srcbtn.can-install {
-    border-color: var(--primary);
-    color: var(--primary);
-    font-weight: 600;
-  }
-  .srcbtn.can-install:hover:not(:disabled) {
-    background: var(--primary);
-    color: var(--on-primary);
-  }
-  .srcbtn:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-  .srcbtn-name {
-    font-weight: 600;
-  }
-  .srcbtn-ver {
-    opacity: 0.85;
-  }
-  .srcbtn-icon {
-    opacity: 0.7;
-    font-size: 0.7rem;
-  }
-  .card-owned {
-    font-size: 0.75rem;
-    color: var(--primary);
-    font-weight: 600;
-    align-self: center;
-  }
-  .card-actions {
-    display: flex;
-    gap: 8px;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: 8px;
-  }
   .btn {
     flex: 1;
     padding: 7px 10px;
@@ -986,288 +488,8 @@
     font-size: 0.85rem;
     cursor: pointer;
   }
-  .btn.ghost {
-    flex: 0 0 auto;
-  }
   .btn:disabled {
     opacity: 0.55;
     cursor: default;
-  }
-
-  /* ── Detail drawer ── */
-  .drawer-backdrop {
-    position: fixed;
-    inset: 0;
-    top: var(--topbar-h, 0px);
-    background: rgba(0, 0, 0, 0.35);
-    z-index: 40;
-  }
-  .drawer {
-    position: fixed;
-    top: var(--topbar-h, 0px);
-    right: 0;
-    bottom: 0;
-    width: min(420px, 92vw);
-    background: var(--surface);
-    border-left: 1px solid var(--border);
-    box-shadow: var(--shadow-2);
-    z-index: 41;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .drawer-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--border);
-  }
-  .drawer-head h3 {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: 1.15rem;
-    color: var(--text);
-    flex: 1;
-    line-height: 1.25;
-  }
-  .drawer-x {
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 1rem;
-    cursor: pointer;
-    padding: 4px 6px;
-    border-radius: var(--radius-sm);
-  }
-  .drawer-x:hover {
-    background: var(--bg);
-    color: var(--text);
-  }
-  .drawer-body {
-    padding: 14px 16px 24px;
-    overflow-y: auto;
-  }
-  .drawer-img {
-    width: 100%;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    margin-bottom: 12px;
-    display: block;
-  }
-  .facts {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 4px 12px;
-    margin: 0 0 12px;
-    font-size: 0.85rem;
-  }
-  .facts dt {
-    color: var(--text-muted);
-  }
-  .facts dd {
-    margin: 0;
-    color: var(--text);
-  }
-  .mono {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.8rem;
-  }
-  .drawer-desc {
-    color: var(--text);
-    font-size: 0.88rem;
-    line-height: 1.5;
-    margin: 0 0 4px;
-  }
-  .drawer-desc.clamped {
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
-    line-clamp: 4;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .read-more {
-    border: none;
-    background: transparent;
-    color: var(--info);
-    font-size: 0.8rem;
-    font-weight: 600;
-    padding: 0;
-    margin: 0 0 14px;
-    cursor: pointer;
-  }
-  .read-more:hover {
-    text-decoration: underline;
-  }
-  .modal-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 50;
-  }
-  .modal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: min(620px, 92vw);
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-    background: var(--surface, var(--bg));
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
-    z-index: 51;
-  }
-  .modal-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--border);
-  }
-  .modal-head h3 {
-    margin: 0;
-    font-size: 1rem;
-  }
-  .modal-body {
-    overflow-y: auto;
-    padding: 16px;
-  }
-  .modal-body p {
-    margin: 0;
-    color: var(--text);
-    font-size: 0.9rem;
-    line-height: 1.6;
-    white-space: pre-wrap;
-  }
-  .modal-loading,
-  .modal-empty {
-    color: var(--text-muted) !important;
-    font-size: 0.8rem !important;
-    margin-top: 10px !important;
-  }
-  .modal-foot {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    padding: 12px 16px;
-    border-top: 1px solid var(--border);
-  }
-  .modal-note {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-  }
-  .modal-link {
-    flex: 0 0 auto;
-    border: 1px solid var(--border);
-    background: var(--bg);
-    color: var(--info);
-    padding: 6px 12px;
-    border-radius: var(--radius-sm);
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .modal-link:hover {
-    border-color: color-mix(in srgb, var(--info) 40%, var(--border));
-  }
-  .drawer-sec {
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-    margin-bottom: 6px;
-  }
-  .src-cards {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 14px;
-  }
-  .drawer-none {
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    margin: 0 0 14px;
-  }
-  .srcs {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .srcs li {
-    padding: 8px 10px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface-raised);
-  }
-  .src-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .src-name {
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: var(--text);
-  }
-  .src-ver {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-  }
-  .src-action {
-    margin-left: auto;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface);
-    color: var(--text-muted);
-    font: inherit;
-    font-size: 0.78rem;
-    padding: 4px 9px;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .src-action.can-install {
-    background: var(--primary);
-    border-color: transparent;
-    color: var(--on-primary);
-    font-weight: 600;
-  }
-  .src-action:hover:not(:disabled) {
-    filter: brightness(1.06);
-  }
-  .src-action:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-  /* Why this source can't be installed directly — names who's responsible. */
-  .src-why {
-    margin: 6px 0 0;
-    font-size: 0.72rem;
-    line-height: 1.4;
-    color: var(--text-muted);
-  }
-  .drawer-hint {
-    font-size: 0.78rem;
-    line-height: 1.5;
-    color: var(--text-muted);
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 9px 11px;
-    margin: 0 0 12px;
-  }
-  .drawer-owned {
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    padding: 8px;
   }
 </style>

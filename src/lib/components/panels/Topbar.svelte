@@ -1,0 +1,261 @@
+<script lang="ts">
+  let {
+    topbarH = $bindable(),
+    view,
+    hasSavegames,
+    savesOpen,
+    loadoutsOpen,
+    activeLoadoutName,
+    mpOpen,
+    showOrganize,
+    unorganizedCount,
+    hasMods,
+    updateChecking,
+    scanning,
+    busy,
+    hasGame,
+    activeCount,
+    settingsOpen,
+    onSwitchView,
+    onToggleSaves,
+    onToggleLoadouts,
+    onToggleMp,
+    onOrganize,
+    onCheckUpdates,
+    onRescan,
+    onLaunch,
+    onToggleSettings,
+  }: {
+    topbarH: number;
+    view: "library" | "browse";
+    hasSavegames: boolean;
+    savesOpen: boolean;
+    loadoutsOpen: boolean;
+    activeLoadoutName: string | null;
+    mpOpen: boolean;
+    showOrganize: boolean;
+    unorganizedCount: number;
+    hasMods: boolean;
+    updateChecking: boolean;
+    scanning: boolean;
+    busy: string | null;
+    hasGame: boolean;
+    activeCount: number;
+    settingsOpen: boolean;
+    onSwitchView: (v: "library" | "browse") => void;
+    onToggleSaves: () => void;
+    onToggleLoadouts: () => void;
+    onToggleMp: () => void;
+    onOrganize: () => void;
+    onCheckUpdates: () => void;
+    onRescan: () => void;
+    onLaunch: () => void;
+    onToggleSettings: () => void;
+  } = $props();
+</script>
+
+<header class="topbar" bind:clientHeight={topbarH}>
+  <div class="brand">
+    <div class="logo">S</div>
+    <div>
+      <h1>Silo</h1>
+      <p class="tagline">Farming Simulator 25 mod library</p>
+    </div>
+  </div>
+
+  <nav class="tabs" aria-label="Views">
+    <button class="tab" class:on={view === "library"} onclick={() => onSwitchView("library")}>
+      Library
+    </button>
+    <button class="tab" class:on={view === "browse"} onclick={() => onSwitchView("browse")}>
+      Browse
+    </button>
+  </nav>
+
+  <div class="topbar-spacer"></div>
+
+  {#if hasSavegames}
+    <button class="btn" class:on={savesOpen} onclick={onToggleSaves} disabled={!!busy}>
+      Savegames
+    </button>
+  {/if}
+
+  <button
+    class="btn loadout-btn"
+    class:on={loadoutsOpen}
+    onclick={onToggleLoadouts}
+    disabled={!!busy}
+  >
+    {#if activeLoadoutName !== null}
+      ● {activeLoadoutName}
+    {:else}
+      Loadouts
+    {/if}
+  </button>
+
+  <button
+    class="btn"
+    class:on={mpOpen}
+    title="Multiplayer: share or verify your mod set so friends can join"
+    onclick={onToggleMp}
+    disabled={!!busy}
+  >
+    Multiplayer
+  </button>
+
+  {#if showOrganize}
+    <button class="btn" onclick={onOrganize} disabled={!!busy || scanning}>
+      Organize {unorganizedCount}
+    </button>
+  {/if}
+  {#if hasMods}
+    <button
+      class="btn"
+      title="Check the SiloAPI catalog (and any linked GitHub repos) for updates"
+      onclick={onCheckUpdates}
+      disabled={!!busy || updateChecking}
+    >
+      {updateChecking ? "Checking…" : "⟳ Updates"}
+    </button>
+  {/if}
+  <button class="btn" onclick={onRescan} disabled={scanning || !!busy}>
+    {scanning ? "Scanning…" : "Rescan"}
+  </button>
+  {#if hasGame}
+    <button
+      class="btn primary launch-btn"
+      title="Launch Farming Simulator 25 with the current active set"
+      onclick={onLaunch}
+      disabled={!!busy}
+    >
+      ▶ Launch{activeCount ? ` (${activeCount})` : ""}
+    </button>
+  {/if}
+  <button
+    class="btn icon-btn"
+    class:on={settingsOpen}
+    title="Settings"
+    aria-label="Settings"
+    onclick={onToggleSettings}
+    disabled={!!busy}
+  >
+    ⚙
+  </button>
+</header>
+
+<style>
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px 16px;
+    flex-wrap: wrap;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  /* The spacer pushes actions right on a wide bar, but must not force a blank row when
+     things wrap — collapse it once the bar is narrow enough to wrap. */
+  @media (max-width: 900px) {
+    .topbar-spacer {
+      display: none;
+    }
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius);
+    display: grid;
+    place-items: center;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 22px;
+    color: var(--on-primary);
+    background: linear-gradient(135deg, var(--green-500), var(--green-700));
+    box-shadow: var(--shadow-1);
+  }
+  h1 {
+    font-size: 20px;
+    line-height: 1.1;
+  }
+  .tagline {
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .btn {
+    border: 1px solid var(--border);
+    background: var(--surface-raised);
+    color: var(--text);
+    padding: 9px 18px;
+    border-radius: var(--radius);
+    font-weight: 600;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .btn.primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--on-primary);
+  }
+  .btn.primary:hover:not(:disabled) {
+    background: var(--primary-hover);
+  }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-left: 20px;
+    padding: 3px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .tab {
+    padding: 7px 16px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .tab:hover {
+    color: var(--text);
+  }
+  .tab.on {
+    background: var(--surface-raised);
+    color: var(--text);
+    box-shadow: var(--shadow-1);
+  }
+  .topbar-spacer {
+    flex: 1 1 auto;
+  }
+  .icon-btn {
+    padding: 9px 12px;
+    font-size: 16px;
+    line-height: 1;
+  }
+  .icon-btn.on {
+    color: var(--primary);
+    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  }
+  .launch-btn {
+    font-weight: 700;
+  }
+  .btn:hover:not(:disabled):not(.primary) {
+    color: var(--text);
+    border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+  }
+  .btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .loadout-btn.on {
+    border-color: color-mix(in srgb, var(--primary) 50%, var(--border));
+    color: var(--primary);
+  }
+</style>

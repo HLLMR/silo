@@ -1,0 +1,372 @@
+<script lang="ts">
+  import type { CatalogModDetail, ModSourceOption } from "../types";
+  import { resizable } from "../resize";
+  import GithubCard from "./GithubCard.svelte";
+  import NexusCard from "./NexusCard.svelte";
+  import ModHubCard from "./ModHubCard.svelte";
+  import { label, gatedReason, fmtCount, parseRepo, parseNexusId, canExpand } from "../browse";
+
+  let {
+    detail,
+    detailLoading,
+    installingId,
+    gh,
+    nexusConnected,
+    installed,
+    onClose,
+    onUseSource,
+    onOpenDesc,
+    onNeedAuth,
+  }: {
+    detail: CatalogModDetail | null;
+    detailLoading: boolean;
+    installingId: string | null;
+    gh: { connected: boolean; canWrite: boolean };
+    nexusConnected: boolean;
+    installed: Set<string>;
+    onClose: () => void;
+    onUseSource: (d: CatalogModDetail, s: ModSourceOption) => void;
+    onOpenDesc: (d: CatalogModDetail) => void;
+    onNeedAuth?: () => void;
+  } = $props();
+
+  function hasLocally(d: CatalogModDetail): boolean {
+    return d.techName != null && installed.has(d.techName);
+  }
+</script>
+
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+<div class="drawer-backdrop" onclick={onClose}></div>
+<aside class="drawer" use:resizable>
+  {#if detailLoading}
+    <div class="empty">Loading…</div>
+  {:else if detail}
+    {@const d = detail}
+    <div class="drawer-head">
+      <h3>{d.title}</h3>
+      <button class="drawer-x" title="Close" onclick={onClose}>✕</button>
+    </div>
+    <div class="drawer-body">
+      {#if d.imageUrl}
+        <img class="drawer-img" src={d.imageUrl} alt="" />
+      {/if}
+      <dl class="facts">
+        {#if d.author}<dt>Author</dt><dd>{d.author}</dd>{/if}
+        {#if d.latestVersion}<dt>Version</dt><dd class="tnum">{d.latestVersion}</dd>{/if}
+        {#if d.category}<dt>Category</dt><dd>{d.category}</dd>{/if}
+        {#if d.techName}<dt>Tech name</dt><dd class="mono">{d.techName}</dd>{/if}
+        {#if d.trustScore != null}<dt>Trust</dt><dd class="tnum">{d.trustScore}/100</dd>{/if}
+        {#if d.rating != null}
+          <dt>Rating</dt>
+          <dd class="tnum">
+            ⭐ {d.rating.toFixed(1)}{#if d.ratingCount}
+              &nbsp;({fmtCount(d.ratingCount)}){/if}
+          </dd>
+        {/if}
+        {#if d.downloads != null}
+          <dt>Downloads</dt><dd class="tnum">{fmtCount(d.downloads)}</dd>
+        {/if}
+      </dl>
+
+      {#if d.description}
+        <p class="drawer-desc clamped">{d.description}</p>
+        {#if canExpand(d)}
+          <button class="read-more" onclick={() => onOpenDesc(d)}>Read more →</button>
+        {/if}
+      {/if}
+
+      <div class="drawer-sec">Available from</div>
+      {#if d.sources.length === 0}
+        <p class="drawer-none">No sources recorded.</p>
+      {:else}
+        <ul class="srcs">
+          {#each d.sources as s (s.source + s.sourceUrl)}
+            <li>
+              <div class="src-head">
+                <span class="src-name">{label(s.source)}</span>
+                {#if s.version}<span class="src-ver tnum">{s.version}</span>{/if}
+                <button
+                  class="src-action"
+                  class:can-install={s.installable}
+                  disabled={hasLocally(d) || installingId === d.id}
+                  onclick={() => onUseSource(d, s)}
+                >
+                  {#if hasLocally(d)}
+                    In library
+                  {:else if s.installable}
+                    {installingId === d.id ? "Installing…" : "Install ⬇"}
+                  {:else}
+                    Open page ↗
+                  {/if}
+                </button>
+              </div>
+              {#if !s.installable}
+                <p class="src-why">{gatedReason(s.source)}</p>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      {/if}
+
+      {#if d.sources.some((s) => (s.source === "github" && parseRepo(s.sourceUrl)) || (s.source === "nexus" && parseNexusId(s.sourceUrl)) || s.source === "modhub")}
+        {@const ghSrcs = d.sources.filter((s) => s.source === "github" && parseRepo(s.sourceUrl))}
+        {@const nxSrcs = d.sources.filter((s) => s.source === "nexus" && parseNexusId(s.sourceUrl))}
+        {@const mhSrcs = d.sources.filter((s) => s.source === "modhub")}
+        <div class="drawer-sec">Interact</div>
+        <div class="src-cards">
+          {#each ghSrcs as s (s.sourceUrl)}
+            {@const r = parseRepo(s.sourceUrl)}
+            {#if r}
+              <GithubCard
+                owner={r.owner}
+                repo={r.repo}
+                connected={gh.connected}
+                canWrite={gh.canWrite}
+                onConnect={() => onNeedAuth?.()}
+              />
+            {/if}
+          {/each}
+          {#each nxSrcs as s (s.sourceUrl)}
+            {@const id = parseNexusId(s.sourceUrl)}
+            {#if id != null}
+              <NexusCard
+                modId={id}
+                version={s.version}
+                sourceUrl={s.sourceUrl}
+                connected={nexusConnected}
+                onConnect={() => onNeedAuth?.()}
+              />
+            {/if}
+          {/each}
+          {#each mhSrcs as s (s.sourceUrl)}
+            <ModHubCard
+              rating={d.rating}
+              ratingCount={d.ratingCount}
+              sourceUrl={s.sourceUrl}
+            />
+          {/each}
+        </div>
+      {/if}
+
+      {#if !hasLocally(d) && d.sources.length > 0 && !d.sources.some((s) => s.installable)}
+        <!-- Nothing here is directly installable — tell the user exactly what to do,
+             and that Silo will still take it from there. -->
+        <p class="drawer-hint">
+          None of these sources allow apps to download for you. Grab the .zip from a
+          source above and drop it in your mods folder — Silo files it automatically
+          on the next scan.
+        </p>
+      {/if}
+      {#if hasLocally(d)}
+        <div class="drawer-owned">Already in your library</div>
+      {/if}
+    </div>
+  {/if}
+</aside>
+
+<style>
+  .empty {
+    color: var(--text-muted);
+    text-align: center;
+    padding: 60px 0;
+  }
+  /* ── Detail drawer ── */
+  .drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    top: var(--topbar-h, 0px);
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 40;
+  }
+  .drawer {
+    position: fixed;
+    top: var(--topbar-h, 0px);
+    right: 0;
+    bottom: 0;
+    width: min(420px, 92vw);
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    box-shadow: var(--shadow-2);
+    z-index: 41;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .drawer-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .drawer-head h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    color: var(--text);
+    flex: 1;
+    line-height: 1.25;
+  }
+  .drawer-x {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: var(--radius-sm);
+  }
+  .drawer-x:hover {
+    background: var(--bg);
+    color: var(--text);
+  }
+  .drawer-body {
+    padding: 14px 16px 24px;
+    overflow-y: auto;
+  }
+  .drawer-img {
+    width: 100%;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+    display: block;
+  }
+  .facts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 12px;
+    margin: 0 0 12px;
+    font-size: 0.85rem;
+  }
+  .facts dt {
+    color: var(--text-muted);
+  }
+  .facts dd {
+    margin: 0;
+    color: var(--text);
+  }
+  .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8rem;
+  }
+  .drawer-desc {
+    color: var(--text);
+    font-size: 0.88rem;
+    line-height: 1.5;
+    margin: 0 0 4px;
+  }
+  .drawer-desc.clamped {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .read-more {
+    border: none;
+    background: transparent;
+    color: var(--info);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0;
+    margin: 0 0 14px;
+    cursor: pointer;
+  }
+  .read-more:hover {
+    text-decoration: underline;
+  }
+  .drawer-sec {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .src-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .drawer-none {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin: 0 0 14px;
+  }
+  .srcs {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .srcs li {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+  }
+  .src-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .src-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text);
+  }
+  .src-ver {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  .src-action {
+    margin-left: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 0.78rem;
+    padding: 4px 9px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .src-action.can-install {
+    background: var(--primary);
+    border-color: transparent;
+    color: var(--on-primary);
+    font-weight: 600;
+  }
+  .src-action:hover:not(:disabled) {
+    filter: brightness(1.06);
+  }
+  .src-action:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  /* Why this source can't be installed directly — names who's responsible. */
+  .src-why {
+    margin: 6px 0 0;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+  }
+  .drawer-hint {
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 9px 11px;
+    margin: 0 0 12px;
+  }
+  .drawer-owned {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 8px;
+  }
+</style>

@@ -1,0 +1,243 @@
+<script lang="ts">
+  let {
+    modCount,
+    mapsCount,
+    scriptsCount,
+    uniqueCount,
+    activeCount,
+    conflictCount,
+    criticalCount,
+    healthCount,
+    conflictedCount,
+    tookMs,
+    favoritesOnly = $bindable(),
+    showHidden = $bindable(),
+    flaggedOnly = $bindable(),
+    conflictedOnly = $bindable(),
+    query = $bindable(),
+    onOpenStats,
+    onOpenConflicts,
+    onOpenHealth,
+    onOpenLog,
+    onOpenBindings,
+    onOpenBridge,
+  }: {
+    modCount: number;
+    mapsCount: number;
+    scriptsCount: number;
+    uniqueCount: number;
+    activeCount: number;
+    conflictCount: number;
+    criticalCount: number;
+    healthCount: number;
+    conflictedCount: number;
+    tookMs: number | null;
+    favoritesOnly: boolean;
+    showHidden: boolean;
+    flaggedOnly: boolean;
+    conflictedOnly: boolean;
+    query: string;
+    onOpenStats: () => void;
+    onOpenConflicts: () => void;
+    onOpenHealth: () => void;
+    onOpenLog: () => void;
+    onOpenBindings: () => void;
+    onOpenBridge: () => void;
+  } = $props();
+</script>
+
+<div class="statbar">
+  <button class="stat statbtn" title="Library statistics" onclick={onOpenStats}>
+    <span class="stat-num tnum">{modCount}</span>
+    <span class="stat-label">mods</span>
+  </button>
+  <div class="stat">
+    <span class="stat-num tnum">{mapsCount}</span>
+    <span class="stat-label">maps</span>
+  </div>
+  <div class="stat">
+    <span class="stat-num tnum">{scriptsCount}</span>
+    <span class="stat-label">script mods</span>
+  </div>
+  <div class="stat">
+    <span class="stat-num tnum">{uniqueCount}</span>
+    <span class="stat-label">uniqueType</span>
+  </div>
+  <div class="stat">
+    <span class="stat-num tnum">{activeCount}</span>
+    <span class="stat-label">active</span>
+  </div>
+  <button
+    class="stat statbtn"
+    class:flag={conflictCount > 0}
+    class:crit={criticalCount > 0}
+    title="Conflicts within the active set"
+    onclick={onOpenConflicts}
+  >
+    <span class="stat-num tnum">{conflictCount}</span>
+    <span class="stat-label">conflict{conflictCount === 1 ? "" : "s"}</span>
+  </button>
+  <button
+    class="stat statbtn"
+    class:flag={healthCount > 0}
+    title="Library health: missing dependencies, corrupt mods, ignored names"
+    onclick={onOpenHealth}
+  >
+    <span class="stat-num tnum">{healthCount}</span>
+    <span class="stat-label">need attention</span>
+  </button>
+  <button
+    class="stat statbtn"
+    title="Crash & log triage: did the last run crash, and which mod is at fault?"
+    onclick={onOpenLog}
+  >
+    <span class="stat-num">◆</span>
+    <span class="stat-label">diagnose</span>
+  </button>
+  <button
+    class="stat statbtn"
+    title="The full control-binding map — every action and key, grouped by device"
+    onclick={onOpenBindings}
+  >
+    <span class="stat-num">⌨</span>
+    <span class="stat-label">bindings</span>
+  </button>
+  <button
+    class="stat statbtn"
+    title="Filltype bridge: make a stubborn map filltype work with your equipment"
+    onclick={onOpenBridge}
+  >
+    <span class="stat-num">⛓</span>
+    <span class="stat-label">bridge</span>
+  </button>
+  {#if tookMs !== null}
+    <div class="took tnum" title="Scan wall-clock time">
+      scanned in {tookMs} ms
+    </div>
+  {/if}
+
+  <button
+    class="toggle"
+    class:on={favoritesOnly}
+    title="Show favorites only"
+    onclick={() => (favoritesOnly = !favoritesOnly)}
+  >
+    {favoritesOnly ? "★" : "☆"} Favorites
+  </button>
+  <button
+    class="toggle"
+    class:on={showHidden}
+    title="Show hidden mods"
+    onclick={() => (showHidden = !showHidden)}
+  >
+    Hidden
+  </button>
+  <button
+    class="toggle"
+    class:on={flaggedOnly}
+    title="Show only mods you've flagged as broken"
+    onclick={() => (flaggedOnly = !flaggedOnly)}
+  >
+    ⚑ Flagged
+  </button>
+  <button
+    class="toggle"
+    class:on={conflictedOnly}
+    title="Show only mods involved in a conflict"
+    onclick={() => (conflictedOnly = !conflictedOnly)}
+    disabled={conflictedCount === 0}
+  >
+    ⚠ In conflict{conflictedCount > 0 ? ` (${conflictedCount})` : ""}
+  </button>
+
+  <input
+    class="search"
+    type="search"
+    placeholder="Filter by title, author, or tech name…"
+    bind:value={query}
+  />
+</div>
+
+<style>
+  .statbar {
+    display: flex;
+    align-items: center;
+    gap: 12px 20px;
+    flex-wrap: wrap;
+    /* Reserve room on the right for an open detail drawer (the subheader tucks left
+       of it instead of being clipped). */
+    padding: 12px calc(20px + var(--drawer-w, 0px)) 12px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .stat {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .stat-num {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .stat.flag .stat-num {
+    color: var(--warn);
+  }
+  .statbtn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    font: inherit;
+  }
+  .statbtn:hover {
+    opacity: 0.8;
+  }
+  .statbtn.flag .stat-num {
+    color: var(--warn);
+  }
+  .statbtn.crit .stat-num {
+    color: var(--danger);
+  }
+  .took {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+  .toggle {
+    flex: 0 0 auto;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-muted);
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .toggle:hover {
+    color: var(--text);
+  }
+  .toggle.on {
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    color: var(--accent);
+  }
+  .search {
+    flex: 0 0 280px;
+    padding: 9px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+  }
+  .search:focus {
+    outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    outline-offset: 1px;
+  }
+</style>
