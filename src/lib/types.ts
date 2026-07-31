@@ -165,6 +165,23 @@ export interface GhStatus {
   clientId: string | null;
   user: string | null;
   builtin: boolean;
+  /** True when the stored token can star/watch (public_repo OAuth grant or a PAT). */
+  canWrite: boolean;
+}
+
+/** Live public signals for a GitHub source card. `youStarred`/`youWatching` are
+ *  null unless a token is connected. */
+export interface RepoStats {
+  fullName: string;
+  htmlUrl: string;
+  stars: number;
+  forks: number;
+  watchers: number;
+  openIssues: number;
+  archived: boolean;
+  pushedAt: string | null;
+  youStarred: boolean | null;
+  youWatching: boolean | null;
 }
 
 export interface DeviceCode {

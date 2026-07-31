@@ -131,11 +131,14 @@ pub struct PollResult {
 }
 
 /// Step 1: request a device + user code for the given OAuth App client id.
-pub fn device_start(client_id: &str) -> Result<DeviceCode, String> {
+/// `scope` is space-separated OAuth scopes. Read-only identity is `read:user`;
+/// to let the user star/watch through Silo we also need `public_repo` (GitHub's
+/// docs: "Also required for starring public repositories").
+pub fn device_start(client_id: &str, scope: &str) -> Result<DeviceCode, String> {
     let resp = ureq::post("https://github.com/login/device/code")
         .set("Accept", "application/json")
         .set("User-Agent", UA)
-        .send_form(&[("client_id", client_id), ("scope", "read:user")])
+        .send_form(&[("client_id", client_id), ("scope", scope)])
         .map_err(|e| e.to_string())?;
     let v: serde_json::Value = resp.into_json().map_err(|e| e.to_string())?;
     if let Some(err) = v["error"].as_str() {
@@ -215,6 +218,148 @@ pub fn whoami(token: &str) -> Result<String, String> {
         .map_err(|e| e.to_string())?;
     let v: serde_json::Value = resp.into_json().map_err(|e| e.to_string())?;
     Ok(v["login"].as_str().unwrap_or("").to_string())
+}
+
+// ── GitHub source card: live public reads + user-owned actions ──
+//
+// The interaction lands on GitHub through the user's own token; Silo only reflects
+// state. Reads here are fetched live when the drawer opens (per SiloAPI ENRICHMENT.md,
+// rich per-source read fields are the client's job, not the aggregate API's).
+
+/// Public repo signals for the GitHub card. `you_starred` / `you_watching` are only
+/// meaningful (non-null) when a token is supplied.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RepoStats {
+    pub full_name: String,
+    pub html_url: String,
+    pub stars: u64,
+    pub forks: u64,
+    pub watchers: u64,
+    pub open_issues: u64,
+    pub archived: bool,
+    pub pushed_at: Option<String>,
+    pub you_starred: Option<bool>,
+    pub you_watching: Option<bool>,
+}
+
+fn gh_get(url: &str, token: Option<&str>) -> Result<serde_json::Value, String> {
+    let mut req = ureq::get(url)
+        .set("Accept", "application/vnd.github+json")
+        .set("User-Agent", UA);
+    if let Some(t) = token {
+        req = req.set("Authorization", &format!("Bearer {t}"));
+    }
+    req.call()
+        .map_err(gh_err)?
+        .into_json()
+        .map_err(|e| e.to_string())
+}
+
+/// Map a ureq error to a friendly string, calling out the scope case so the UI can
+/// prompt the user to re-connect with actions enabled.
+fn gh_err(e: ureq::Error) -> String {
+    match e {
+        ureq::Error::Status(401, _) => {
+            "GitHub rejected the token — reconnect your account".to_string()
+        }
+        ureq::Error::Status(403, _) => {
+            "This token can't perform that action — reconnect with actions enabled \
+             (public_repo), or use a PAT with Starring permission"
+                .to_string()
+        }
+        ureq::Error::Status(404, _) => "Not found on GitHub".to_string(),
+        other => other.to_string(),
+    }
+}
+
+/// GET /repos/{owner}/{repo} plus (when authenticated) the user's star/watch state.
+pub fn repo_stats(owner: &str, repo: &str, token: Option<&str>) -> Result<RepoStats, String> {
+    let v = gh_get(&format!("https://api.github.com/repos/{owner}/{repo}"), token)?;
+    if v["full_name"].as_str().unwrap_or("").is_empty() {
+        return Err("Repo not found on GitHub".into());
+    }
+    let (you_starred, you_watching) = match token {
+        Some(t) => (star_state(owner, repo, t).ok(), watch_state(owner, repo, t).ok()),
+        None => (None, None),
+    };
+    Ok(RepoStats {
+        full_name: v["full_name"].as_str().unwrap_or("").to_string(),
+        html_url: v["html_url"].as_str().unwrap_or("").to_string(),
+        stars: v["stargazers_count"].as_u64().unwrap_or(0),
+        forks: v["forks_count"].as_u64().unwrap_or(0),
+        // `watchers_count` mirrors stars on the REST API; `subscribers_count` is the
+        // real "watching" number.
+        watchers: v["subscribers_count"].as_u64().unwrap_or(0),
+        open_issues: v["open_issues_count"].as_u64().unwrap_or(0),
+        archived: v["archived"].as_bool().unwrap_or(false),
+        pushed_at: v["pushed_at"].as_str().map(String::from),
+        you_starred,
+        you_watching,
+    })
+}
+
+/// A GET that treats 204 as true and 404 as false — the shape GitHub uses for
+/// "is this thing in the user's set?" checks.
+fn present_check(url: &str, token: &str) -> Result<bool, String> {
+    match ureq::get(url)
+        .set("Accept", "application/vnd.github+json")
+        .set("User-Agent", UA)
+        .set("Authorization", &format!("Bearer {token}"))
+        .call()
+    {
+        Ok(_) => Ok(true),
+        Err(ureq::Error::Status(404, _)) => Ok(false),
+        Err(e) => Err(gh_err(e)),
+    }
+}
+
+/// GET /user/starred/{owner}/{repo} — 204 starred, 404 not.
+pub fn star_state(owner: &str, repo: &str, token: &str) -> Result<bool, String> {
+    present_check(&format!("https://api.github.com/user/starred/{owner}/{repo}"), token)
+}
+
+/// GET /repos/{owner}/{repo}/subscription — 200 watching, 404 not.
+pub fn watch_state(owner: &str, repo: &str, token: &str) -> Result<bool, String> {
+    present_check(
+        &format!("https://api.github.com/repos/{owner}/{repo}/subscription"),
+        token,
+    )
+}
+
+/// PUT/DELETE /user/starred/{owner}/{repo}. Needs `public_repo` (OAuth) or a PAT with
+/// the Starring permission. Returns the new starred state (= `on`).
+pub fn set_star(owner: &str, repo: &str, token: &str, on: bool) -> Result<bool, String> {
+    let url = format!("https://api.github.com/user/starred/{owner}/{repo}");
+    let req = if on { ureq::put(&url) } else { ureq::delete(&url) }
+        .set("Accept", "application/vnd.github+json")
+        .set("User-Agent", UA)
+        .set("Content-Length", "0")
+        .set("Authorization", &format!("Bearer {token}"));
+    req.call().map_err(gh_err)?;
+    Ok(on)
+}
+
+/// PUT (subscribe) / DELETE (unsubscribe) /repos/{owner}/{repo}/subscription.
+pub fn set_watch(owner: &str, repo: &str, token: &str, on: bool) -> Result<bool, String> {
+    let url = format!("https://api.github.com/repos/{owner}/{repo}/subscription");
+    if on {
+        ureq::put(&url)
+            .set("Accept", "application/vnd.github+json")
+            .set("User-Agent", UA)
+            .set("Authorization", &format!("Bearer {token}"))
+            .send_json(ureq::json!({ "subscribed": true, "ignored": false }))
+            .map_err(gh_err)?;
+    } else {
+        ureq::delete(&url)
+            .set("Accept", "application/vnd.github+json")
+            .set("User-Agent", UA)
+            .set("Content-Length", "0")
+            .set("Authorization", &format!("Bearer {token}"))
+            .call()
+            .map_err(gh_err)?;
+    }
+    Ok(on)
 }
 
 /// Best-effort scan of arbitrary text (a modDesc.xml) for the first

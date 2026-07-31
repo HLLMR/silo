@@ -4,16 +4,24 @@
     ghSetClientId,
     ghDeviceStart,
     ghDevicePoll,
+    ghSetPat,
     ghLogout,
     openExternal,
   } from "../api";
   import type { GhStatus } from "../types";
 
-  let status = $state<GhStatus>({ clientId: null, user: null, builtin: false });
+  let status = $state<GhStatus>({
+    clientId: null,
+    user: null,
+    builtin: false,
+    canWrite: false,
+  });
   let clientIdInput = $state("");
   let flow = $state<{ userCode: string; verificationUri: string } | null>(null);
   let message = $state<string | null>(null);
   let showAdvanced = $state(false);
+  let showPat = $state(false);
+  let patInput = $state("");
   let poller: ReturnType<typeof setTimeout> | undefined;
 
   async function refresh() {
@@ -36,16 +44,16 @@
     }
   }
 
-  async function connect() {
+  async function connect(write = false) {
     message = null;
     try {
-      const dc = await ghDeviceStart();
+      const dc = await ghDeviceStart(write);
       flow = { userCode: dc.userCode, verificationUri: dc.verificationUri };
       openExternal(dc.verificationUri).catch(() => {});
       let interval = Math.max(dc.interval, 3);
       const tick = async () => {
         try {
-          const r = await ghDevicePoll(dc.deviceCode);
+          const r = await ghDevicePoll(dc.deviceCode, write);
           if (r.status === "ok") {
             flow = null;
             await refresh();
@@ -74,6 +82,18 @@
     }
   }
 
+  async function savePat() {
+    message = null;
+    try {
+      await ghSetPat(patInput.trim());
+      patInput = "";
+      showPat = false;
+      await refresh();
+    } catch (e) {
+      message = String(e);
+    }
+  }
+
   async function disconnect() {
     try {
       await ghLogout();
@@ -91,10 +111,25 @@
     <div class="gha-row">
       <div>
         <div class="gha-connected">✓ Connected as {status.user}</div>
-        <div class="gha-hint">Authenticated requests: 5,000/hr.</div>
+        <div class="gha-hint">
+          {#if status.canWrite}
+            Star &amp; Watch actions enabled · 5,000 req/hr.
+          {:else}
+            Read-only (update checks · 5,000 req/hr).
+          {/if}
+        </div>
       </div>
       <button class="gha-btn" onclick={disconnect}>Disconnect</button>
     </div>
+    {#if !status.canWrite && !flow}
+      <div class="gha-row">
+        <div class="gha-hint">
+          Enable ⭐ Star / 👁 Watch on mod pages — grants the <code>public_repo</code>
+          scope so actions land on your GitHub account.
+        </div>
+        <button class="gha-btn primary" onclick={() => connect(true)}>Enable actions</button>
+      </div>
+    {/if}
   {:else if flow}
     <div class="gha-flow">
       <div class="gha-hint">1. A browser opened to <b>github.com/login/device</b>. Enter this code:</div>
@@ -104,7 +139,7 @@
   {:else if status.clientId}
     <div class="gha-row">
       <div class="gha-hint">Connect your GitHub account for faster update checks (5,000/hr) and private repos.</div>
-      <button class="gha-btn primary" onclick={connect}>Connect GitHub</button>
+      <button class="gha-btn primary" onclick={() => connect()}>Connect GitHub</button>
     </div>
     {#if !status.builtin}
       <button class="gha-link" onclick={() => (showAdvanced = !showAdvanced)}>
@@ -131,6 +166,33 @@
         <button class="gha-btn" onclick={saveClientId}>Save</button>
       </div>
     </div>
+  {/if}
+
+  {#if !status.user && !flow}
+    <button class="gha-link" onclick={() => (showPat = !showPat)}>
+      {showPat ? "Hide token option" : "Use a Personal Access Token instead…"}
+    </button>
+    {#if showPat}
+      <div class="gha-hint">
+        A fine-grained PAT scoped to only <b>Starring</b> (read/write) is the most
+        minimal-permission path — narrower than the OAuth scope.
+        <button
+          class="gha-link"
+          onclick={() => openExternal("https://github.com/settings/personal-access-tokens/new")}
+        >
+          Create one ↗
+        </button>
+      </div>
+      <div class="gha-row">
+        <input
+          class="gha-input"
+          type="password"
+          placeholder="github_pat_… or ghp_…"
+          bind:value={patInput}
+        />
+        <button class="gha-btn" onclick={savePat} disabled={!patInput.trim()}>Save token</button>
+      </div>
+    {/if}
   {/if}
   {#if message}<div class="gha-msg">{message}</div>{/if}
 </div>

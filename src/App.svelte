@@ -1571,7 +1571,11 @@
     <!-- Own scroll region: the library scrolls via its inner VirtualList, but Browse
          is plain flow content, so it needs a flex-fill scroll container of its own. -->
     <div class="browse-scroll">
-      <ModBrowser installed={libraryTechNames} onInstalled={() => runScan(true)} />
+      <ModBrowser
+        installed={libraryTechNames}
+        onInstalled={() => runScan(true)}
+        onNeedGithubAuth={() => (settingsOpen = true)}
+      />
     </div>
   {:else}
   <div class="statbar">

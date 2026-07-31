@@ -11,6 +11,7 @@
     installRemoteMod,
     onInstallProgress,
     openExternal,
+    ghStatus,
   } from "../api";
   import type {
     BrowseMod,
@@ -20,14 +21,39 @@
     ModSourceOption,
   } from "../types";
   import type { UnlistenFn } from "@tauri-apps/api/event";
+  import GithubCard from "./GithubCard.svelte";
 
   interface Props {
     /** Tech names already in the local library, to flag "in library". */
     installed: Set<string>;
     /** Called after a successful install so the parent can rescan. */
     onInstalled: (filename: string) => void;
+    /** Route the user to the GitHub connect UI (Settings) from a source card. */
+    onNeedGithubAuth?: () => void;
   }
-  let { installed, onInstalled }: Props = $props();
+  let { installed, onInstalled, onNeedGithubAuth }: Props = $props();
+
+  // GitHub connection state, for the interactive source cards in the drawer.
+  let gh = $state<{ connected: boolean; canWrite: boolean }>({
+    connected: false,
+    canWrite: false,
+  });
+  async function refreshGh() {
+    try {
+      const s = await ghStatus();
+      gh = { connected: !!s.user, canWrite: s.canWrite };
+    } catch {
+      gh = { connected: false, canWrite: false };
+    }
+  }
+  refreshGh();
+
+  /** Pull owner/repo out of a github.com source URL, for the interactive card. */
+  function parseRepo(url: string): { owner: string; repo: string } | null {
+    const m = url.match(/github\.com\/([^/]+)\/([^/?#]+)/i);
+    if (!m) return null;
+    return { owner: m[1], repo: m[2].replace(/\.git$/i, "") };
+  }
 
   let query = $state("");
   let category = $state("");
@@ -58,6 +84,8 @@
   async function openDetail(m: BrowseMod) {
     detail = null;
     detailLoading = true;
+    // Re-read GitHub state so a connection made in Settings reflects in the cards.
+    refreshGh();
     try {
       detail = await siloapiModDetail(m.id);
     } catch (e) {
@@ -460,6 +488,24 @@
                 </li>
               {/each}
             </ul>
+          {/if}
+
+          {#if d.sources.some((s) => s.source === "github" && parseRepo(s.sourceUrl))}
+            <div class="drawer-sec">Interact</div>
+            <div class="src-cards">
+              {#each d.sources.filter((s) => s.source === "github") as s (s.sourceUrl)}
+                {@const r = parseRepo(s.sourceUrl)}
+                {#if r}
+                  <GithubCard
+                    owner={r.owner}
+                    repo={r.repo}
+                    connected={gh.connected}
+                    canWrite={gh.canWrite}
+                    onConnect={() => onNeedGithubAuth?.()}
+                  />
+                {/if}
+              {/each}
+            </div>
           {/if}
 
           {#if !hasLocally(d) && d.sources.length > 0 && !d.sources.some((s) => s.installable)}
@@ -911,6 +957,12 @@
     letter-spacing: 0.05em;
     color: var(--text-muted);
     margin-bottom: 6px;
+  }
+  .src-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
   }
   .drawer-none {
     color: var(--text-muted);

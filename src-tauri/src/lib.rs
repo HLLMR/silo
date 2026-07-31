@@ -192,6 +192,9 @@ struct GhStatus {
     user: Option<String>,
     /// True when a client id is baked into the app (no user setup needed).
     builtin: bool,
+    /// True when the stored token can act (star/watch): a `public_repo` OAuth grant
+    /// or a PAT. Read-only (`read:user`) connections report false.
+    can_write: bool,
 }
 
 #[tauri::command]
@@ -201,6 +204,7 @@ fn gh_status(app: tauri::AppHandle) -> Result<GhStatus, String> {
         client_id: effective_client_id(&conn),
         user: db::get_app_setting(&conn, "gh_user"),
         builtin: !SILO_GH_CLIENT_ID.is_empty(),
+        can_write: db::get_app_setting(&conn, "gh_write").as_deref() == Some("1"),
     })
 }
 
@@ -212,13 +216,23 @@ fn gh_set_client_id(app: tauri::AppHandle, client_id: String) -> Result<(), Stri
 }
 
 #[tauri::command]
-async fn gh_device_start(app: tauri::AppHandle) -> Result<github::DeviceCode, String> {
+async fn gh_device_start(
+    app: tauri::AppHandle,
+    write: Option<bool>,
+) -> Result<github::DeviceCode, String> {
     let db = db_path(&app)?;
+    // Only ask for `public_repo` when the user is enabling actions — a plain sign-in
+    // for update-checks stays read-only.
+    let scope = if write.unwrap_or(false) {
+        "read:user public_repo"
+    } else {
+        "read:user"
+    };
     tauri::async_runtime::spawn_blocking(move || -> Result<github::DeviceCode, String> {
         let conn = db::open(&db)?;
         let cid = effective_client_id(&conn)
             .ok_or_else(|| "No GitHub OAuth App Client ID configured".to_string())?;
-        github::device_start(&cid)
+        github::device_start(&cid, scope)
     })
     .await
     .map_err(|e| e.to_string())?
@@ -228,8 +242,10 @@ async fn gh_device_start(app: tauri::AppHandle) -> Result<github::DeviceCode, St
 async fn gh_device_poll(
     app: tauri::AppHandle,
     device_code: String,
+    write: Option<bool>,
 ) -> Result<github::PollResult, String> {
     let db = db_path(&app)?;
+    let write = write.unwrap_or(false);
     tauri::async_runtime::spawn_blocking(move || -> Result<github::PollResult, String> {
         let conn = db::open(&db)?;
         let cid = effective_client_id(&conn)
@@ -240,10 +256,89 @@ async fn gh_device_poll(
                 let user = github::whoami(tok).unwrap_or_default();
                 db::set_app_setting(&conn, "gh_token", Some(tok))?;
                 db::set_app_setting(&conn, "gh_user", Some(&user))?;
+                db::set_app_setting(&conn, "gh_write", if write { Some("1") } else { None })?;
             }
         }
         // Never expose the raw token to the frontend.
         Ok(github::PollResult { token: None, ..res })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// PAT fallback for users who'd rather mint a token than OAuth. A fine-grained PAT
+/// scoped to only "Starring" (+ optionally "Watching") is the most minimal-permission
+/// path — narrower than the OAuth `public_repo` scope. We verify it, then treat it as
+/// action-capable.
+#[tauri::command]
+async fn gh_set_pat(app: tauri::AppHandle, pat: String) -> Result<String, String> {
+    let db = db_path(&app)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
+        let pat = pat.trim().to_string();
+        if pat.is_empty() {
+            return Err("Empty token".into());
+        }
+        let user = github::whoami(&pat)?;
+        if user.is_empty() {
+            return Err("GitHub did not recognize that token".into());
+        }
+        let conn = db::open(&db)?;
+        db::set_app_setting(&conn, "gh_token", Some(&pat))?;
+        db::set_app_setting(&conn, "gh_user", Some(&user))?;
+        db::set_app_setting(&conn, "gh_write", Some("1"))?;
+        Ok(user)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn gh_repo_stats(
+    app: tauri::AppHandle,
+    owner: String,
+    repo: String,
+) -> Result<github::RepoStats, String> {
+    let db = db_path(&app)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<github::RepoStats, String> {
+        let conn = db::open(&db)?;
+        let token = db::get_app_setting(&conn, "gh_token");
+        github::repo_stats(&owner, &repo, token.as_deref())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn gh_star(
+    app: tauri::AppHandle,
+    owner: String,
+    repo: String,
+    on: bool,
+) -> Result<bool, String> {
+    let db = db_path(&app)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<bool, String> {
+        let conn = db::open(&db)?;
+        let token = db::get_app_setting(&conn, "gh_token")
+            .ok_or_else(|| "Connect your GitHub account first".to_string())?;
+        github::set_star(&owner, &repo, &token, on)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn gh_watch(
+    app: tauri::AppHandle,
+    owner: String,
+    repo: String,
+    on: bool,
+) -> Result<bool, String> {
+    let db = db_path(&app)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<bool, String> {
+        let conn = db::open(&db)?;
+        let token = db::get_app_setting(&conn, "gh_token")
+            .ok_or_else(|| "Connect your GitHub account first".to_string())?;
+        github::set_watch(&owner, &repo, &token, on)
     })
     .await
     .map_err(|e| e.to_string())?
@@ -441,6 +536,7 @@ fn gh_logout(app: tauri::AppHandle) -> Result<(), String> {
     let conn = db::open(&db_path(&app)?)?;
     db::set_app_setting(&conn, "gh_token", None)?;
     db::set_app_setting(&conn, "gh_user", None)?;
+    db::set_app_setting(&conn, "gh_write", None)?;
     Ok(())
 }
 
@@ -852,6 +948,10 @@ pub fn run() {
             gh_set_client_id,
             gh_device_start,
             gh_device_poll,
+            gh_set_pat,
+            gh_repo_stats,
+            gh_star,
+            gh_watch,
             gh_logout,
             download_update,
             siloapi_status,

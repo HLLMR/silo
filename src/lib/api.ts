@@ -23,6 +23,7 @@ import type {
   RepoRow,
   UpdateInfo,
   GhStatus,
+  RepoStats,
   DeviceCode,
   PollResult,
   BrowseMod,
@@ -200,14 +201,31 @@ export function ghStatus(): Promise<GhStatus> {
 export function ghSetClientId(clientId: string): Promise<void> {
   return invoke("gh_set_client_id", { clientId });
 }
-export function ghDeviceStart(): Promise<DeviceCode> {
-  return invoke<DeviceCode>("gh_device_start");
+export function ghDeviceStart(write = false): Promise<DeviceCode> {
+  return invoke<DeviceCode>("gh_device_start", { write });
 }
-export function ghDevicePoll(deviceCode: string): Promise<PollResult> {
-  return invoke<PollResult>("gh_device_poll", { deviceCode });
+export function ghDevicePoll(deviceCode: string, write = false): Promise<PollResult> {
+  return invoke<PollResult>("gh_device_poll", { deviceCode, write });
 }
 export function ghLogout(): Promise<void> {
   return invoke("gh_logout");
+}
+/** PAT fallback: store + verify a personal access token. Returns the login name. */
+export function ghSetPat(pat: string): Promise<string> {
+  return invoke<string>("gh_set_pat", { pat });
+}
+
+// ── GitHub source card (live reads + user-owned actions) ──
+export function ghRepoStats(owner: string, repo: string): Promise<RepoStats> {
+  return invoke<RepoStats>("gh_repo_stats", { owner, repo });
+}
+/** Star (on=true) / unstar the repo through the user's own GitHub account. */
+export function ghStar(owner: string, repo: string, on: boolean): Promise<boolean> {
+  return invoke<boolean>("gh_star", { owner, repo, on });
+}
+/** Watch (on=true) / unwatch the repo through the user's own GitHub account. */
+export function ghWatch(owner: string, repo: string, on: boolean): Promise<boolean> {
+  return invoke<boolean>("gh_watch", { owner, repo, on });
 }
 
 /** Download a release .zip and install it in place (backs up the old file). */
