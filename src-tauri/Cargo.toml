@@ -35,6 +35,15 @@ image_dds = "0.7"
 base64 = "0.22"
 rusqlite = { version = "0.32", features = ["bundled"] }
 ureq = { version = "2", features = ["json"] }
+# OS credential store for tokens (Windows Credential Manager / macOS Keychain / Linux
+# Secret Service via pure-Rust zbus — no extra system libs). Falls back to SQLite only
+# where no keychain exists; see src/secrets.rs.
+keyring = { version = "3", features = [
+    "apple-native",
+    "windows-native",
+    "sync-secret-service",
+    "crypto-rust",
+] }
 
 [profile.dev]
 # Faster incremental dev builds; the heavy work is I/O-bound anyway.

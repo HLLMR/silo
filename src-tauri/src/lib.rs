@@ -18,6 +18,7 @@ pub mod nexus;
 pub mod organize;
 pub mod savegame;
 pub mod scan;
+pub mod secrets;
 pub mod settings_form;
 pub mod siloapi;
 pub mod store;
@@ -183,7 +184,7 @@ async fn check_mod_update(
     let db = db_path(&app)?;
     tauri::async_runtime::spawn_blocking(move || -> Result<github::UpdateInfo, String> {
         let conn = db::open(&db)?;
-        let token = db::get_app_setting(&conn, "gh_token");
+        let token = secrets::get(&conn, "gh_token");
         github::check(&owner, &repo, &current, token.as_deref())
     })
     .await
@@ -263,7 +264,7 @@ async fn gh_device_poll(
         if res.status == "ok" {
             if let Some(tok) = &res.token {
                 let user = github::whoami(tok).unwrap_or_default();
-                db::set_app_setting(&conn, "gh_token", Some(tok))?;
+                secrets::set(&conn, "gh_token", Some(tok))?;
                 db::set_app_setting(&conn, "gh_user", Some(&user))?;
                 db::set_app_setting(&conn, "gh_write", if write { Some("1") } else { None })?;
             }
@@ -292,7 +293,7 @@ async fn gh_set_pat(app: tauri::AppHandle, pat: String) -> Result<String, String
             return Err("GitHub did not recognize that token".into());
         }
         let conn = db::open(&db)?;
-        db::set_app_setting(&conn, "gh_token", Some(&pat))?;
+        secrets::set(&conn, "gh_token", Some(&pat))?;
         db::set_app_setting(&conn, "gh_user", Some(&user))?;
         db::set_app_setting(&conn, "gh_write", Some("1"))?;
         Ok(user)
@@ -310,7 +311,7 @@ async fn gh_repo_stats(
     let db = db_path(&app)?;
     tauri::async_runtime::spawn_blocking(move || -> Result<github::RepoStats, String> {
         let conn = db::open(&db)?;
-        let token = db::get_app_setting(&conn, "gh_token");
+        let token = secrets::get(&conn, "gh_token");
         github::repo_stats(&owner, &repo, token.as_deref())
     })
     .await
@@ -327,7 +328,7 @@ async fn gh_star(
     let db = db_path(&app)?;
     tauri::async_runtime::spawn_blocking(move || -> Result<bool, String> {
         let conn = db::open(&db)?;
-        let token = db::get_app_setting(&conn, "gh_token")
+        let token = secrets::get(&conn, "gh_token")
             .ok_or_else(|| "Connect your GitHub account first".to_string())?;
         github::set_star(&owner, &repo, &token, on)
     })
@@ -345,7 +346,7 @@ async fn gh_watch(
     let db = db_path(&app)?;
     tauri::async_runtime::spawn_blocking(move || -> Result<bool, String> {
         let conn = db::open(&db)?;
-        let token = db::get_app_setting(&conn, "gh_token")
+        let token = secrets::get(&conn, "gh_token")
             .ok_or_else(|| "Connect your GitHub account first".to_string())?;
         github::set_watch(&owner, &repo, &token, on)
     })
@@ -380,7 +381,7 @@ async fn nexus_set_key(app: tauri::AppHandle, key: String) -> Result<String, Str
         }
         let user = nexus::validate_key(&key)?;
         let conn = db::open(&db)?;
-        db::set_app_setting(&conn, "nexus_key", Some(&key))?;
+        secrets::set(&conn, "nexus_key", Some(&key))?;
         db::set_app_setting(&conn, "nexus_user", Some(&user))?;
         Ok(user)
     })
@@ -391,7 +392,7 @@ async fn nexus_set_key(app: tauri::AppHandle, key: String) -> Result<String, Str
 #[tauri::command]
 fn nexus_logout(app: tauri::AppHandle) -> Result<(), String> {
     let conn = db::open(&db_path(&app)?)?;
-    db::set_app_setting(&conn, "nexus_key", None)?;
+    secrets::set(&conn, "nexus_key", None)?;
     db::set_app_setting(&conn, "nexus_user", None)?;
     Ok(())
 }
@@ -401,7 +402,7 @@ async fn nexus_mod(app: tauri::AppHandle, mod_id: u64) -> Result<nexus::NexusMod
     let db = db_path(&app)?;
     tauri::async_runtime::spawn_blocking(move || -> Result<nexus::NexusMod, String> {
         let conn = db::open(&db)?;
-        let key = db::get_app_setting(&conn, "nexus_key");
+        let key = secrets::get(&conn, "nexus_key");
         nexus::mod_stats(mod_id, key.as_deref())
     })
     .await
@@ -418,7 +419,7 @@ async fn nexus_endorse(
     let db = db_path(&app)?;
     tauri::async_runtime::spawn_blocking(move || -> Result<bool, String> {
         let conn = db::open(&db)?;
-        let key = db::get_app_setting(&conn, "nexus_key")
+        let key = secrets::get(&conn, "nexus_key")
             .ok_or_else(|| "Add your Nexus API key first".to_string())?;
         nexus::set_endorse(mod_id, &key, on, version.as_deref())
     })
@@ -443,7 +444,7 @@ async fn download_update(
     let db = db_path(&app)?;
     tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
         let conn = db::open(&db)?;
-        let token = db::get_app_setting(&conn, "gh_token");
+        let token = secrets::get(&conn, "gh_token");
         github::download_zip(&asset_url, token.as_deref(), std::path::Path::new(&path))
     })
     .await
@@ -632,7 +633,7 @@ async fn catalog_check_updates(
 #[tauri::command]
 fn gh_logout(app: tauri::AppHandle) -> Result<(), String> {
     let conn = db::open(&db_path(&app)?)?;
-    db::set_app_setting(&conn, "gh_token", None)?;
+    secrets::set(&conn, "gh_token", None)?;
     db::set_app_setting(&conn, "gh_user", None)?;
     db::set_app_setting(&conn, "gh_write", None)?;
     Ok(())
