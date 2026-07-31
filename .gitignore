@@ -57,3 +57,6 @@ temp/
 *.swo
 .DS_Store
 Thumbs.db
+
+# Internal go-to-market playbook — local only, not for the public repo
+docs/MARKETING_PLAYBOOK.md
