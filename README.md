@@ -90,6 +90,14 @@ Issues and PRs welcome. `npm run check` (svelte-check) and `cargo test` (in `src
 must pass — CI runs both. Please keep heavy work off the UI thread and file writes
 reversible (see [`CLAUDE.md`](CLAUDE.md) for conventions).
 
+## Built with AI assistance
+
+Silo was built with heavy use of AI-assisted engineering (Claude Code). The
+architecture, the security and reliability decisions, the testing, and every release are
+human-owned and human-reviewed — including acting on an independent source review before
+promoting the beta. The desktop source is fully open here so you don't have to take that
+on faith: read it, audit it, build it yourself.
+
 ## License
 
 [MIT](LICENSE) © HLLMR. Use it, fork it, ship it.
