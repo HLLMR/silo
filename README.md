@@ -15,10 +15,10 @@
   <a href="https://silo.hllmr.com"><img alt="Website" src="https://img.shields.io/badge/web-silo.hllmr.com-4a90c2"></a>
 </p>
 
-A fast, native desktop app that organizes your FS25 mod library, names the mod that
-crashed you, catches conflicts before they bite, and pulls ModHub, GitHub and Nexus into
-one honest catalog — without ever touching your saves destructively. **Free and open
-source. Windows · macOS · Linux.**
+A fast, native desktop app for your FS25 mod library. Silo reads the game log to name
+the mod that crashed you, flags conflicts before you launch, and shows the real latest
+version across ModHub, GitHub and Nexus. Your files and saves stay untouched. **Free and
+open source. Windows · macOS · Linux.**
 
 <p align="center">
   <b><a href="https://github.com/HLLMR/silo/releases/latest">⬇ Download the beta</a></b>
@@ -49,10 +49,10 @@ is the management layer the game left out.
   relaunch" to isolate it, and safely restores your active set afterward.
 - **Loadouts & projection** — curate profiles and project only the active set into the
   game's flat folder at launch, via symlink/junction — never by moving your files.
-- **Per-source actions** — star a repo on GitHub, endorse on Nexus, open the ModHub page
-  to rate — through *your own* accounts. Silo brokers the action; it holds none of it.
-- **Multiplayer sync**, **filltype-compatibility bridge generator**, **savegame backup**,
-  and a **control-binding map**.
+- **Per-source actions** — star a repo on GitHub, endorse on Nexus, rate on ModHub, all
+  through *your own* accounts. Silo just opens the door; your credentials stay yours.
+- **Multiplayer sync**, a **filltype-compatibility bridge generator**, **savegame backup**,
+  and a full **control-binding map**.
 
 ## Install
 
