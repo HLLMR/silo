@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Silo — the Farming Simulator 25 mod manager</title>
+<meta name="description" content="Silo organizes your Farming Simulator 25 mods, names the mod that crashed you, catches conflicts, and pulls ModHub, GitHub and Nexus into one honest catalog. Free and open source." />
+<meta property="og:title" content="Silo — the FS25 mod manager that should have shipped with the game" />
+<meta property="og:description" content="Organize 700+ mods, name the mod that crashed you, catch conflicts, one honest cross-source catalog. Free, open source, no telemetry." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://silo.hllmr.com" />
+<style>
+  /* ── Silo's own "Golden Hour" tokens, mirrored from the app so site == product ── */
+  :root {
+    --green-300: #9cc06e;
+    --green-500: #5c8a3a;
+    --green-600: #4a7330;
+    --green-700: #395a25;
+    --green-900: #21361a;
+    --gold-300: #f2d26b;
+    --gold-500: #e3b23c;
+    --gold-700: #a5751f;
+    --soil-500: #8a6a45;
+    --soil-700: #5e472e;
+    --barn-500: #b34a38;
+    --sky-500: #4a90c2;
+
+    --bg: #f6f3ec;
+    --surface: #fcfaf4;
+    --raised: #ffffff;
+    --border: #e4dece;
+    --text: #2a2a22;
+    --muted: #6b6a5c;
+    --primary: var(--green-600);
+    --primary-hover: var(--green-700);
+    --accent: var(--gold-500);
+    --on-primary: #ffffff;
+
+    --font-display: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --font-ui: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow-1: 0 1px 2px rgba(40, 30, 10, 0.06), 0 8px 24px rgba(40, 30, 10, 0.06);
+    --shadow-2: 0 12px 40px rgba(20, 15, 5, 0.16);
+    --maxw: 1120px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #171a14;
+      --surface: #1f231c;
+      --raised: #282d24;
+      --border: #39402f;
+      --text: #edebe0;
+      --muted: #a8a897;
+      --primary: var(--green-500);
+      --primary-hover: var(--green-300);
+      --on-primary: #12180e;
+      --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.28);
+      --shadow-2: 0 14px 44px rgba(0, 0, 0, 0.45);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #171a14; --surface: #1f231c; --raised: #282d24; --border: #39402f;
+    --text: #edebe0; --muted: #a8a897; --primary: var(--green-500);
+    --primary-hover: var(--green-300); --on-primary: #12180e;
+    --shadow-1: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.28);
+    --shadow-2: 0 14px 44px rgba(0,0,0,0.45);
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f3ec; --surface: #fcfaf4; --raised: #ffffff; --border: #e4dece;
+    --text: #2a2a22; --muted: #6b6a5c; --primary: var(--green-600);
+    --primary-hover: var(--green-700); --on-primary: #ffffff;
+    --shadow-1: 0 1px 2px rgba(40,30,10,0.06), 0 8px 24px rgba(40,30,10,0.06);
+    --shadow-2: 0 12px 40px rgba(20,15,5,0.16);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; }
+  a { color: inherit; }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ── Header ── */
+  header.nav {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--bg) 86%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-in { display: flex; align-items: center; gap: 16px; height: 64px; }
+  .brand { display: flex; align-items: center; gap: 11px; font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; }
+  .logo {
+    width: 34px; height: 34px; border-radius: 9px; flex: 0 0 auto;
+    background: linear-gradient(150deg, var(--green-500), var(--green-700));
+    color: #fff; display: grid; place-items: center; font-weight: 700;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
+  }
+  .nav-links { margin-left: auto; display: flex; align-items: center; gap: 22px; }
+  .nav-links a { color: var(--muted); text-decoration: none; font-size: 0.95rem; font-weight: 500; }
+  .nav-links a:hover { color: var(--text); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; justify-content: center;
+    font-family: var(--font-ui); font-weight: 600; font-size: 0.95rem;
+    padding: 10px 18px; border-radius: var(--radius-sm); border: 1px solid transparent;
+    text-decoration: none; cursor: pointer; transition: transform 0.12s, background 0.15s, border-color 0.15s;
+  }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn-primary { background: var(--primary); color: var(--on-primary); }
+  .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+  .btn-ghost { background: transparent; color: var(--text); border-color: var(--border); }
+  .btn-ghost:hover { border-color: color-mix(in srgb, var(--primary) 50%, var(--border)); }
+  .nav-links .btn { padding: 8px 15px; }
+
+  /* ── Hero ── */
+  .hero { position: relative; overflow: hidden; padding: 84px 0 48px; }
+  .hero-glow {
+    position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(120% 80% at 78% -8%, color-mix(in srgb, var(--gold-500) 30%, transparent), transparent 55%),
+      radial-gradient(90% 70% at 12% 8%, color-mix(in srgb, var(--green-500) 16%, transparent), transparent 60%);
+  }
+  /* Ambient field furrows converging to a golden-hour horizon. */
+  .furrows { position: absolute; left: 0; right: 0; bottom: -2px; height: 240px; z-index: 0; opacity: 0.5; pointer-events: none; }
+  .hero-in { position: relative; z-index: 1; display: grid; grid-template-columns: 1.02fr 1fr; gap: 54px; align-items: center; }
+  .hero-copy { max-width: 33ch; }
+  .hero h1 { font-size: clamp(2.5rem, 4.6vw, 3.9rem); line-height: 1.02; letter-spacing: -0.015em; }
+  .hero h1 em { font-style: italic; color: var(--primary); }
+  .lede { color: var(--muted); font-size: 1.12rem; margin: 22px 0 26px; max-width: 46ch; }
+  .cta-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .trust-line {
+    margin-top: 22px; display: flex; flex-wrap: wrap; gap: 8px 18px;
+    font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted);
+  }
+  .trust-line span { display: inline-flex; align-items: center; gap: 6px; }
+  .trust-line .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green-500); }
+
+  .reveal { opacity: 0; transform: translateY(14px); animation: rise 0.7s cubic-bezier(0.2,0.7,0.2,1) forwards; }
+  .reveal.d1 { animation-delay: 0.06s; }
+  .reveal.d2 { animation-delay: 0.14s; }
+  .reveal.d3 { animation-delay: 0.22s; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .reveal { animation: none; opacity: 1; transform: none; } }
+
+  /* ── App mock ── */
+  .mock {
+    position: relative; z-index: 1;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; box-shadow: var(--shadow-2); overflow: hidden;
+    font-size: 12px;
+  }
+  .mock-bar { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--border); background: var(--raised); }
+  .mock-dots { display: flex; gap: 5px; }
+  .mock-dots i { width: 9px; height: 9px; border-radius: 50%; display: block; background: var(--border); }
+  .mock-dots i:first-child { background: var(--barn-500); }
+  .mock-title { font-family: var(--font-display); font-weight: 600; font-size: 12.5px; margin-left: 4px; }
+  .mock-tabs { margin-left: auto; display: flex; gap: 4px; }
+  .mock-tab { padding: 3px 10px; border-radius: 6px; color: var(--muted); }
+  .mock-tab.on { background: color-mix(in srgb, var(--primary) 16%, transparent); color: var(--primary); font-weight: 600; }
+  .mock-body { display: grid; grid-template-columns: 1fr 176px; min-height: 316px; }
+  .mock-list { border-right: 1px solid var(--border); padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+  .row { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 7px; }
+  .row.sel { background: color-mix(in srgb, var(--primary) 12%, transparent); }
+  .row .ic { width: 26px; height: 26px; border-radius: 6px; flex: 0 0 auto; background: linear-gradient(135deg, var(--soil-500), var(--soil-700)); }
+  .row .ic.g { background: linear-gradient(135deg, var(--green-500), var(--green-700)); }
+  .row .ic.k { background: linear-gradient(135deg, var(--gold-500), var(--gold-700)); }
+  .row .nm { font-weight: 600; }
+  .row .sub { color: var(--muted); font-size: 10.5px; }
+  .row .flag { margin-left: auto; font-size: 10px; padding: 1px 7px; border-radius: 20px; font-weight: 600; }
+  .flag.warn { background: color-mix(in srgb, var(--barn-500) 16%, transparent); color: var(--barn-500); }
+  .flag.ok { background: color-mix(in srgb, var(--green-500) 16%, transparent); color: var(--green-600); }
+  .mock-draw { padding: 11px; display: flex; flex-direction: column; gap: 9px; background: var(--surface); }
+  .draw-h { font-family: var(--font-display); font-weight: 600; font-size: 13px; }
+  .src { border: 1px solid var(--border); border-radius: 8px; padding: 8px; background: var(--raised); }
+  .src-t { font-weight: 700; font-size: 11px; display: flex; justify-content: space-between; }
+  .src-n { color: var(--muted); font-size: 10.5px; margin: 3px 0 6px; font-variant-numeric: tabular-nums; }
+  .src-b { display: inline-block; font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border); color: var(--primary); }
+  .src-b.gold { color: var(--gold-700); }
+
+  /* ── Sections ── */
+  section { padding: 68px 0; }
+  .sec-head { max-width: 40ch; margin-bottom: 38px; }
+  .sec-head h2 { font-size: clamp(1.7rem, 3vw, 2.4rem); line-height: 1.1; }
+  .sec-head p { color: var(--muted); margin: 12px 0 0; }
+  .rule { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+  /* Problem strip */
+  .problem { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .prob-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px 48px; }
+  .prob { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start; }
+  .prob .mk { font-family: var(--font-mono); color: var(--barn-500); font-size: 0.8rem; padding-top: 3px; }
+  .prob b { font-family: var(--font-display); font-weight: 600; }
+  .prob p { margin: 4px 0 0; color: var(--muted); font-size: 0.98rem; }
+
+  /* Features */
+  .feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 22px; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  }
+  .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-1); border-color: color-mix(in srgb, var(--primary) 30%, var(--border)); }
+  .card .glyph {
+    width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center;
+    font-size: 20px; margin-bottom: 14px;
+    background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary);
+  }
+  .card h3 { font-size: 1.16rem; }
+  .card p { color: var(--muted); font-size: 0.96rem; margin: 8px 0 0; }
+  .card.wide { grid-column: span 3; display: grid; grid-template-columns: auto 1fr auto; gap: 22px; align-items: center; padding: 20px 24px; }
+  .card.wide .glyph { margin: 0; }
+  .card.wide p { margin: 6px 0 0; }
+
+  /* Ethos band */
+  .ethos { background: linear-gradient(135deg, var(--green-700), var(--green-900)); color: #f3f1e6; border-radius: 18px; padding: 44px; }
+  .ethos .eyebrow { color: color-mix(in srgb, var(--gold-300) 90%, #fff); }
+  .ethos h2 { color: #fff; font-size: clamp(1.6rem, 2.8vw, 2.2rem); max-width: 20ch; }
+  .ethos-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 26px; margin-top: 30px; }
+  .ethos-grid h3 { color: #fff; font-size: 1.05rem; }
+  .ethos-grid p { color: rgba(243,241,230,0.72); font-size: 0.92rem; margin: 6px 0 0; }
+  .ethos-grid .m { font-family: var(--font-mono); color: var(--gold-300); font-size: 0.75rem; }
+
+  /* Steps */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; counter-reset: step; }
+  .step { padding-top: 24px; border-top: 2px solid var(--primary); }
+  .step .n { counter-increment: step; font-family: var(--font-mono); color: var(--primary); font-size: 0.85rem; font-weight: 600; }
+  .step .n::before { content: "0" counter(step) " / "; color: var(--muted); }
+  .step h3 { font-size: 1.2rem; margin: 8px 0 6px; }
+  .step p { color: var(--muted); font-size: 0.96rem; margin: 0; }
+
+  /* Download */
+  .dl { text-align: center; }
+  .dl .sec-head { margin: 0 auto 34px; }
+  .dl-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+  .dl-btn {
+    display: flex; align-items: center; gap: 11px; text-decoration: none;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 15px 22px; min-width: 190px; transition: transform 0.12s, border-color 0.15s;
+  }
+  .dl-btn:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
+  .dl-btn .os { font-size: 22px; }
+  .dl-btn .l { text-align: left; line-height: 1.25; }
+  .dl-btn .l b { font-family: var(--font-display); font-weight: 600; }
+  .dl-btn .l span { display: block; color: var(--muted); font-size: 0.8rem; }
+  .dl-note { color: var(--muted); font-size: 0.86rem; margin-top: 20px; }
+  .dl-note a { color: var(--primary); }
+
+  /* Footer */
+  footer { border-top: 1px solid var(--border); padding: 40px 0; color: var(--muted); }
+  .foot-in { display: flex; flex-wrap: wrap; gap: 18px 40px; align-items: center; }
+  .foot-links { display: flex; flex-wrap: wrap; gap: 22px; margin-left: auto; }
+  .foot-links a { color: var(--muted); text-decoration: none; font-size: 0.92rem; }
+  .foot-links a:hover { color: var(--text); }
+
+  @media (max-width: 900px) {
+    .hero-in { grid-template-columns: 1fr; gap: 40px; }
+    .hero-copy { max-width: none; }
+    .mock { max-width: 520px; }
+    .feat-grid, .steps, .ethos-grid { grid-template-columns: 1fr 1fr; }
+    .card.wide { grid-column: span 2; }
+    .prob-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 620px) {
+    body { font-size: 16px; }
+    .nav-links a:not(.btn) { display: none; }
+    .feat-grid, .steps, .ethos-grid { grid-template-columns: 1fr; }
+    .card.wide { grid-column: span 1; grid-template-columns: 1fr; }
+    .mock-body { grid-template-columns: 1fr; }
+    .mock-draw { display: none; }
+  }
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="wrap nav-in">
+    <span class="brand"><span class="logo">S</span> Silo</span>
+    <nav class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#ethos">Why trust it</a>
+      <a href="https://github.com/HLLMR/silo">Source</a>
+      <a class="btn btn-primary" href="#download">Download</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-glow"></div>
+  <canvas class="furrows" aria-hidden="true"></canvas>
+  <div class="wrap hero-in">
+    <div class="hero-copy">
+      <p class="eyebrow reveal">Farming Simulator 25 · mod manager · free &amp; open source</p>
+      <h1 class="reveal d1">The mod manager FS25 <em>should have shipped with.</em></h1>
+      <p class="lede reveal d2">Silo organizes hundreds of mods, names the one that crashed you, catches conflicts before they bite, and pulls ModHub, GitHub and Nexus into a single honest catalog — without ever touching your saves.</p>
+      <div class="cta-row reveal d2">
+        <a class="btn btn-primary" href="#download">Download the beta</a>
+        <a class="btn btn-ghost" href="https://github.com/HLLMR/silo">View the source →</a>
+      </div>
+      <div class="trust-line reveal d3">
+        <span><span class="dot"></span> Open source</span>
+        <span><span class="dot"></span> No account</span>
+        <span><span class="dot"></span> No telemetry</span>
+        <span><span class="dot"></span> Reversible by design</span>
+      </div>
+    </div>
+
+    <div class="mock reveal d2" role="img" aria-label="A preview of the Silo app: a mod library with a detail panel showing GitHub, Nexus and ModHub sources.">
+      <div class="mock-bar">
+        <span class="mock-dots"><i></i><i></i><i></i></span>
+        <span class="mock-title">Silo</span>
+        <span class="mock-tabs"><span class="mock-tab on">Library</span><span class="mock-tab">Browse</span></span>
+      </div>
+      <div class="mock-body">
+        <div class="mock-list">
+          <div class="row"><span class="ic g"></span><span><div class="nm">FS25_UniversalAutoload</div><div class="sub">loki79uk · v1.1.1.0</div></span><span class="flag ok">active</span></div>
+          <div class="row sel"><span class="ic"></span><span><div class="nm">Additional Filltypes</div><div class="sub">w33zl · v1.1.2.0</div></span></div>
+          <div class="row"><span class="ic k"></span><span><div class="nm">Precision Farming</div><div class="sub">GIANTS · v1.5.1.0</div></span></div>
+          <div class="row"><span class="ic"></span><span><div class="nm">AdditionalContracts</div><div class="sub">HappyLooser · v1.0.0.6</div></span><span class="flag warn">conflict</span></div>
+          <div class="row"><span class="ic g"></span><span><div class="nm">Enhanced Vehicle</div><div class="sub">ZhooL · v1.1.7.1</div></span></div>
+          <div class="row"><span class="ic"></span><span><div class="nm">Wind Turbine Package</div><div class="sub">Razak · v1.2.0.0</div></span></div>
+        </div>
+        <div class="mock-draw">
+          <div class="draw-h">Additional Filltypes</div>
+          <div class="src">
+            <div class="src-t"><span>GitHub</span><span>★ 680</span></div>
+            <div class="src-n">⑂ 47 · 👁 53 · ◎ 40</div>
+            <span class="src-b">★ Star</span>
+          </div>
+          <div class="src">
+            <div class="src-t"><span>Nexus Mods</span><span>👍 65</span></div>
+            <div class="src-n">⬇ 5,238</div>
+            <span class="src-b">👍 Endorse</span>
+          </div>
+          <div class="src">
+            <div class="src-t"><span>ModHub</span><span>⭐ 4.6</span></div>
+            <div class="src-n">1,726 ratings</div>
+            <span class="src-b gold">Rate ↗</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="problem" id="problem">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">The problem</p>
+      <h2>FS25 hands you a flat folder and a shrug.</h2>
+      <p>Everything lands in one <code>mods/</code> directory. When something breaks, the game won't tell you what. Silo fixes the parts the game left out.</p>
+    </div>
+    <div class="prob-grid">
+      <div class="prob"><span class="mk">01</span><span><b>Mystery crashes.</b><p>The log scrolls a wall of red and names nothing. You disable mods at random and pray.</p></span></div>
+      <div class="prob"><span class="mk">02</span><span><b>Silent conflicts.</b><p>Two mods claim the same map, filltype or vehicle type — and one quietly wins, or the save corrupts.</p></span></div>
+      <div class="prob"><span class="mk">03</span><span><b>Version roulette.</b><p>ModHub says outdated, GitHub shipped days ago, and you can't tell which number is real.</p></span></div>
+      <div class="prob"><span class="mk">04</span><span><b>Scattered sources.</b><p>A mod lives on ModHub, its dev on GitHub, a mirror on Nexus. No one place tells the whole story.</p></span></div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">What Silo does</p>
+      <h2>A management layer, not another downloader.</h2>
+      <p>Every heavy job — parsing archives, decoding icons, hashing, walking trees — runs off the UI thread in Rust. It stays fast at 700+ mods.</p>
+    </div>
+    <div class="feat-grid">
+      <div class="card">
+        <div class="glyph">◆</div>
+        <h3>Crash &amp; log triage</h3>
+        <p>Reads <code>log.txt</code>, separates real errors from cosmetic noise, and names the mod at fault — instead of leaving you to guess.</p>
+      </div>
+      <div class="card">
+        <div class="glyph">⚠</div>
+        <h3>Conflict detection</h3>
+        <p>Catches duplicate active maps (an instant crash), and colliding filltypes, vehicle types and scripts across your set.</p>
+      </div>
+      <div class="card">
+        <div class="glyph">⌗</div>
+        <h3>Cross-source catalog</h3>
+        <p>One canonical record per mod, aggregating ModHub, GitHub and Nexus — with the real latest version across all of them.</p>
+      </div>
+      <div class="card">
+        <div class="glyph">⑃</div>
+        <h3>Guided bisection</h3>
+        <p>When the log can't name the culprit, Silo automates "disable half, relaunch" to isolate it — and safely restores your active set.</p>
+      </div>
+      <div class="card">
+        <div class="glyph">≋</div>
+        <h3>Loadouts &amp; projection</h3>
+        <p>Curate profiles and project only the active set into the game's flat folder at launch — via junction, never by moving your files.</p>
+      </div>
+      <div class="card">
+        <div class="glyph">⛓</div>
+        <h3>Filltype bridge</h3>
+        <p>Generates a companion mod that teaches your equipment a stubborn map filltype — the "sugar beet" fix, with no vehicle edits.</p>
+      </div>
+      <div class="card wide">
+        <div class="glyph">☰</div>
+        <div>
+          <h3>Act on every source, from one drawer</h3>
+          <p>Star the repo on GitHub, endorse on Nexus, open the ModHub page to rate — through <em>your own</em> accounts. Silo brokers the action; it never holds your data.</p>
+        </div>
+        <a class="btn btn-ghost" href="#download">Try it</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="ethos">
+  <div class="wrap">
+    <div class="ethos">
+      <p class="eyebrow">Why you can trust it</p>
+      <h2>Built to respect your machine and your files.</h2>
+      <div class="ethos-grid">
+        <div><p class="m">// open</p><h3>Fully open source</h3><p>Every line is on GitHub. Audit it, fork it, build it yourself.</p></div>
+        <div><p class="m">// quiet</p><h3>No telemetry, no account</h3><p>Silo phones home to nobody. There's nothing to sign up for.</p></div>
+        <div><p class="m">// safe</p><h3>Reversible by design</h3><p>It projects with links and backs up before it writes. Your saves are never touched destructively.</p></div>
+        <div><p class="m">// everywhere</p><h3>Windows · macOS · Linux</h3><p>One native app, per-OS game discovery, no runtime to install.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">How it works</p>
+      <h2>Point it at your mods. Play.</h2>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="n">Scan</div><h3>It reads your library</h3><p>Silo finds your mods folder, parses each archive off-thread, and categorizes everything — cached so the next scan is instant.</p></div>
+      <div class="step"><div class="n">Curate</div><h3>Organize &amp; check</h3><p>Sort, tag, rate and build loadouts. See conflicts and update status before you ever launch the game.</p></div>
+      <div class="step"><div class="n">Launch</div><h3>Project &amp; go</h3><p>Only your active set is linked into the game folder at launch. Quit, switch profiles, relaunch — nothing is ever moved.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="dl" id="download">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Download</p>
+      <h2>Get the beta.</h2>
+      <p>Free, forever. Grab the installer for your platform, or build it from source.</p>
+    </div>
+    <div class="dl-row">
+      <a class="dl-btn" href="https://github.com/HLLMR/silo/releases"><span class="os">⊞</span><span class="l"><b>Windows</b><span>.msi / .exe</span></span></a>
+      <a class="dl-btn" href="https://github.com/HLLMR/silo/releases"><span class="os"></span><span class="l"><b>macOS</b><span>.dmg · Intel &amp; Apple Silicon</span></span></a>
+      <a class="dl-btn" href="https://github.com/HLLMR/silo/releases"><span class="os">🐧</span><span class="l"><b>Linux</b><span>.AppImage / .deb</span></span></a>
+    </div>
+    <p class="dl-note">Silo is open source and unsigned, so Windows SmartScreen or macOS Gatekeeper may warn on first launch — you can <a href="https://github.com/HLLMR/silo">read or build the source</a> to verify it yourself. Auto-update lands after beta.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-in">
+    <span class="brand"><span class="logo">S</span> Silo</span>
+    <nav class="foot-links">
+      <a href="https://github.com/HLLMR/silo">GitHub</a>
+      <a href="https://silo-api.hllmr.com">Catalog API</a>
+      <a href="https://github.com/HLLMR/silo/releases">Releases</a>
+      <a href="https://github.com/HLLMR/silo/issues">Report a bug</a>
+    </nav>
+    <span style="width:100%;font-size:0.82rem;opacity:0.75;">Not affiliated with GIANTS Software. Farming Simulator is a trademark of its respective owner. Made by HLLMR.</span>
+  </div>
+</footer>
+
+<script>
+  // Ambient golden-hour field furrows: perspective lines converging to a horizon.
+  (function () {
+    var c = document.querySelector(".furrows");
+    if (!c || window.matchMedia("(prefers-reduced-motion: reduce)").matches) { if (c) c.remove(); return; }
+    var ctx = c.getContext("2d");
+    function resize() {
+      var r = c.getBoundingClientRect();
+      c.width = r.width * devicePixelRatio; c.height = r.height * devicePixelRatio;
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    }
+    resize(); window.addEventListener("resize", resize);
+    function draw() {
+      var w = c.clientWidth, h = c.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+      var vpx = w * 0.78, vpy = -30; // vanishing point up-right, matching the glow
+      var accent = getComputedStyle(document.documentElement).getPropertyValue("--soil-500") || "#8a6a45";
+      ctx.strokeStyle = accent.trim() || "#8a6a45";
+      ctx.globalAlpha = 0.22; ctx.lineWidth = 1;
+      for (var i = -8; i <= 24; i++) {
+        var x = (i / 16) * w;
+        ctx.beginPath(); ctx.moveTo(x, h + 4); ctx.lineTo(vpx, vpy); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+    draw(); window.addEventListener("resize", draw);
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    (mq.addEventListener ? mq.addEventListener("change", draw) : mq.addListener(draw));
+  })();
+</script>
+</body>
+</html>
