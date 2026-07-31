@@ -376,10 +376,10 @@
       "@type": "FAQPage",
       "mainEntity": [
         { "@type": "Question", "name": "Is Silo free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — Silo is free, forever, and fully open source. There's no account to create, no paid tier, and no telemetry. Every line is on GitHub to audit, fork or build yourself." } },
-        { "@type": "Question", "name": "What does Silo actually do?", "acceptedAnswer": { "@type": "Answer", "text": "It's a management layer for your Farming Simulator 25 mods. Silo organizes your library, reads log.txt to name the mod that crashed you, detects conflicts (duplicate maps, colliding filltypes, vehicle types and scripts), and aggregates ModHub, GitHub and Nexus into one canonical catalog with the real latest version across all three." } },
-        { "@type": "Question", "name": "Does Silo move or modify my mod files?", "acceptedAnswer": { "@type": "Answer", "text": "No. Silo projects only your active set into the game's mods folder using links (junctions) at launch — it never moves your files, and it backs up before it writes. Your saves are never touched destructively, and everything it does is reversible." } },
+        { "@type": "Question", "name": "What does Silo actually do?", "acceptedAnswer": { "@type": "Answer", "text": "It manages your Farming Simulator 25 mods. Silo organizes the library and reads log.txt to name the mod that crashed you. It flags conflicts such as duplicate maps and colliding filltypes, vehicle types or scripts. And it pulls ModHub, GitHub and Nexus into one catalog that shows the latest version found across all three." } },
+        { "@type": "Question", "name": "Does Silo move or modify my mod files?", "acceptedAnswer": { "@type": "Answer", "text": "It moves them, but reversibly. Silo files your ZIPs into a local archive, then links only your active set into the game's mods folder at launch. Every move is recorded so it can be undone, and it backs up before it overwrites anything or edits a savegame." } },
         { "@type": "Question", "name": "Which platforms does Silo support?", "acceptedAnswer": { "@type": "Answer", "text": "Windows, macOS (Intel and Apple Silicon) and Linux. It's one native app with per-OS game discovery and no runtime to install." } },
-        { "@type": "Question", "name": "Does Silo work with ModHub, GitHub and Nexus?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Silo keeps one canonical record per mod that aggregates all three sources, so you see the true latest version and can act on each — star on GitHub, endorse on Nexus, open the ModHub page to rate — through your own accounts. Silo brokers the action; it never holds your data." } },
+        { "@type": "Question", "name": "Does Silo work with ModHub, GitHub and Nexus?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Silo keeps one record per mod that pulls all three together, so you see the latest version found across them. You can act on each through your own accounts: star on GitHub, endorse on Nexus, rate on ModHub. Silo just opens the door; your credentials stay on your machine." } },
         { "@type": "Question", "name": "Does Silo collect any data about me?", "acceptedAnswer": { "@type": "Answer", "text": "No telemetry and no account, so there's nothing to sign up for and nothing phoned home. The catalog data comes from a public read-only API; your library and actions stay on your machine and in your own source accounts." } }
       ]
     }
@@ -407,7 +407,7 @@
     <div class="hero-copy">
       <p class="eyebrow reveal">Farming Simulator 25 · mod manager · free &amp; open source</p>
       <h1 class="reveal d1">The mod manager FS25 <em>should have shipped with.</em></h1>
-      <p class="lede reveal d2">Load up on mods and Silo keeps them straight. It reads the game log to tell you which mod actually crashed you, flags conflicts before you launch, and shows the real latest version across ModHub, GitHub and Nexus. Your saves stay untouched.</p>
+      <p class="lede reveal d2">Load up on mods and Silo keeps them straight. It reads the game log to tell you which mod actually crashed you, flags conflicts before you launch, and shows the latest version it can find across ModHub, GitHub and Nexus. Everything it changes on disk is reversible.</p>
       <div class="cta-row reveal d2">
         <a class="btn btn-primary" href="#download">Download the beta</a>
         <a class="btn btn-ghost" href="https://github.com/HLLMR/silo">View the source →</a>
@@ -495,7 +495,7 @@
       <div class="card">
         <div class="glyph">⌗</div>
         <h3>Cross-source catalog</h3>
-        <p>One record per mod that pulls ModHub, GitHub and Nexus together, so you see the real latest version instead of whichever source happened to update last.</p>
+        <p>One record per mod that pulls ModHub, GitHub and Nexus together, so you see the latest version found across them instead of whichever source happened to update last.</p>
       </div>
       <div class="card">
         <div class="glyph">⑃</div>
@@ -546,8 +546,8 @@
       <h2>Built to respect your machine and your files.</h2>
       <div class="ethos-grid">
         <div><p class="m">// open</p><h3>Fully open source</h3><p>Every line is on GitHub. Audit it, fork it, build it yourself.</p></div>
-        <div><p class="m">// quiet</p><h3>No telemetry, no account</h3><p>Silo phones home to nobody. There's nothing to sign up for.</p></div>
-        <div><p class="m">// safe</p><h3>Reversible by design</h3><p>It works through links and backs up before it writes, so nothing it does to your saves is permanent.</p></div>
+        <div><p class="m">// quiet</p><h3>No telemetry, no account</h3><p>Silo uses the network only for catalog search, update checks, and the source actions you choose. Nothing else leaves your machine.</p></div>
+        <div><p class="m">// safe</p><h3>Reversible by design</h3><p>Silo files your mods into a local archive and links the active set into the game. Every move is recorded so it can be undone, and it backs up before it overwrites anything.</p></div>
         <div><p class="m">// everywhere</p><h3>Windows · macOS · Linux</h3><p>One native app, per-OS game discovery, no runtime to install.</p></div>
       </div>
     </div>
@@ -583,11 +583,11 @@
       </details>
       <details>
         <summary>What does Silo actually do?</summary>
-        <p>It manages your Farming Simulator 25 mods. Silo organizes the library and reads <code>log.txt</code> to name the mod that crashed you. It flags conflicts such as duplicate maps and colliding filltypes, vehicle types or scripts. And it pulls ModHub, GitHub and Nexus into one catalog that shows the real latest version across all three.</p>
+        <p>It manages your Farming Simulator 25 mods. Silo organizes the library and reads <code>log.txt</code> to name the mod that crashed you. It flags conflicts such as duplicate maps and colliding filltypes, vehicle types or scripts. And it pulls ModHub, GitHub and Nexus into one catalog that shows the latest version found across all three.</p>
       </details>
       <details>
         <summary>Does Silo move or modify my mod files?</summary>
-        <p>No. At launch it links your active set into the game's mods folder using junctions, and it backs up before it writes anything. Your originals stay put, your saves are never touched destructively, and every change it makes can be undone.</p>
+        <p>It moves them, but reversibly. Silo files your ZIPs into a local archive, then links only your active set into the game's mods folder at launch. Every move is recorded so it can be undone, and it backs up before it overwrites anything or edits a savegame.</p>
       </details>
       <details>
         <summary>Which platforms does Silo support?</summary>
@@ -595,7 +595,7 @@
       </details>
       <details>
         <summary>Does Silo work with ModHub, GitHub and Nexus?</summary>
-        <p>Yes. Silo keeps one record per mod that pulls all three together, so you see the true latest version. You can act on each through <em>your own</em> accounts: star on GitHub, endorse on Nexus, rate on ModHub. Silo just opens the door; your credentials stay yours.</p>
+        <p>Yes. Silo keeps one record per mod that pulls all three together, so you see the latest version found across them. You can act on each through <em>your own</em> accounts: star on GitHub, endorse on Nexus, rate on ModHub. Silo just opens the door; your credentials stay on your machine.</p>
       </details>
       <details>
         <summary>Does Silo collect any data about me?</summary>

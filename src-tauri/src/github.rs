@@ -240,8 +240,12 @@ pub fn download_zip(url: &str, token: Option<&str>, dest: &std::path::Path) -> R
     if bytes.len() < 4 || &bytes[..2] != b"PK" {
         return Err("Downloaded file is not a valid .zip".to_string());
     }
+    // Back up the existing file FIRST, and abort if that fails — never overwrite a mod we
+    // couldn't preserve a copy of. (Previously the backup error was ignored.)
     if dest.exists() {
-        let _ = std::fs::copy(dest, dest.with_extension("zip.bak"));
+        std::fs::copy(dest, dest.with_extension("zip.bak")).map_err(|e| {
+            format!("aborted before overwriting — couldn't back up the current file: {e}")
+        })?;
     }
     std::fs::write(dest, &bytes).map_err(|e| e.to_string())
 }

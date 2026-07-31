@@ -16,9 +16,9 @@
 </p>
 
 A fast, native desktop app for your FS25 mod library. Silo reads the game log to name
-the mod that crashed you, flags conflicts before you launch, and shows the real latest
-version across ModHub, GitHub and Nexus. Your files and saves stay untouched. **Free and
-open source. Windows · macOS · Linux.**
+the mod that crashed you, flags conflicts before you launch, and shows the latest
+version it can find across ModHub, GitHub and Nexus. Everything it changes on disk is
+reversible. **Free and open source. Windows · macOS · Linux.**
 
 <p align="center">
   <b><a href="https://github.com/HLLMR/silo/releases/latest">⬇ Download the beta</a></b>
@@ -42,8 +42,8 @@ is the management layer the game left out.
   and names the mod at fault.
 - **Conflict detection** — duplicate active maps (an instant crash), plus colliding
   filltypes, vehicle types and scripts across your active set.
-- **Cross-source catalog** — one canonical record per mod aggregating ModHub + GitHub +
-  Nexus, with the real latest version across all of them (backed by
+- **Cross-source catalog** — one record per mod aggregating ModHub + GitHub + Nexus,
+  with the latest version found across all of them (backed by
   [SiloAPI](https://silo-api.hllmr.com)).
 - **Guided bisection** — when the log can't name the culprit, automates "disable half,
   relaunch" to isolate it, and safely restores your active set afterward.
@@ -71,9 +71,12 @@ npm run tauri:build   # produce an installer in src-tauri/target/release/bundle/
 
 ## Trust
 
-- **Open source** — every line is here; audit, fork, or build it yourself.
-- **No telemetry, no account** — Silo phones home to nobody; there's nothing to sign up for.
-- **Reversible by design** — it projects with links and backs up before it writes.
+- **Open source** — the desktop app is fully open here; audit, fork, or build it yourself.
+- **No telemetry, no account** — Silo uses the network only for catalog search, update
+  checks, and the source actions you choose.
+- **Reversible by design** — it files your mods into a local archive and links the active
+  set into the game; every move is recorded and undoable, and it backs up before any
+  overwrite.
 
 ## Stack
 
