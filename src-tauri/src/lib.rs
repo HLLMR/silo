@@ -16,6 +16,7 @@ pub mod moddesc;
 pub mod mpsync;
 pub mod nexus;
 pub mod organize;
+pub mod paths;
 pub mod savegame;
 pub mod scan;
 pub mod secrets;
@@ -443,9 +444,11 @@ async fn download_update(
 ) -> Result<(), String> {
     let db = db_path(&app)?;
     tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
+        let dest = std::path::Path::new(&path);
+        paths::no_traversal(dest)?;
         let conn = db::open(&db)?;
         let token = secrets::get(&conn, "gh_token");
-        github::download_zip(&asset_url, token.as_deref(), std::path::Path::new(&path))
+        github::download_zip(&asset_url, token.as_deref(), dest)
     })
     .await
     .map_err(|e| e.to_string())?
@@ -552,6 +555,9 @@ async fn install_remote_mod(
     let emitter = app.clone();
     tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
         let (url, filename) = siloapi::resolve_download(&base, &id, source.as_deref())?;
+        // The filename comes from the catalog — validate it's a plain basename so a
+        // hostile response can't redirect the write outside the mods folder.
+        paths::safe_file_name(&filename)?;
         let dest = root.join(&filename);
         if dest.exists() {
             return Err(format!("{filename} is already in your library"));

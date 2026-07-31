@@ -107,6 +107,11 @@ pub fn apply_organize(conn: &Connection, root: &Path, mods: &[ModInput]) -> Repo
             rep.skipped += 1;
             continue;
         }
+        // file_name drives every join below — it must be a plain basename, never a path.
+        if let Err(e) = crate::paths::safe_file_name(&m.file_name) {
+            rep.errors.push(format!("{}: {e}", m.tech_name));
+            continue;
+        }
         let from = root.join(&m.file_name);
         if !from.exists() {
             rep.skipped += 1;
