@@ -8,7 +8,22 @@
 <meta property="og:title" content="Silo — the FS25 mod manager that should have shipped with the game" />
 <meta property="og:description" content="Organize 700+ mods, name the mod that crashed you, catch conflicts, one honest cross-source catalog. Free, open source, no telemetry." />
 <meta property="og:type" content="website" />
-<meta property="og:url" content="https://silo.hllmr.com" />
+<meta property="og:url" content="https://silo.hllmr.com/" />
+<meta property="og:site_name" content="Silo" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:image" content="https://silo.hllmr.com/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Silo — the Farming Simulator 25 mod manager. Free and open source." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Silo — the FS25 mod manager that should have shipped with the game" />
+<meta name="twitter:description" content="Organize hundreds of mods, name the mod that crashed you, catch conflicts, one honest cross-source catalog. Free, open source, no telemetry." />
+<meta name="twitter:image" content="https://silo.hllmr.com/og.png" />
+<link rel="canonical" href="https://silo.hllmr.com/" />
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+<meta name="author" content="HLLMR" />
+<meta name="theme-color" content="#4a7330" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#171a14" media="(prefers-color-scheme: dark)" />
 <style>
   /* ── Silo's own "Golden Hour" tokens, mirrored from the app so site == product ── */
   :root {
@@ -262,6 +277,17 @@
   .dl-note { color: var(--muted); font-size: 0.86rem; margin-top: 20px; }
   .dl-note a { color: var(--primary); }
 
+  /* FAQ */
+  .faq { display: grid; gap: 12px; max-width: 760px; }
+  .faq details { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 2px 20px; transition: border-color 0.15s; }
+  .faq details[open] { border-color: color-mix(in srgb, var(--primary) 30%, var(--border)); }
+  .faq summary { font-family: var(--font-display); font-weight: 600; font-size: 1.06rem; cursor: pointer; padding: 15px 28px 15px 0; position: relative; list-style: none; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: "+"; position: absolute; right: 0; top: 13px; font-size: 1.3rem; color: var(--primary); line-height: 1; }
+  .faq details[open] summary::after { content: "\2013"; }
+  .faq summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+  .faq p { color: var(--muted); margin: 0 0 16px; font-size: 0.98rem; }
+
   /* Footer */
   footer { border-top: 1px solid var(--border); padding: 40px 0; color: var(--muted); }
   .foot-in { display: flex; flex-wrap: wrap; gap: 18px 40px; align-items: center; }
@@ -286,6 +312,56 @@
     .mock-draw { display: none; }
   }
 </style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "Silo",
+      "url": "https://silo.hllmr.com/",
+      "applicationCategory": "UtilitiesApplication",
+      "applicationSubCategory": "Mod Manager",
+      "operatingSystem": "Windows, macOS, Linux",
+      "description": "Silo is a free, open-source mod manager for Farming Simulator 25. It organizes your mods, reads the game log to name the mod that crashed you, detects conflicts, and aggregates ModHub, GitHub and Nexus into one canonical cross-source catalog — without moving your files or touching your saves.",
+      "downloadUrl": "https://github.com/HLLMR/silo/releases",
+      "softwareVersion": "beta",
+      "releaseNotes": "https://github.com/HLLMR/silo/releases",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "author": { "@type": "Organization", "name": "HLLMR", "url": "https://github.com/HLLMR" },
+      "image": "https://silo.hllmr.com/og.png",
+      "screenshot": "https://silo.hllmr.com/og.png",
+      "featureList": [
+        "Crash and log triage — names the mod at fault from log.txt",
+        "Conflict detection across maps, filltypes, vehicle types and scripts",
+        "Cross-source catalog aggregating ModHub, GitHub and Nexus",
+        "Guided bisection to isolate a bad mod",
+        "Loadouts projected into the game folder via links, never by moving files",
+        "Filltype bridge companion-mod generation",
+        "No telemetry, no account"
+      ]
+    },
+    {
+      "@type": "Organization",
+      "name": "HLLMR",
+      "url": "https://github.com/HLLMR",
+      "sameAs": ["https://github.com/HLLMR/silo"]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "Is Silo free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — Silo is free, forever, and fully open source. There's no account to create, no paid tier, and no telemetry. Every line is on GitHub to audit, fork or build yourself." } },
+        { "@type": "Question", "name": "What does Silo actually do?", "acceptedAnswer": { "@type": "Answer", "text": "It's a management layer for your Farming Simulator 25 mods. Silo organizes your library, reads log.txt to name the mod that crashed you, detects conflicts (duplicate maps, colliding filltypes, vehicle types and scripts), and aggregates ModHub, GitHub and Nexus into one canonical catalog with the real latest version across all three." } },
+        { "@type": "Question", "name": "Does Silo move or modify my mod files?", "acceptedAnswer": { "@type": "Answer", "text": "No. Silo projects only your active set into the game's mods folder using links (junctions) at launch — it never moves your files, and it backs up before it writes. Your saves are never touched destructively, and everything it does is reversible." } },
+        { "@type": "Question", "name": "Which platforms does Silo support?", "acceptedAnswer": { "@type": "Answer", "text": "Windows, macOS (Intel and Apple Silicon) and Linux. It's one native app with per-OS game discovery and no runtime to install." } },
+        { "@type": "Question", "name": "Does Silo work with ModHub, GitHub and Nexus?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Silo keeps one canonical record per mod that aggregates all three sources, so you see the true latest version and can act on each — star on GitHub, endorse on Nexus, open the ModHub page to rate — through your own accounts. Silo brokers the action; it never holds your data." } },
+        { "@type": "Question", "name": "Does Silo collect any data about me?", "acceptedAnswer": { "@type": "Answer", "text": "No telemetry and no account, so there's nothing to sign up for and nothing phoned home. The catalog data comes from a public read-only API; your library and actions stay on your machine and in your own source accounts." } }
+      ]
+    }
+  ]
+}
+</script>
 </head>
 <body>
 <header class="nav">
@@ -449,6 +525,43 @@
       <div class="step"><div class="n">Scan</div><h3>It reads your library</h3><p>Silo finds your mods folder, parses each archive off-thread, and categorizes everything — cached so the next scan is instant.</p></div>
       <div class="step"><div class="n">Curate</div><h3>Organize &amp; check</h3><p>Sort, tag, rate and build loadouts. See conflicts and update status before you ever launch the game.</p></div>
       <div class="step"><div class="n">Launch</div><h3>Project &amp; go</h3><p>Only your active set is linked into the game folder at launch. Quit, switch profiles, relaunch — nothing is ever moved.</p></div>
+    </div>
+  </div>
+</section>
+
+<hr class="rule" />
+
+<section id="faq">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Questions</p>
+      <h2>Straight answers.</h2>
+    </div>
+    <div class="faq">
+      <details>
+        <summary>Is Silo free?</summary>
+        <p>Yes — Silo is free, forever, and fully open source. There's no account to create, no paid tier, and no telemetry. Every line is on GitHub to audit, fork or build yourself.</p>
+      </details>
+      <details>
+        <summary>What does Silo actually do?</summary>
+        <p>It's a management layer for your Farming Simulator 25 mods. Silo organizes your library, reads <code>log.txt</code> to name the mod that crashed you, detects conflicts (duplicate maps, colliding filltypes, vehicle types and scripts), and aggregates ModHub, GitHub and Nexus into one canonical catalog with the real latest version across all three.</p>
+      </details>
+      <details>
+        <summary>Does Silo move or modify my mod files?</summary>
+        <p>No. Silo projects only your active set into the game's mods folder using links (junctions) at launch — it never moves your files, and it backs up before it writes. Your saves are never touched destructively, and everything it does is reversible.</p>
+      </details>
+      <details>
+        <summary>Which platforms does Silo support?</summary>
+        <p>Windows, macOS (Intel &amp; Apple Silicon) and Linux. It's one native app with per-OS game discovery and no runtime to install.</p>
+      </details>
+      <details>
+        <summary>Does Silo work with ModHub, GitHub and Nexus?</summary>
+        <p>Yes. Silo keeps one canonical record per mod that aggregates all three sources, so you see the true latest version and can act on each — star on GitHub, endorse on Nexus, open the ModHub page to rate — through <em>your own</em> accounts. Silo brokers the action; it never holds your data.</p>
+      </details>
+      <details>
+        <summary>Does Silo collect any data about me?</summary>
+        <p>No telemetry and no account, so there's nothing to sign up for and nothing phoned home. The catalog data comes from a public read-only API; your library and actions stay on your machine and in your own source accounts.</p>
+      </details>
     </div>
   </div>
 </section>

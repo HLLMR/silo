@@ -1,0 +1,35 @@
+# Silo
+
+> Silo is a free, open-source mod manager for Farming Simulator 25 (FS25). It organizes
+> your mods, names the mod that crashed you from the game log, detects conflicts, and
+> unifies ModHub, GitHub and Nexus into one cross-source catalog — without moving your
+> files or touching your saves.
+
+Silo is a native desktop app for Windows, macOS and Linux. No account, no telemetry, fully
+open source. Its catalog is served by a public read-only API (SiloAPI) that aggregates mod
+metadata, versions, popularity and descriptions across sources.
+
+## What Silo does
+- Crash & log triage: reads `log.txt`, separates real errors from noise, and names the mod at fault
+- Conflict detection: duplicate active maps (an instant crash), colliding filltypes, vehicle types and scripts
+- Cross-source catalog: one canonical record per mod across ModHub, GitHub and Nexus, with the real latest version
+- Guided bisection: automates "disable half, relaunch" to isolate a bad mod, then restores your set
+- Loadouts & projection: links only the active set into the game's flat mods folder at launch — never moves files
+- Filltype bridge: generates a companion mod that teaches equipment a stubborn map filltype
+
+## Principles
+- Free and open source — every line is on GitHub
+- No telemetry, no account
+- Reversible by design: projects with links, backs up before writing, saves never touched destructively
+- Acts through your own GitHub / Nexus / ModHub accounts; never holds your data
+
+## Links
+- Site: https://silo.hllmr.com/
+- Source code: https://github.com/HLLMR/silo
+- Download / releases: https://github.com/HLLMR/silo/releases
+- Catalog API: https://silo-api.hllmr.com/
+- Report a bug: https://github.com/HLLMR/silo/issues
+
+## Notes
+Not affiliated with GIANTS Software. Farming Simulator is a trademark of its respective
+owner. Made by HLLMR.
