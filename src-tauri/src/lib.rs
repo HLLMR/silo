@@ -1191,6 +1191,13 @@ fn app_version(app: tauri::AppHandle) -> String {
     app.package_info().version.to_string()
 }
 
+/// True when this machine can store account tokens in the OS keychain. When false, the UI
+/// warns that a connected token would be kept in the local DB unencrypted.
+#[tauri::command]
+fn secret_storage_secure() -> bool {
+    secrets::keychain_available()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1272,7 +1279,8 @@ pub fn run() {
             get_mod_settings,
             save_mod_settings,
             save_mod_settings_raw,
-            app_version
+            app_version,
+            secret_storage_secure
         ])
         .run(tauri::generate_context!())
         .expect("error while running Silo");
