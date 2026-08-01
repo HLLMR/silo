@@ -3,6 +3,10 @@
     topbarH = $bindable(),
     view,
     appVer,
+    update,
+    updating,
+    updatePct,
+    onApplyUpdate,
     hasSavegames,
     savesOpen,
     loadoutsOpen,
@@ -30,6 +34,10 @@
     topbarH: number;
     view: "library" | "browse";
     appVer: string | null;
+    update: { version: string } | null;
+    updating: boolean;
+    updatePct: number | null;
+    onApplyUpdate: () => void;
     hasSavegames: boolean;
     savesOpen: boolean;
     loadoutsOpen: boolean;
@@ -77,6 +85,21 @@
   </nav>
 
   <div class="topbar-spacer"></div>
+
+  {#if update}
+    <button
+      class="btn update-btn"
+      onclick={onApplyUpdate}
+      disabled={updating}
+      title="Download and install Silo {update.version}, then restart"
+    >
+      {#if updating}
+        {updatePct != null ? `Updating… ${updatePct}%` : "Updating…"}
+      {:else}
+        ⬆ Update to {update.version}
+      {/if}
+    </button>
+  {/if}
 
   {#if hasSavegames}
     <button class="btn" class:on={savesOpen} onclick={onToggleSaves} disabled={!!busy}>
@@ -257,6 +280,17 @@
   }
   .launch-btn {
     font-weight: 700;
+  }
+  .update-btn {
+    font-weight: 700;
+    color: var(--gold-700);
+    border-color: color-mix(in srgb, var(--gold-500) 55%, var(--border));
+    background: color-mix(in srgb, var(--gold-500) 14%, var(--surface-raised));
+  }
+  .update-btn:hover:not(:disabled) {
+    color: var(--gold-700);
+    border-color: var(--gold-500);
+    background: color-mix(in srgb, var(--gold-500) 22%, var(--surface-raised));
   }
   .btn:hover:not(:disabled):not(.primary) {
     color: var(--text);
