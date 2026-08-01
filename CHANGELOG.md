@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **Hardened the native command boundary against a compromised webview.** File-path commands
+  that took a raw path from the frontend now validate it: loadout/mod-set/report export and
+  import enforce the expected file type and reject `..` traversal, and config/mod-settings reads
+  are confined to the FS25 user directory (mirroring the existing guarded writes). Turns
+  "read/write any path" into "read/write an expected file type in an intended location." No
+  behavior change for normal dialog-driven use. (#20)
+
 ## [0.2.2] - 2026-08-01
 
 ### Added
