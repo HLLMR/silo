@@ -33,6 +33,7 @@ closes the app). A packaged build is `npm run tauri:build`.
 ## 2. Curation & detail drawer  _(auto-verified: curation/tags/rating store)_
 - [x] `[app]` Click a mod row → detail drawer opens with icon, metadata, deps (with present/missing status).
 - [x] `[app]` Favorite / Broken / Hidden toggles persist across a rescan; star rating persists; tags add/remove & filter; notes save on blur.
+- [ ] `[app]` **Integrity verification**: in a mod's detail drawer, **Verify integrity** returns one of **Verified** (a GitHub-source mod SiloAPI has hashed, e.g. `FS25_CabView`), **Modified** (edit a file inside a verified mod's zip → expect the changed file listed), or **Unverified** (a ModHub-only-latest or unknown mod — correct, not a bug). Folder mods show "can't be verified". No red console errors.
 - [ ] `[app]` **Last run** section shows this mod's log health (see §8) — errors/cosmetic/clean.
 - [ ] `[net]` **Catalog** section shows latest version / "update available (source)" / "not in catalog".
 - [ ] `[app]` Reveal opens the file in Explorer; activate/deactivate toggles the active dot.

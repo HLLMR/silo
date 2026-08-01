@@ -676,6 +676,63 @@ async fn catalog_check_updates(
     .map_err(|e| e.to_string())?
 }
 
+/// Verify one installed mod against its canonical build: hash the local zip, look the mod
+/// up in the catalog, fetch the canonical manifest for the local version, and compare.
+/// Verified (byte/content match), Modified (with the exact file diff), or Unverified (no
+/// hashed build to compare — not proof of anything). Provenance, not antivirus.
+#[tauri::command]
+async fn verify_mod(
+    app: tauri::AppHandle,
+    tech_name: String,
+    version: Option<String>,
+    path: String,
+) -> Result<provenance::VerifyResult, String> {
+    let base = siloapi_base(&app)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<provenance::VerifyResult, String> {
+        let local = provenance::manifest_from_zip(std::path::Path::new(&path))?;
+
+        // Find the catalog id by tech name (one request).
+        let hits = siloapi::lookup(&base, std::slice::from_ref(&tech_name))?;
+        let Some(hit) = hits
+            .into_iter()
+            .find(|r| r.tech_name.as_deref() == Some(tech_name.as_str()))
+        else {
+            return Ok(provenance::VerifyResult::unverified(
+                "This mod isn't in the catalog yet — no trusted build to compare against.",
+            ));
+        };
+
+        // The server does version-equivalence (ModHub `1.2.0` ↔ GitHub `v1.2.0`), so send
+        // the local modDesc version verbatim. 404 → no hashed build for this version.
+        let ver = version.as_deref().unwrap_or("");
+        match siloapi::manifest(&base, &hit.id, ver)? {
+            Some(cm) => {
+                let canon_entries: Vec<provenance::Entry> = cm
+                    .entries
+                    .iter()
+                    .map(|e| provenance::Entry {
+                        path: e.path.clone(),
+                        sha256: e.sha256.clone(),
+                    })
+                    .collect();
+                let mut r = provenance::compare(
+                    &local,
+                    cm.archive_sha256.as_deref(),
+                    &cm.manifest_hash,
+                    &canon_entries,
+                );
+                r.matched_version = cm.version;
+                Ok(r)
+            }
+            None => Ok(provenance::VerifyResult::unverified(
+                "No hashed build for this version yet — coverage is GitHub-first and growing.",
+            )),
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 fn gh_logout(app: tauri::AppHandle) -> Result<(), String> {
     let conn = db::open(&db_path(&app)?)?;
@@ -1117,6 +1174,7 @@ pub fn run() {
             catalog_image,
             install_remote_mod,
             catalog_check_updates,
+            verify_mod,
             get_overrides,
             set_override,
             plan_organize,

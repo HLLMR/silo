@@ -1,0 +1,253 @@
+<script lang="ts">
+  import type { ModEntry, VerifyResult } from "../types";
+  import { verifyMod } from "../api";
+
+  let { mod }: { mod: ModEntry } = $props();
+
+  type Phase = "idle" | "running" | "done" | "error";
+  let phase = $state<Phase>("idle");
+  let result = $state<VerifyResult | null>(null);
+  let err = $state("");
+
+  // Reset when the drawer switches to another mod.
+  $effect(() => {
+    void mod.path;
+    phase = "idle";
+    result = null;
+    err = "";
+  });
+
+  const canVerify = $derived(mod.kind === "zip");
+
+  async function run() {
+    phase = "running";
+    err = "";
+    try {
+      result = await verifyMod(mod.techName, mod.version, mod.path);
+      phase = "done";
+    } catch (e) {
+      err = String(e);
+      phase = "error";
+    }
+  }
+
+  const howLabel = (how: string | null) =>
+    how === "exact"
+      ? "Byte-for-byte match with the published build."
+      : how === "content"
+        ? "Contents match the published build (repackaged, same files)."
+        : "Matches the published build.";
+
+  // Cap each diff list so a wildly-modified mod can't blow out the drawer.
+  const CAP = 12;
+  function capped(list: string[]): { shown: string[]; more: number } {
+    return { shown: list.slice(0, CAP), more: Math.max(0, list.length - CAP) };
+  }
+</script>
+
+<div class="prov">
+  <div class="prov-head">
+    <span class="prov-title">Integrity</span>
+    {#if canVerify && phase === "idle"}
+      <button class="prov-btn" onclick={run}>Verify integrity</button>
+    {:else if phase === "running"}
+      <span class="prov-run">Hashing &amp; comparing…</span>
+    {:else if phase === "done" && (result?.status === "modified" || result?.status === "unverified")}
+      <button class="prov-btn ghost" onclick={run}>Re-check</button>
+    {/if}
+  </div>
+
+  {#if !canVerify}
+    <p class="prov-note">Folder mods can't be verified — there's no archive to hash.</p>
+  {:else if phase === "idle"}
+    <p class="prov-note">
+      Check this mod against the trusted build SiloAPI hashed from its source.
+    </p>
+  {:else if phase === "error"}
+    <p class="prov-err">{err}</p>
+    <button class="prov-btn ghost" onclick={run}>Try again</button>
+  {:else if phase === "done" && result}
+    {@const r = result}
+    {#if r.status === "verified"}
+      <div class="verdict ok">
+        <span class="dot">✓</span>
+        <div>
+          <div class="v-label">Verified</div>
+          <div class="v-sub">
+            {howLabel(r.how)}{#if r.matchedVersion}&nbsp;(v{r.matchedVersion}){/if}
+          </div>
+        </div>
+      </div>
+    {:else if r.status === "modified"}
+      <div class="verdict warn">
+        <span class="dot">⚠</span>
+        <div>
+          <div class="v-label">Modified from the published build</div>
+          <div class="v-sub">
+            {r.changed.length} changed · {r.added.length} added · {r.removed.length} removed{#if r.matchedVersion}
+              &nbsp;(vs v{r.matchedVersion}){/if}
+          </div>
+        </div>
+      </div>
+      {#each [{ k: "changed", label: "Changed", list: r.changed }, { k: "added", label: "Added", list: r.added }, { k: "removed", label: "Removed", list: r.removed }] as g (g.k)}
+        {#if g.list.length}
+          {@const c = capped(g.list)}
+          <details class="diff">
+            <summary>{g.label} <span class="cnt">{g.list.length}</span></summary>
+            <ul>
+              {#each c.shown as f (f)}<li class="mono">{f}</li>{/each}
+              {#if c.more}<li class="more">+{c.more} more</li>{/if}
+            </ul>
+          </details>
+        {/if}
+      {/each}
+    {:else}
+      <div class="verdict muted">
+        <span class="dot">?</span>
+        <div>
+          <div class="v-label">Unverified</div>
+          <div class="v-sub">{r.note ?? "No trusted build to compare against."}</div>
+        </div>
+      </div>
+    {/if}
+    <p class="prov-fine">
+      Provenance check, not a virus scan — it confirms origin &amp; integrity, it can't
+      judge whether a mod is safe.
+    </p>
+  {/if}
+</div>
+
+<style>
+  .prov {
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+    margin-top: 4px;
+  }
+  .prov-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .prov-title {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+  .prov-btn {
+    border: 1px solid var(--primary);
+    background: var(--primary);
+    color: var(--on-primary);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 4px 11px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .prov-btn.ghost {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border);
+    font-weight: 500;
+  }
+  .prov-btn:hover {
+    filter: brightness(1.05);
+  }
+  .prov-run {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+  .prov-note,
+  .prov-fine,
+  .prov-err {
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--text-muted);
+    margin: 0;
+  }
+  .prov-err {
+    color: var(--danger);
+  }
+  .prov-fine {
+    margin-top: 10px;
+    font-size: 0.72rem;
+    opacity: 0.85;
+  }
+  .verdict {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 9px 11px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+  .verdict .dot {
+    font-size: 0.95rem;
+    line-height: 1.3;
+    flex: 0 0 auto;
+  }
+  .verdict.ok {
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
+    border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  }
+  .verdict.ok .dot {
+    color: var(--primary);
+  }
+  .verdict.warn {
+    background: color-mix(in srgb, var(--warn) 12%, transparent);
+    border-color: color-mix(in srgb, var(--warn) 40%, var(--border));
+  }
+  .verdict.warn .dot {
+    color: var(--warn);
+  }
+  .verdict.muted .dot {
+    color: var(--text-muted);
+  }
+  .v-label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text);
+  }
+  .v-sub {
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+    margin-top: 1px;
+  }
+  .diff {
+    margin-top: 6px;
+    font-size: 0.78rem;
+  }
+  .diff summary {
+    cursor: pointer;
+    color: var(--text);
+    padding: 3px 0;
+  }
+  .diff .cnt {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .diff ul {
+    list-style: none;
+    margin: 2px 0 4px;
+    padding: 0 0 0 6px;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  .diff li {
+    padding: 1px 0;
+    color: var(--text-muted);
+  }
+  .diff li.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.72rem;
+    word-break: break-all;
+  }
+  .diff li.more {
+    font-style: italic;
+    font-size: 0.72rem;
+  }
+</style>

@@ -14,6 +14,7 @@ import type {
   ModInput,
   OrganizeReport,
   PlannedMove,
+  VerifyResult,
   Loadout,
   Savegame,
   Conflict,
@@ -102,6 +103,15 @@ export function planOrganize(mods: ModInput[]): Promise<PlannedMove[]> {
 
 export function applyOrganize(mods: ModInput[]): Promise<OrganizeReport> {
   return invoke<OrganizeReport>("apply_organize", { root: null, mods });
+}
+
+// ── Provenance (tamper verification) ──
+export function verifyMod(
+  techName: string,
+  version: string | null,
+  path: string,
+): Promise<VerifyResult> {
+  return invoke<VerifyResult>("verify_mod", { techName, version, path });
 }
 
 export function setActive(active: string[]): Promise<OrganizeReport> {

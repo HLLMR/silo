@@ -77,6 +77,22 @@ export interface OrganizeReport {
   errors: string[];
 }
 
+/** Provenance verdict of comparing an installed mod to its canonical build. */
+export type VerifyStatus = "verified" | "modified" | "unverified";
+export interface VerifyResult {
+  status: VerifyStatus;
+  /** "exact" (whole-zip) or "content" (manifest) when verified. */
+  how: string | null;
+  /** Local files absent from the canonical build. */
+  added: string[];
+  /** Canonical files missing locally. */
+  removed: string[];
+  /** Files present in both with different content. */
+  changed: string[];
+  matchedVersion: string | null;
+  note: string | null;
+}
+
 /** One planned move from a dry-run `plan_organize` (read-only preview). */
 export interface PlannedMove {
   techName: string;

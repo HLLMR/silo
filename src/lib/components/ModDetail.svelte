@@ -5,6 +5,7 @@
   import ModStatus from "./ModStatus.svelte";
   import ModCuration from "./ModCuration.svelte";
   import ModRepoLink from "./ModRepoLink.svelte";
+  import ProvenanceCheck from "./ProvenanceCheck.svelte";
 
   type Flag = "favorite" | "hidden" | "broken";
   interface Props {
@@ -173,6 +174,8 @@
   />
 
   <ModRepoLink {mod} {repo} {onRepoChange} {onInstalled} />
+
+  <ProvenanceCheck {mod} />
 
   {#if mod.dependencies.length > 0}
     <div class="d-section">

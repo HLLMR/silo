@@ -37,6 +37,15 @@ pub struct BrowseMod {
     pub latest_version: Option<String>,
     #[serde(default)]
     pub trust_score: Option<i64>,
+    // Provenance (SiloAPI docs/PROVENANCE-CANONICALIZATION.md). Present when the latest
+    // version has been hashed (GitHub-source versions in P1). `verified` = a canonical hash
+    // exists to compare against; the client still does the byte-level match itself.
+    #[serde(default)]
+    pub verified: Option<bool>,
+    #[serde(default)]
+    pub archive_sha256: Option<String>,
+    #[serde(default)]
+    pub manifest_hash: Option<String>,
     #[serde(default)]
     pub updated_at: Option<String>,
     // Popularity signals (see SiloAPI docs/ENRICHMENT.md). All optional: they stay None
@@ -243,6 +252,48 @@ pub fn stats(base: &str) -> Result<Stats, String> {
 pub fn detail(base: &str, id: &str) -> Result<BrowseMod, String> {
     let resp = get(&format!("{}/mods/{}", base.trim_end_matches('/'), id))?;
     resp.into_json().map_err(|e| e.to_string())
+}
+
+/// One entry in a canonical content manifest.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ManifestEntryDto {
+    pub path: String,
+    pub sha256: String,
+    #[serde(default)]
+    pub size: Option<i64>,
+}
+
+/// The canonical manifest for one (mod, version) — `GET /mods/:id/manifest?version=<v>`.
+/// The server does version-equivalence matching (ModHub `1.2.0` ↔ GitHub `v1.2.0`), so the
+/// client sends its local modDesc version verbatim.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CanonicalManifest {
+    #[serde(default)]
+    pub version: Option<String>,
+    #[serde(default)]
+    pub archive_sha256: Option<String>,
+    pub manifest_hash: String,
+    #[serde(default)]
+    pub entries: Vec<ManifestEntryDto>,
+}
+
+/// Fetch the canonical manifest for a specific version. `Ok(None)` when the server has no
+/// hashed build for that version (404) — that's an "unverified", not an error.
+pub fn manifest(base: &str, id: &str, version: &str) -> Result<Option<CanonicalManifest>, String> {
+    let url = format!(
+        "{}/mods/{}/manifest?version={}",
+        base.trim_end_matches('/'),
+        id,
+        urlencode(version)
+    );
+    match ureq::get(&url).set("User-Agent", UA).call() {
+        Ok(resp) => resp.into_json().map(Some).map_err(|e| e.to_string()),
+        Err(ureq::Error::Status(404, _)) => Ok(None),
+        Err(ureq::Error::Status(code, _)) => Err(format!("SiloAPI manifest returned {code}")),
+        Err(other) => Err(format!("Could not reach SiloAPI: {other}")),
+    }
 }
 
 /// Resolve a download into (url, filename). `want` picks a specific source (the button

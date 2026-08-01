@@ -15,7 +15,11 @@
 //!   §10.4 hash  — per-entry sha256 is over UNCOMPRESSED bytes (computed upstream).
 //!   §10.5 vectors — reproduced in the tests below.
 
+use serde::Serialize;
 use sha2::{Digest, Sha256};
+use std::collections::{HashMap, HashSet};
+use std::io::Read;
+use std::path::Path;
 use unicode_normalization::UnicodeNormalization;
 
 /// One regular-file entry: its canonicalized path and the lowercase-hex sha256 of the
@@ -24,6 +28,19 @@ use unicode_normalization::UnicodeNormalization;
 pub struct Entry {
     pub path: String,
     pub sha256: String,
+}
+
+/// Per-entry zip-bomb guard: refuse to hash a single member that decompresses past this.
+/// Generous (a map's `.i3d`/`.dds` can be large) but bounds a hostile tiny-in/huge-out entry.
+const ENTRY_LIMIT: u64 = 4 * 1024 * 1024 * 1024;
+
+/// The locally-computed manifest of an installed mod zip: the whole-file hash (exact-match
+/// fast path), the ratified `manifestHash`, and the per-entry list (for the tamper diff).
+#[derive(Debug, Clone)]
+pub struct LocalManifest {
+    pub archive_sha256: String,
+    pub manifest_hash: String,
+    pub entries: Vec<Entry>,
 }
 
 fn hex_lower(bytes: &[u8]) -> String {
@@ -69,6 +86,182 @@ pub fn manifest_hash(entries: &[Entry]) -> String {
         h.update([0x0a]);
     }
     hex_lower(&h.finalize())
+}
+
+/// Stream a reader through sha256, refusing to read past `limit` bytes (zip-bomb guard).
+/// Returns the lowercase-hex digest.
+fn sha256_stream<R: Read>(mut r: R, limit: u64) -> Result<String, String> {
+    let mut h = Sha256::new();
+    let mut buf = [0u8; 64 * 1024];
+    let mut total: u64 = 0;
+    loop {
+        let n = r.read(&mut buf).map_err(|e| e.to_string())?;
+        if n == 0 {
+            break;
+        }
+        total += n as u64;
+        if total > limit {
+            return Err(format!("an entry exceeds the {limit}-byte safety limit"));
+        }
+        h.update(&buf[..n]);
+    }
+    Ok(hex_lower(&h.finalize()))
+}
+
+/// sha256 of a whole file, streamed (bounded memory). Used for `archiveSha256`.
+pub fn sha256_file(path: &Path) -> Result<String, String> {
+    let f = std::fs::File::open(path).map_err(|e| e.to_string())?;
+    sha256_stream(f, u64::MAX)
+}
+
+/// Compute the local manifest of an installed mod `.zip`: whole-file `archiveSha256`, the
+/// ratified `manifestHash`, and the per-entry list. Directory entries are excluded; decode
+/// follows the zip UTF-8 flag with CP437 fallback (the `zip` crate does this, matching the
+/// server). A duplicate canonical path is a spec anomaly (§4) — we fail loud rather than
+/// emit a partial manifest that would hash wrong.
+pub fn manifest_from_zip(zip_path: &Path) -> Result<LocalManifest, String> {
+    let archive_sha256 = sha256_file(zip_path)?;
+    let file = std::fs::File::open(zip_path).map_err(|e| e.to_string())?;
+    let mut ar = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
+
+    let mut entries: Vec<Entry> = Vec::with_capacity(ar.len());
+    let mut seen: HashSet<String> = HashSet::new();
+    for i in 0..ar.len() {
+        let mut f = ar.by_index(i).map_err(|e| e.to_string())?;
+        if f.is_dir() {
+            continue;
+        }
+        let path = canon_path(f.name());
+        if path.is_empty() {
+            continue;
+        }
+        if !seen.insert(path.clone()) {
+            return Err(format!(
+                "anomalous archive: duplicate canonical path {path:?} — not verifiable"
+            ));
+        }
+        let sha256 = sha256_stream(&mut f, ENTRY_LIMIT)?;
+        entries.push(Entry { path, sha256 });
+    }
+    let manifest_hash = manifest_hash(&entries);
+    Ok(LocalManifest {
+        archive_sha256,
+        manifest_hash,
+        entries,
+    })
+}
+
+/// Verdict of comparing a local mod against the canonical build.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum VerifyStatus {
+    /// Byte-identical to the trusted build (by whole-zip or content manifest).
+    Verified,
+    /// Same mod, but files differ — the diff names them.
+    Modified,
+    /// No hashed canonical build to compare against (not proof of anything).
+    Unverified,
+}
+
+/// The result the UI renders: a status, how a match was reached, and — when Modified — the
+/// exact files that differ (the injected-code candidates).
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VerifyResult {
+    pub status: VerifyStatus,
+    /// `"exact"` (whole-zip match) or `"content"` (manifest match) when Verified.
+    pub how: Option<String>,
+    /// Local files absent from the canonical build.
+    pub added: Vec<String>,
+    /// Canonical files missing locally.
+    pub removed: Vec<String>,
+    /// Files present in both with different content.
+    pub changed: Vec<String>,
+    /// The canonical version compared against (for display).
+    pub matched_version: Option<String>,
+    /// Plain-language context (why Unverified, etc.).
+    pub note: Option<String>,
+}
+
+impl VerifyResult {
+    pub fn unverified(note: &str) -> Self {
+        VerifyResult {
+            status: VerifyStatus::Unverified,
+            how: None,
+            added: Vec::new(),
+            removed: Vec::new(),
+            changed: Vec::new(),
+            matched_version: None,
+            note: Some(note.to_string()),
+        }
+    }
+}
+
+/// Pure comparison of a local manifest against a canonical one. Exact whole-zip match →
+/// Verified("exact"); manifest-hash match → Verified("content"); otherwise a Modified verdict
+/// with the added/removed/changed file lists.
+pub fn compare(
+    local: &LocalManifest,
+    canon_archive_sha256: Option<&str>,
+    canon_manifest_hash: &str,
+    canon_entries: &[Entry],
+) -> VerifyResult {
+    let verified = |how: &str| VerifyResult {
+        status: VerifyStatus::Verified,
+        how: Some(how.to_string()),
+        added: Vec::new(),
+        removed: Vec::new(),
+        changed: Vec::new(),
+        matched_version: None,
+        note: None,
+    };
+
+    if let Some(a) = canon_archive_sha256 {
+        if a.eq_ignore_ascii_case(&local.archive_sha256) {
+            return verified("exact");
+        }
+    }
+    if canon_manifest_hash.eq_ignore_ascii_case(&local.manifest_hash) {
+        return verified("content");
+    }
+
+    let local_map: HashMap<&str, &str> = local
+        .entries
+        .iter()
+        .map(|e| (e.path.as_str(), e.sha256.as_str()))
+        .collect();
+    let canon_map: HashMap<&str, &str> = canon_entries
+        .iter()
+        .map(|e| (e.path.as_str(), e.sha256.as_str()))
+        .collect();
+
+    let mut added = Vec::new();
+    let mut changed = Vec::new();
+    for (p, s) in &local_map {
+        match canon_map.get(p) {
+            None => added.push((*p).to_string()),
+            Some(cs) if !cs.eq_ignore_ascii_case(s) => changed.push((*p).to_string()),
+            _ => {}
+        }
+    }
+    let mut removed: Vec<String> = canon_map
+        .keys()
+        .filter(|p| !local_map.contains_key(*p))
+        .map(|p| (*p).to_string())
+        .collect();
+    added.sort();
+    changed.sort();
+    removed.sort();
+
+    VerifyResult {
+        status: VerifyStatus::Modified,
+        how: None,
+        added,
+        removed,
+        changed,
+        matched_version: None,
+        note: None,
+    }
 }
 
 #[cfg(test)]
@@ -145,6 +338,71 @@ mod tests {
         assert_eq!(canon_path("/a/b.lua"), "a/b.lua");
         // NFC: a decomposed `u`+combining-diaeresis collapses to U+00FC.
         assert_eq!(canon_path("u\u{0308}.lua"), "\u{00FC}.lua");
+    }
+
+    #[test]
+    fn manifest_from_zip_hashes_files_and_excludes_dirs() {
+        use std::io::Write;
+        let dir = std::env::temp_dir().join(format!("silo_prov_zip_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let zpath = dir.join("m.zip");
+        {
+            let f = std::fs::File::create(&zpath).unwrap();
+            let mut zw = zip::ZipWriter::new(f);
+            let opts = zip::write::SimpleFileOptions::default()
+                .compression_method(zip::CompressionMethod::Stored);
+            zw.add_directory("scripts/", opts).unwrap(); // must be excluded
+            zw.start_file("modDesc.xml", opts).unwrap();
+            zw.write_all(b"hello").unwrap();
+            zw.start_file("scripts/a.lua", opts).unwrap();
+            zw.write_all(b"world").unwrap();
+            zw.finish().unwrap();
+        }
+
+        let m = manifest_from_zip(&zpath).unwrap();
+        assert_eq!(m.entries.len(), 2, "the directory entry must be excluded");
+        // Cross-check against the ratified hash of the same files (sha256 of "hello"/"world").
+        let expected = manifest_hash(&[
+            e(
+                "modDesc.xml",
+                "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+            ),
+            e(
+                "scripts/a.lua",
+                "486ea46224d1bb4fb680f34f7c9ad96a8f24ec88be73ea8e5a6c65260e9cb8a7",
+            ),
+        ]);
+        assert_eq!(m.manifest_hash, expected);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn compare_verifies_exact_and_content_and_diffs_modified() {
+        let local = LocalManifest {
+            archive_sha256: "aa".into(),
+            manifest_hash: "bb".into(),
+            entries: vec![e("a.lua", "1"), e("b.lua", "2")],
+        };
+
+        // Whole-zip exact match (case-insensitive hex).
+        let r = compare(&local, Some("AA"), "zzz", &[]);
+        assert_eq!(r.status, VerifyStatus::Verified);
+        assert_eq!(r.how.as_deref(), Some("exact"));
+
+        // Manifest (content) match when the archive differs (re-zipped, same content).
+        let r = compare(&local, Some("different"), "BB", &[]);
+        assert_eq!(r.status, VerifyStatus::Verified);
+        assert_eq!(r.how.as_deref(), Some("content"));
+
+        // Modified: b.lua changed, c.lua present canonically but missing locally.
+        let canon = [e("a.lua", "1"), e("b.lua", "9"), e("c.lua", "3")];
+        let r = compare(&local, Some("different"), "different", &canon);
+        assert_eq!(r.status, VerifyStatus::Modified);
+        assert_eq!(r.changed, vec!["b.lua"]);
+        assert_eq!(r.removed, vec!["c.lua"]);
+        assert!(r.added.is_empty());
     }
 
     #[test]

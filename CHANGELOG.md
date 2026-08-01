@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Mod integrity verification (provenance).** The detail drawer can now check an installed
+  mod against the trusted build SiloAPI hashed from its source: **Verified** (byte-for-byte
+  or content match), **Modified** (with the exact list of changed / added / removed files —
+  the injected-code candidates), or **Unverified** (no hashed build to compare against yet).
+  Byte-exact against the server via a cross-language-ratified manifest format. It's a
+  provenance check, not a virus scan — it confirms origin and integrity, and says so.
+  Coverage is GitHub-source-first and grows as SiloAPI hashes more.
 - **Organize preview.** The manual **Organize** button now shows a read-only dry run
   first — exactly which zips move into which `archive/<Category>/` folder — before a
   single file is touched. Confirm to apply, Cancel to touch nothing. Dismissible for
