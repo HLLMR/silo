@@ -301,11 +301,21 @@ pub fn manifest(base: &str, id: &str, version: &str) -> Result<Option<CanonicalM
 ///
 /// The API decides what's installable and strips URLs it knows won't serve us, so a
 /// source with no url here is one the user must fetch from its own site.
+/// A resolved installable download plus the identity we can hold it to: `expected_sha256` is
+/// the catalog's canonical whole-zip hash for the exact version being fetched, when it has one
+/// (GitHub-source, provenance P1). `None` means "not hashed yet" (ModHub/Nexus/unhashed) — we
+/// can't prove identity, only that it's a valid archive.
+pub struct ResolvedDownload {
+    pub url: String,
+    pub filename: String,
+    pub expected_sha256: Option<String>,
+}
+
 pub fn resolve_download(
     base: &str,
     id: &str,
     want: Option<&str>,
-) -> Result<(String, String), String> {
+) -> Result<ResolvedDownload, String> {
     let detail = detail(base, id)?;
 
     let usable = |s: &&ModSource| s.installable && s.download_url.is_some();
@@ -336,7 +346,25 @@ pub fn resolve_download(
         .ok_or_else(|| "That source has no download URL".to_string())?;
     let filename = filename_from_url(&url)
         .ok_or_else(|| "Could not derive a .zip filename from the download URL".to_string())?;
-    Ok((url, filename))
+
+    // Identity: the canonical whole-zip hash for the *version we're about to fetch*. Use the
+    // /manifest endpoint (server does version-equivalence). A network/404 miss → None → the
+    // download is still validated as an archive, just not identity-checked.
+    let version = pick
+        .version
+        .clone()
+        .or_else(|| detail.latest_version.clone())
+        .unwrap_or_default();
+    let expected_sha256 = manifest(base, id, &version)
+        .ok()
+        .flatten()
+        .and_then(|m| m.archive_sha256);
+
+    Ok(ResolvedDownload {
+        url,
+        filename,
+        expected_sha256,
+    })
 }
 
 /// Last path segment if it looks like a .zip.
@@ -378,6 +406,7 @@ fn urlencode(s: &str) -> String {
 pub fn download_to<F: Fn(u64, Option<u64>)>(
     url: &str,
     dest: &std::path::Path,
+    expected_sha256: Option<&str>,
     on_progress: F,
 ) -> Result<(), String> {
     const CAP: u64 = 500 * 1024 * 1024;
@@ -449,6 +478,19 @@ pub fn download_to<F: Fn(u64, Option<u64>)>(
             .map_err(|_| "Downloaded file isn't a valid .zip (corrupt or truncated)".to_string())?;
         ar.by_name("modDesc.xml")
             .map_err(|_| "Downloaded archive has no modDesc.xml — not an FS25 mod".to_string())?;
+        // Identity: a valid ZIP of the WRONG mod is still the wrong mod. If the catalog has a
+        // canonical hash for this exact mod+version, the bytes must match it byte-for-byte —
+        // this catches a mismatched/tampered asset before it enters the library.
+        if let Some(expected) = expected_sha256 {
+            let got = crate::provenance::sha256_file(&part)?;
+            if !got.eq_ignore_ascii_case(expected) {
+                return Err(
+                    "Downloaded file doesn't match the catalog's known build for this mod \
+                     (wrong or tampered file) — refusing it."
+                        .to_string(),
+                );
+            }
+        }
         Ok(())
     })();
     if let Err(e) = validate {

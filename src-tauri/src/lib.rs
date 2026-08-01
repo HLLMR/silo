@@ -594,25 +594,30 @@ async fn install_remote_mod(
     let root = primary_root(root)?;
     let emitter = app.clone();
     tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
-        let (url, filename) = siloapi::resolve_download(&base, &id, source.as_deref())?;
+        let resolved = siloapi::resolve_download(&base, &id, source.as_deref())?;
         // The filename comes from the catalog — validate it's a plain basename so a
         // hostile response can't redirect the write outside the mods folder.
-        paths::safe_file_name(&filename)?;
-        let dest = root.join(&filename);
+        paths::safe_file_name(&resolved.filename)?;
+        let dest = root.join(&resolved.filename);
         if dest.exists() {
-            return Err(format!("{filename} is already in your library"));
+            return Err(format!("{} is already in your library", resolved.filename));
         }
-        siloapi::download_to(&url, &dest, |done, total| {
-            let _ = emitter.emit(
-                "install:progress",
-                InstallProgress {
-                    id: id.clone(),
-                    done,
-                    total,
-                },
-            );
-        })?;
-        Ok(filename)
+        siloapi::download_to(
+            &resolved.url,
+            &dest,
+            resolved.expected_sha256.as_deref(),
+            |done, total| {
+                let _ = emitter.emit(
+                    "install:progress",
+                    InstallProgress {
+                        id: id.clone(),
+                        done,
+                        total,
+                    },
+                );
+            },
+        )?;
+        Ok(resolved.filename)
     })
     .await
     .map_err(|e| e.to_string())?

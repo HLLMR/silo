@@ -127,10 +127,13 @@ Feed both the updater and the direct catalog installer:
   chain · server 404 / 429 / 500 · **valid FS25 ZIP that is the WRONG mod** · already-installed
   version · locally-modified build.
 
-Direct catalog installs now validate the full archive + require a root `modDesc.xml`. Verify:
-**the `.part` temp disappears after every failure**, and **no bad archive ever enters the
-library.** Note: archive validity ≠ catalog identity — the **wrong-valid-mod** case is a known
-gap (identity check is a tracked follow-up); confirm current behavior and file it, don't pass it.
+Direct catalog installs now validate the full archive + require a root `modDesc.xml`, **and**
+identity-check the bytes: when the catalog has a canonical hash for the mod (GitHub-source), a
+download whose bytes don't match is refused. Verify: **the `.part` temp disappears after every
+failure**, **no bad archive ever enters the library**, and the **wrong-valid-mod** case is
+**rejected** for a hashed (GitHub) mod (swap the asset → "doesn't match the catalog's known
+build"). For an *unhashed* source (ModHub/Nexus/not-yet-hashed) identity can't be proven — only
+archive validity — so confirm that path degrades to the validity check, not a false rejection.
 
 ### D. User-ownership conflicts — the most important regression
 

@@ -36,9 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The backend owns where it writes.** Installs, organizing, and updates now validate the
   target mods folder against the game folder(s) Silo detected, rather than trusting a path
   handed in by the UI — a defence-in-depth boundary on the Rust side.
-- **Direct catalog installs are validated like updates.** A downloaded mod must be a fully
-  openable `.zip` containing `modDesc.xml` before it's admitted to the library, so a
-  truncated or garbage download can't land as a "broken mod".
+- **Direct catalog installs are validated like updates — and identity-checked.** A downloaded
+  mod must be a fully openable `.zip` containing `modDesc.xml` before it's admitted, so a
+  truncated or garbage download can't land as a "broken mod". And when the catalog has a
+  canonical hash for the mod (GitHub-source), the downloaded bytes must match it byte-for-byte
+  — a valid ZIP of the *wrong* mod, or a tampered asset, is refused.
 - **Safer cross-volume moves.** A move that can't be a fast rename now copies to a temporary
   file and swaps it into place, so an interrupted move never leaves a half-written file.
 - **Organize can never delete your only copy.** The restore/deactivate paths now
