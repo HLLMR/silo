@@ -22,6 +22,10 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 const ARCHIVE: &str = "archive";
+/// Dropped inside a copy-fallback **directory** projection so we can later prove Silo
+/// created it (a dir has no hardlink identity to compare). Hardlink/symlink projections
+/// are identified structurally and need no marker.
+const SILO_MARKER: &str = ".silo-projection";
 
 /// A mod present in the flat root that could be organized.
 #[derive(Debug, Clone, Deserialize)]
@@ -170,17 +174,33 @@ pub fn set_active(conn: &Connection, root: &Path, active: &HashSet<String>) -> R
         if want && !linked {
             match make_link(&src, &link, &row.kind) {
                 Ok(()) => {
-                    let _ = db::set_organized_active(conn, &row.tech_name, true);
+                    if let Err(e) = db::set_organized_active(conn, &row.tech_name, true) {
+                        rep.errors.push(format!("{}: manifest: {e}", row.tech_name));
+                    }
                     rep.changed += 1;
                 }
                 Err(e) => rep.errors.push(format!("{}: link: {e}", row.tech_name)),
             }
         } else if !want && linked {
-            // Only drop the root entry if the archived copy exists behind it. A genuine
-            // projection is always backed by an archive file; a root entry with NO archive
-            // is the only copy (e.g. a crash between the manifest write and the move landed
-            // the original here) — deleting it to "deactivate" would destroy it.
-            if src.exists() {
+            // Two guards before removing anything from the root:
+            //  1. The archived copy must exist behind it — a root entry with no archive is the
+            //     only copy (e.g. a crash between manifest-write and move), never delete it.
+            //  2. The entry must PROVABLY be Silo's projection (our hardlink / our symlink /
+            //     our marked copy). If the user swapped in their own file at that name, it is
+            //     not ours to delete — leave it and say so.
+            if !src.exists() {
+                rep.errors.push(format!(
+                    "{}: no archived copy behind the root file — kept it (won't delete the only copy)",
+                    row.tech_name
+                ));
+                rep.skipped += 1;
+            } else if !is_silo_projection(&link, &src, &row.kind) {
+                rep.errors.push(format!(
+                    "{}: the file in the mods folder isn't the one Silo projected (did you replace it?) — left it untouched",
+                    row.tech_name
+                ));
+                rep.skipped += 1;
+            } else {
                 match remove_link(&link) {
                     Ok(()) => {
                         if let Err(e) = db::set_organized_active(conn, &row.tech_name, false) {
@@ -190,12 +210,6 @@ pub fn set_active(conn: &Connection, root: &Path, active: &HashSet<String>) -> R
                     }
                     Err(e) => rep.errors.push(format!("{}: unlink: {e}", row.tech_name)),
                 }
-            } else {
-                rep.errors.push(format!(
-                    "{}: no archived copy behind the root file — kept it (won't delete the only copy)",
-                    row.tech_name
-                ));
-                rep.skipped += 1;
             }
         } else {
             rep.skipped += 1;
@@ -214,9 +228,21 @@ pub fn flatten(conn: &Connection, root: &Path) -> Report {
         let src = archive_path(root, &row.category, &row.file_name);
 
         if src.exists() {
-            // Normal restore: drop the projection to free the slot, then move the archived
+            let occupied = link.symlink_metadata().is_ok();
+            // If a file occupies the root slot but it isn't Silo's projection (the user swapped
+            // their own build in), don't remove it and don't overwrite it with the archived
+            // copy — leave both in place and report the anomaly for the user to resolve.
+            if occupied && !is_silo_projection(&link, &src, &row.kind) {
+                rep.errors.push(format!(
+                    "{}: the mods-folder file isn't Silo's projection — left it and the archived copy untouched",
+                    row.tech_name
+                ));
+                rep.skipped += 1;
+                continue;
+            }
+            // Normal restore: drop our projection to free the slot, then move the archived
             // original back into the root.
-            if link.symlink_metadata().is_ok() {
+            if occupied {
                 if let Err(e) = remove_link(&link) {
                     rep.errors.push(format!("{}: unlink: {e}", row.tech_name));
                     continue;
@@ -298,23 +324,56 @@ fn cleanup_empty_archive(archive: &Path) -> std::io::Result<Vec<PathBuf>> {
 
 // ── filesystem primitives ──
 
-/// Move a file/dir, preferring an instant same-volume rename, falling back to
-/// copy+remove across volumes.
+/// A hidden temp sibling of `to`, used for the copy-and-swap fallback.
+fn tmp_sibling(to: &Path) -> PathBuf {
+    let name = to
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "x".into());
+    to.with_file_name(format!(".{name}.silo-tmp"))
+}
+
+/// Remove a path whatever it is (file/dir/link), treating "not found" as success.
+fn remove_path(p: &Path) -> std::io::Result<()> {
+    match std::fs::symlink_metadata(p) {
+        Ok(m) if m.is_dir() => std::fs::remove_dir_all(p),
+        Ok(_) => std::fs::remove_file(p),
+        Err(_) => Ok(()),
+    }
+}
+
+/// Move a file/dir, preferring an instant same-volume rename. On any rename failure
+/// (typically a cross-volume move) fall back SAFELY: copy to a temporary sibling of the
+/// destination, rename that into place, and only then remove the source — so a failed or
+/// partial copy never leaves a half-written file at `to`, and `from` is never lost until
+/// the destination is complete.
 fn move_path(from: &Path, to: &Path) -> std::io::Result<()> {
     if let Some(parent) = to.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    match std::fs::rename(from, to) {
-        Ok(()) => Ok(()),
-        Err(_) => {
-            if from.is_dir() {
-                copy_dir_all(from, to)?;
-                std::fs::remove_dir_all(from)
-            } else {
-                std::fs::copy(from, to)?;
-                std::fs::remove_file(from)
-            }
-        }
+    if std::fs::rename(from, to).is_ok() {
+        return Ok(());
+    }
+
+    let tmp = tmp_sibling(to);
+    let _ = remove_path(&tmp); // clear any stale temp from a prior aborted run
+    let copied = if from.is_dir() {
+        copy_dir_all(from, &tmp)
+    } else {
+        std::fs::copy(from, &tmp).map(|_| ())
+    };
+    if let Err(e) = copied {
+        let _ = remove_path(&tmp);
+        return Err(e);
+    }
+    if let Err(e) = std::fs::rename(&tmp, to) {
+        let _ = remove_path(&tmp);
+        return Err(e);
+    }
+    if from.is_dir() {
+        std::fs::remove_dir_all(from)
+    } else {
+        std::fs::remove_file(from)
     }
 }
 
@@ -328,11 +387,68 @@ fn make_link(src: &Path, link: &Path, kind: &str) -> std::io::Result<()> {
         }
         #[cfg(windows)]
         {
-            std::os::windows::fs::symlink_dir(src, link).or_else(|_| copy_dir_all(src, link))
+            std::os::windows::fs::symlink_dir(src, link).or_else(|_| copy_dir_projection(src, link))
         }
     } else {
         std::fs::hard_link(src, link).or_else(|_| std::fs::copy(src, link).map(|_| ()))
     }
+}
+
+/// Copy a directory as a projection and drop the ownership marker, so a later flatten /
+/// deactivate can prove Silo created it (a copied dir has no link identity to compare).
+#[cfg(windows)]
+fn copy_dir_projection(src: &Path, dst: &Path) -> std::io::Result<()> {
+    copy_dir_all(src, dst)?;
+    std::fs::write(dst.join(SILO_MARKER), b"silo\n")
+}
+
+/// True only if `link` in the flat root is provably the projection Silo created for archived
+/// `src` — so removing it can't destroy a file the user put there themselves. Symlink /
+/// junction resolves to `src`; a zip hardlink shares `src`'s file id; a cross-volume copy is
+/// byte-identical to `src`; a copied dir carries our marker. Anything else is NOT ours.
+fn is_silo_projection(link: &Path, src: &Path, kind: &str) -> bool {
+    let Ok(meta) = link.symlink_metadata() else {
+        return false;
+    };
+    let ft = meta.file_type();
+
+    if ft.is_symlink() {
+        // Our dir symlink / Windows junction resolves to the archived source.
+        return matches!(
+            (std::fs::canonicalize(link), std::fs::canonicalize(src)),
+            (Ok(a), Ok(b)) if a == b
+        );
+    }
+
+    if kind == "dir" || ft.is_dir() {
+        // Copy-fallback directory projection carries our marker; a user's own folder won't.
+        return link.join(SILO_MARKER).is_file();
+    }
+
+    // Regular file (zip). Same underlying file id → our hardlink (cheap, the common case).
+    if let (Ok(a), Ok(b)) = (
+        same_file::Handle::from_path(link),
+        same_file::Handle::from_path(src),
+    ) {
+        if a == b {
+            return true;
+        }
+    }
+    // Distinct files: a cross-volume copy projection is byte-identical to the archive; a
+    // user's replacement is not. Cheap size gate first, then a content hash.
+    let (Ok(lm), Ok(sm)) = (std::fs::metadata(link), std::fs::metadata(src)) else {
+        return false;
+    };
+    if lm.len() != sm.len() {
+        return false;
+    }
+    matches!(
+        (
+            crate::provenance::sha256_file(link),
+            crate::provenance::sha256_file(src),
+        ),
+        (Ok(a), Ok(b)) if a == b
+    )
 }
 
 /// Remove a projected entry (hardlink, symlink, junction, or copy) without
@@ -372,6 +488,58 @@ fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn is_silo_projection_distinguishes_ours_from_the_users() {
+        let base = std::env::temp_dir().join(format!("silo_proj_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).unwrap();
+        let src = base.join("archived_FS25_Foo.zip");
+        std::fs::write(&src, b"PK\x03\x04 canonical bytes").unwrap();
+        let link = base.join("FS25_Foo.zip");
+
+        // Our hardlink projection → ours.
+        std::fs::hard_link(&src, &link).unwrap();
+        assert!(is_silo_projection(&link, &src, "zip"), "hardlink is ours");
+        std::fs::remove_file(&link).unwrap();
+
+        // A byte-identical copy (cross-volume fallback) → ours.
+        std::fs::copy(&src, &link).unwrap();
+        assert!(
+            is_silo_projection(&link, &src, "zip"),
+            "identical copy is ours"
+        );
+        std::fs::remove_file(&link).unwrap();
+
+        // The user's own DIFFERENT build at the same name → NOT ours (must be preserved).
+        std::fs::write(&link, b"PK\x03\x04 the user's different, longer build").unwrap();
+        assert!(
+            !is_silo_projection(&link, &src, "zip"),
+            "a user's replacement must not read as Silo's"
+        );
+
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn is_silo_projection_dir_requires_marker() {
+        let base = std::env::temp_dir().join(format!("silo_projdir_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).unwrap();
+        let src = base.join("archived_dir");
+        std::fs::create_dir_all(&src).unwrap();
+        let link = base.join("FS25_FooDir");
+        std::fs::create_dir_all(&link).unwrap();
+        std::fs::write(link.join("modDesc.xml"), b"<x/>").unwrap();
+
+        // A plain user directory at the projected name → NOT ours.
+        assert!(!is_silo_projection(&link, &src, "dir"));
+        // With Silo's ownership marker → ours.
+        std::fs::write(link.join(SILO_MARKER), b"silo\n").unwrap();
+        assert!(is_silo_projection(&link, &src, "dir"));
+
+        let _ = std::fs::remove_dir_all(&base);
+    }
 
     #[test]
     fn cleanup_never_deletes_unknown_files() {

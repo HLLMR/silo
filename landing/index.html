@@ -361,7 +361,7 @@
         "Conflict detection across maps, filltypes, vehicle types and scripts",
         "Cross-source catalog aggregating ModHub, GitHub and Nexus",
         "Guided bisection to isolate a bad mod",
-        "Loadouts projected into the game folder via links, never by moving files",
+        "Loadouts projected into the game folder via links; zips filed into a reversible local archive",
         "Filltype bridge companion-mod generation",
         "No telemetry, no account"
       ]
@@ -375,7 +375,7 @@
     {
       "@type": "FAQPage",
       "mainEntity": [
-        { "@type": "Question", "name": "Is Silo free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — Silo is free, forever, and fully open source. There's no account to create, no paid tier, and no telemetry. Every line is on GitHub to audit, fork or build yourself." } },
+        { "@type": "Question", "name": "Is Silo free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — Silo is free, forever, and open source. There's no account to create, no paid tier, and no telemetry. The desktop app's every line is on GitHub to audit, fork or build yourself; the catalog it talks to is a separate hosted service." } },
         { "@type": "Question", "name": "What does Silo actually do?", "acceptedAnswer": { "@type": "Answer", "text": "It manages your Farming Simulator 25 mods. Silo organizes the library and reads log.txt to name the mod that crashed you. It flags conflicts such as duplicate maps and colliding filltypes, vehicle types or scripts. And it pulls ModHub, GitHub and Nexus into one catalog that shows the latest version found across all three." } },
         { "@type": "Question", "name": "Does Silo move or modify my mod files?", "acceptedAnswer": { "@type": "Answer", "text": "It moves them, but reversibly. Silo files your ZIPs into a local archive, then links only your active set into the game's mods folder at launch. Every move is recorded so it can be undone, and it backs up before it overwrites anything or edits a savegame." } },
         { "@type": "Question", "name": "Which platforms does Silo support?", "acceptedAnswer": { "@type": "Answer", "text": "Windows, macOS (Intel and Apple Silicon) and Linux. It's one native app with per-OS game discovery and no runtime to install." } },
@@ -505,7 +505,7 @@
       <div class="card">
         <div class="glyph">≋</div>
         <h3>Loadouts &amp; projection</h3>
-        <p>Build a profile for each playthrough. At launch, Silo links only the active set into the game folder with junctions, so your actual files never move.</p>
+        <p>Build a profile for each playthrough. At launch, Silo links only the active set into the game folder with junctions — your zips live in a local archive it can restore with one click.</p>
       </div>
       <div class="card">
         <div class="glyph">⛓</div>
@@ -545,7 +545,7 @@
       <p class="eyebrow">Why you can trust it</p>
       <h2>Built to respect your machine and your files.</h2>
       <div class="ethos-grid">
-        <div><p class="m">// open</p><h3>Fully open source</h3><p>Every line is on GitHub. Audit it, fork it, build it yourself.</p></div>
+        <div><p class="m">// open</p><h3>Open source</h3><p>The desktop app's every line is on GitHub. Audit it, fork it, build it yourself.</p></div>
         <div><p class="m">// quiet</p><h3>No telemetry, no account</h3><p>Silo uses the network only for catalog search, update checks, and the source actions you choose. Nothing else leaves your machine.</p></div>
         <div><p class="m">// safe</p><h3>Reversible by design</h3><p>Silo files your mods into a local archive and links the active set into the game. Every move is recorded so it can be undone, and it backs up before it overwrites anything.</p></div>
         <div><p class="m">// everywhere</p><h3>Windows · macOS · Linux</h3><p>One native app, per-OS game discovery, no runtime to install.</p></div>
@@ -579,7 +579,7 @@
     <div class="faq">
       <details>
         <summary>Is Silo free?</summary>
-        <p>Yes, and it always will be. Silo is fully open source, with no account to create, no paid tier, and nothing phoning home. Every line is on GitHub if you want to audit it or build it yourself.</p>
+        <p>Yes, and it always will be. Silo is open source, with no account to create, no paid tier, and no telemetry. The app talks to the Silo catalog only for search, update checks, images and the source actions you choose — never your data. The desktop app's every line is on GitHub to audit or build yourself.</p>
       </details>
       <details>
         <summary>What does Silo actually do?</summary>

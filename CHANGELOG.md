@@ -24,6 +24,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security & reliability (hardening pass)
 
+- **Silo only removes files it can prove it created.** Before de-activating or flattening,
+  Silo now verifies the file in the mods folder really is its own projection (the hardlink,
+  the junction/symlink, or a marked copy). If you swapped in your own build at that name, it
+  is left untouched and reported instead of deleted — closing the last realistic data-loss
+  path (a user replacement being removed because the filename matched).
+- **The backend owns where it writes.** Installs, organizing, and updates now validate the
+  target mods folder against the game folder(s) Silo detected, rather than trusting a path
+  handed in by the UI — a defence-in-depth boundary on the Rust side.
+- **Direct catalog installs are validated like updates.** A downloaded mod must be a fully
+  openable `.zip` containing `modDesc.xml` before it's admitted to the library, so a
+  truncated or garbage download can't land as a "broken mod".
+- **Safer cross-volume moves.** A move that can't be a fast rename now copies to a temporary
+  file and swaps it into place, so an interrupted move never leaves a half-written file.
 - **Organize can never delete your only copy.** The restore/deactivate paths now
   refuse to remove a file from the mods root unless the archived copy exists behind
   it — so an update or organize interrupted by a crash or power loss leaves your

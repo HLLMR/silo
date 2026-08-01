@@ -438,6 +438,24 @@ pub fn download_to<F: Fn(u64, Option<u64>)>(
     }
     file.flush().map_err(|e| e.to_string())?;
     drop(file);
+
+    // Full-archive validation before we admit it to the library. The PK magic above only
+    // proves the first two bytes; a truncated or garbage download can still start with "PK".
+    // Require the central directory to parse AND a modDesc.xml to exist (every real FS mod
+    // has one) — this is what stops "Silo installed a broken mod" reports.
+    let validate = (|| -> Result<(), String> {
+        let f = std::fs::File::open(&part).map_err(|e| e.to_string())?;
+        let mut ar = zip::ZipArchive::new(f)
+            .map_err(|_| "Downloaded file isn't a valid .zip (corrupt or truncated)".to_string())?;
+        ar.by_name("modDesc.xml")
+            .map_err(|_| "Downloaded archive has no modDesc.xml — not an FS25 mod".to_string())?;
+        Ok(())
+    })();
+    if let Err(e) = validate {
+        let _ = std::fs::remove_file(&part);
+        return Err(e);
+    }
+
     std::fs::rename(&part, dest).map_err(|e| e.to_string())?;
     on_progress(done, total);
     Ok(())

@@ -3716,6 +3716,7 @@ dependencies = [
  "quick-xml",
  "rayon",
  "rusqlite",
+ "same-file",
  "serde",
  "serde_json",
  "sha2",

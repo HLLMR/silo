@@ -456,7 +456,7 @@ async fn download_update(
         // root or its `archive/`). An absolute path outside the mods folder — which
         // `no_traversal` alone would pass — is rejected here.
         paths::no_traversal(dest)?;
-        paths::ensure_write_under(&fsgame::default_mods_paths(), dest)?;
+        paths::ensure_write_under(&allowed_roots(), dest)?;
         // Public release assets don't need auth, and a download must never carry the user's
         // GitHub credential — keep the token for explicit API actions only.
         github::download_zip(&asset_url, None, dest)
@@ -769,10 +769,34 @@ fn set_override(app: tauri::AppHandle, row: db::CategoryOverride) -> Result<(), 
 }
 
 // ── Organize / projection engine (writes to the game folder) ──
+
+/// The mod roots Silo is allowed to write to. Today that's the auto-detected game mod
+/// folder(s); a future custom-root feature will add to this set through a native folder
+/// picker. This is the single source of truth for "where may we write" — Rust, not the
+/// webview, is the authority.
+fn allowed_roots() -> Vec<PathBuf> {
+    fsgame::default_mods_paths()
+}
+
+/// Resolve a frontend-supplied root to a TRUSTED one. Empty → the first detected root.
+/// Otherwise the path must canonicalize to one of the allowed roots, or it's rejected —
+/// so a compromised webview can't redirect an install/organize into an arbitrary directory.
+/// Returns the matched allowed root (the trusted path), never the raw frontend string.
 fn primary_root(root: Option<String>) -> Result<PathBuf, String> {
+    let allowed = allowed_roots();
     match root {
-        Some(r) if !r.is_empty() => Ok(PathBuf::from(r)),
-        _ => fsgame::default_mods_paths()
+        Some(r) if !r.is_empty() => {
+            let want = PathBuf::from(&r)
+                .canonicalize()
+                .map_err(|_| "That mods folder doesn't exist".to_string())?;
+            allowed
+                .into_iter()
+                .find(|a| a.canonicalize().map(|ac| ac == want).unwrap_or(false))
+                .ok_or_else(|| {
+                    "refusing a mods folder outside the detected game folder(s)".to_string()
+                })
+        }
+        _ => allowed
             .into_iter()
             .next()
             .ok_or_else(|| "No mods folder detected".to_string()),
