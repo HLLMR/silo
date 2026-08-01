@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **Direct GitHub updates now confirm the download is the right mod before replacing it.** A GitHub
+  release can hold many assets (source archives, docs, other editions), and a valid ZIP of the
+  wrong mod is still a valid ZIP. Before overwriting an installed mod, Silo now requires the
+  downloaded archive to contain a readable root `modDesc.xml` and — when the current file is a
+  readable mod — to identify as the *same* mod (matching `uniqueType`, or author + title). A
+  provable mismatch is refused, with the original untouched; missing/uncomparable fields never
+  block a legitimate update. Mirrors the identity check catalog installs already do. (#20)
+
 ## [0.2.3] - 2026-08-01
 
 ### Security
