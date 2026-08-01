@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Version shown in the UI.** The app version now appears beside the **Silo** wordmark in the
+  top bar and in a footer line at the bottom of Settings, read from the app's package info so it
+  always matches the build. Makes "what version are you on?" answerable at a glance.
+
 ### Fixed
 
 - **GitHub "Enable actions" now shows the device code.** Escalating an already-connected,

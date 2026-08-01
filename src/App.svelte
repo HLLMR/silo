@@ -34,6 +34,7 @@
     userDirPath,
     bisectSnapshotGet,
     bisectSnapshotClear,
+    appVersion,
   } from "./lib/api";
   import {
     GAME_GRAPHICS_FIELDS,
@@ -197,6 +198,7 @@
     detailMod = null;
   }
   let userDir = $state<string | null>(null);
+  let appVer = $state<string | null>(null);
   let configEditor = $state<{
     title: string;
     path: string;
@@ -1003,6 +1005,7 @@
         await loadSavegames();
         gameInfo = await detectGame();
         userDir = await userDirPath();
+        appVer = await appVersion();
         settingsModsSet = new Set(await modsWithSettings());
       } catch (e) {
         errorMsg = String(e);
@@ -1042,6 +1045,7 @@
   <Topbar
     bind:topbarH
     {view}
+    {appVer}
     hasSavegames={savegames.length > 0}
     {savesOpen}
     {loadoutsOpen}
@@ -1126,6 +1130,7 @@
       {roots}
       {gameInfo}
       {userDir}
+      {appVer}
       {autoFileNew}
       {organizedCount}
       {unorganizedCount}

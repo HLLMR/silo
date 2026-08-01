@@ -49,6 +49,11 @@ export function defaultModsPaths(): Promise<string[]> {
   return invoke<string[]>("default_mods_paths");
 }
 
+/** App version (from tauri.conf/Cargo), e.g. "0.2.0" — the single source the UI shows. */
+export function appVersion(): Promise<string> {
+  return invoke<string>("app_version");
+}
+
 export function scanMods(roots?: string[]): Promise<ScanResult> {
   return invoke<ScanResult>("scan_mods", { roots: roots ?? null });
 }
