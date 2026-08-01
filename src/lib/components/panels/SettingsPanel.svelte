@@ -1,8 +1,20 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import type { GameInfo } from "../../types";
-  import { openFolder } from "../../api";
+  import { openFolder, secretStorageSecure } from "../../api";
   import GitHubAuth from "../GitHubAuth.svelte";
   import NexusAuth from "../NexusAuth.svelte";
+
+  // When the OS keychain is unavailable, connecting an account falls back to storing the
+  // token in the local DB unencrypted — warn before the user connects rather than silently.
+  let keychainOk = $state(true);
+  onMount(async () => {
+    try {
+      keychainOk = await secretStorageSecure();
+    } catch {
+      keychainOk = true; // don't cry wolf if the probe itself errors
+    }
+  });
 
   let {
     theme,
@@ -105,6 +117,16 @@
       </div>
       <div class="set-hint">
         Tune graphics settings (presets: Performance / Balanced / Quality) without launching the game.
+      </div>
+    </div>
+  {/if}
+
+  {#if !keychainOk}
+    <div class="set-section">
+      <div class="keychain-warn">
+        ⚠ No OS keychain is available on this machine, so a connected GitHub or Nexus token
+        would be stored <strong>unencrypted</strong> in Silo's local database. Connect an account
+        only if you're comfortable with that; disconnecting removes the stored token.
       </div>
     </div>
   {/if}
@@ -232,6 +254,15 @@
     color: var(--text-muted);
     line-height: 1.5;
     margin-bottom: 8px;
+  }
+  .keychain-warn {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text);
+    background: color-mix(in srgb, var(--barn-500) 12%, var(--surface-raised));
+    border: 1px solid color-mix(in srgb, var(--barn-500) 45%, var(--border));
+    border-radius: var(--radius);
+    padding: 10px 12px;
   }
   .set-foot {
     padding: 10px 4px 4px;

@@ -20,6 +20,26 @@ fn entry(key: &str) -> Option<keyring::Entry> {
     keyring::Entry::new(SERVICE, key).ok()
 }
 
+/// Whether this machine has a working OS keychain. When false, connecting an account falls
+/// back to storing the token in the local SQLite DB (not OS-encrypted) — the UI surfaces a
+/// warning so the user can decide before connecting, rather than falling back silently.
+/// Does a full write→read→delete round-trip on a throwaway probe entry, since some platforms
+/// create an `Entry` fine but fail on the actual store.
+pub fn keychain_available() -> bool {
+    match keyring::Entry::new(SERVICE, "silo-keychain-probe") {
+        Ok(e) => {
+            if e.set_password("probe").is_ok() {
+                let ok = e.get_password().is_ok();
+                let _ = e.delete_credential();
+                ok
+            } else {
+                false
+            }
+        }
+        Err(_) => false,
+    }
+}
+
 /// Read a secret: keychain first; otherwise migrate any legacy SQLite value into the
 /// keychain and return it.
 pub fn get(conn: &Connection, key: &str) -> Option<String> {

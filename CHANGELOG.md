@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **Warn when credential storage isn't encrypted.** On a machine with no OS keychain, connecting
+  a GitHub/Nexus account falls back to storing the token in the local database. Settings now
+  probes keychain availability and shows a clear warning above the account sections so it's never
+  a silent fallback — the user decides before connecting. (#20)
+
 - **SSRF guard on native requests.** A custom SiloAPI base URL and every mod download are now
   validated before the native layer fetches them: HTTPS only (plain `http` allowed only to
   localhost, for a self-hosted/dev endpoint), and never a loopback/link-local/private/CGNAT
