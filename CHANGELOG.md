@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **GitHub "Enable actions" now shows the device code.** Escalating an already-connected,
+  read-only account to Star/Watch scope opened GitHub's device page but never surfaced the
+  code in Silo — the code display was unreachable while connected. It now renders during the
+  read-only → actions escalation.
+
 ## [0.2.0] - 2026-08-01
 
 ### Added
