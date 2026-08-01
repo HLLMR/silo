@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Browse the FS25 mod catalog — Silo</title>
+<meta name="description" content="Browse the Farming Simulator 25 mod catalog Silo has aggregated from ModHub, GitHub and Nexus — search, filter, and see which builds are integrity-verified. No account, no download, no tracking. Every mod links back to its original source." />
+<meta property="og:title" content="Browse the FS25 mod catalog — Silo" />
+<meta property="og:description" content="Search thousands of Farming Simulator 25 mods aggregated from ModHub, GitHub and Nexus. No account, no tracking — every mod links back to its source." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://silo.hllmr.com/browse/" />
+<meta property="og:site_name" content="Silo" />
+<meta property="og:image" content="https://silo.hllmr.com/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://silo.hllmr.com/og.png" />
+<link rel="canonical" href="https://silo.hllmr.com/browse/" />
+<meta name="robots" content="index, follow, max-image-preview:large" />
+<meta name="author" content="HLLMR" />
+<meta name="theme-color" content="#4a7330" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#171a14" media="(prefers-color-scheme: dark)" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<style>
+  /* ── Silo's "Golden Hour" tokens, mirrored from the app + landing so site == product ── */
+  :root {
+    --green-300: #9cc06e; --green-500: #5c8a3a; --green-600: #4a7330;
+    --green-700: #395a25; --green-900: #21361a;
+    --gold-300: #f2d26b; --gold-500: #e3b23c; --gold-700: #a5751f;
+    --soil-500: #8a6a45; --soil-700: #5e472e; --barn-500: #b34a38; --sky-500: #4a90c2;
+
+    --bg: #f6f3ec; --surface: #fcfaf4; --raised: #ffffff; --border: #e4dece;
+    --text: #2a2a22; --muted: #6b6a5c;
+    --primary: var(--green-600); --primary-hover: var(--green-700);
+    --accent: var(--gold-500); --on-primary: #ffffff;
+
+    --font-display: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --font-ui: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+
+    --radius: 12px; --radius-sm: 8px;
+    --shadow-1: 0 1px 2px rgba(40, 30, 10, 0.06), 0 8px 24px rgba(40, 30, 10, 0.06);
+    --shadow-2: 0 12px 40px rgba(20, 15, 5, 0.16);
+    --maxw: 1180px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #171a14; --surface: #1f231c; --raised: #282d24; --border: #39402f;
+      --text: #edebe0; --muted: #a8a897; --primary: var(--green-500);
+      --primary-hover: var(--green-300); --on-primary: #12180e;
+      --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.28);
+      --shadow-2: 0 14px 44px rgba(0, 0, 0, 0.45);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #171a14; --surface: #1f231c; --raised: #282d24; --border: #39402f;
+    --text: #edebe0; --muted: #a8a897; --primary: var(--green-500);
+    --primary-hover: var(--green-300); --on-primary: #12180e;
+    --shadow-1: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.28);
+    --shadow-2: 0 14px 44px rgba(0,0,0,0.45);
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f3ec; --surface: #fcfaf4; --raised: #ffffff; --border: #e4dece;
+    --text: #2a2a22; --muted: #6b6a5c; --primary: var(--green-600);
+    --primary-hover: var(--green-700); --on-primary: #ffffff;
+    --shadow-1: 0 1px 2px rgba(40,30,10,0.06), 0 8px 24px rgba(40,30,10,0.06);
+    --shadow-2: 0 12px 40px rgba(20,15,5,0.16);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html, * { scroll-behavior: auto; } }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: var(--font-ui); line-height: 1.55;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 20px; }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ── Header ── */
+  .top {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    backdrop-filter: saturate(1.4) blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .top-in { display: flex; align-items: center; gap: 16px; padding: 12px 0; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 11px; }
+  .logo {
+    width: 38px; height: 38px; border-radius: var(--radius); display: grid; place-items: center;
+    font-family: var(--font-display); font-weight: 600; font-size: 21px; color: #fff;
+    background: linear-gradient(135deg, var(--green-500), var(--green-700)); box-shadow: var(--shadow-1);
+  }
+  .brand h1 { font-size: 19px; line-height: 1.05; margin: 0; font-family: var(--font-display); }
+  .brand .sub { font-size: 11.5px; color: var(--muted); }
+  .top-spacer { flex: 1 1 auto; }
+  .btn {
+    border: 1px solid var(--border); background: var(--raised); color: var(--text);
+    padding: 8px 15px; border-radius: var(--radius); font-weight: 600; font-size: 14px;
+    transition: border-color 0.15s, background 0.15s, color 0.15s; display: inline-flex; align-items: center; gap: 7px;
+  }
+  .btn:hover { text-decoration: none; border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
+  .btn.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+  .btn.primary:hover { background: var(--primary-hover); }
+  .icon-btn { padding: 8px 11px; font-size: 15px; line-height: 1; }
+
+  /* ── Hero / controls ── */
+  .head { padding: 34px 0 8px; }
+  .head .eyebrow {
+    font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--primary); margin: 0 0 8px;
+  }
+  .head h2 { font-family: var(--font-display); font-size: clamp(1.7rem, 3.4vw, 2.5rem); line-height: 1.08; margin: 0; }
+  .head p { color: var(--muted); margin: 10px 0 0; max-width: 62ch; }
+  .head .count { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .controls { position: sticky; top: 63px; z-index: 15; padding: 18px 0 14px; background: var(--bg); }
+  .searchrow { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .search { position: relative; flex: 1 1 320px; min-width: 220px; }
+  .search input {
+    width: 100%; padding: 11px 14px 11px 40px; border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--raised); color: var(--text); font-size: 15px; font-family: inherit;
+  }
+  .search input:focus { outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent); outline-offset: 1px; border-color: var(--primary); }
+  .search::before {
+    content: "⌕"; position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+    color: var(--muted); font-size: 18px; pointer-events: none;
+  }
+  select.sel {
+    padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--raised); color: var(--text); font-size: 14px; font-family: inherit; font-weight: 600;
+  }
+  .cats { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .chip {
+    border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+    padding: 5px 13px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap;
+    transition: all 0.13s;
+  }
+  .chip:hover { color: var(--text); border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); }
+  .chip.on { background: color-mix(in srgb, var(--primary) 15%, transparent); color: var(--primary); border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
+  .chip .n { opacity: 0.6; font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-size: 11px; margin-left: 5px; }
+
+  /* ── Grid ── */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; padding: 8px 0 40px; }
+  .card {
+    text-align: left; border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius);
+    overflow: hidden; padding: 0; color: inherit; display: flex; flex-direction: column;
+    transition: transform 0.14s, box-shadow 0.14s, border-color 0.14s;
+  }
+  .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-2); border-color: color-mix(in srgb, var(--primary) 30%, var(--border)); }
+  .card .thumb { position: relative; aspect-ratio: 16 / 10; background: var(--raised); overflow: hidden; }
+  .card .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card .thumb.noimg::after {
+    content: "🚜"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 30px; opacity: 0.35;
+  }
+  .verified-badge {
+    position: absolute; top: 8px; left: 8px; display: inline-flex; align-items: center; gap: 4px;
+    background: color-mix(in srgb, var(--green-600) 92%, #000); color: #fff;
+    font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; box-shadow: var(--shadow-1);
+  }
+  .card .body { padding: 11px 13px 13px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .card .title { font-weight: 700; font-size: 14.5px; line-height: 1.25; }
+  .card .author { color: var(--muted); font-size: 12.5px; }
+  .card .foot { margin-top: auto; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-top: 4px; }
+  .src-chip {
+    font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 5px; letter-spacing: 0.02em;
+    border: 1px solid var(--border); color: var(--muted); background: var(--raised);
+  }
+  .src-chip.modhub { color: #b8791c; border-color: color-mix(in srgb, #e3b23c 40%, var(--border)); }
+  .src-chip.github { color: var(--text); }
+  .src-chip.nexus { color: #c56a2c; border-color: color-mix(in srgb, #d2691e 35%, var(--border)); }
+  .card .ver { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+  .card .rating { color: var(--gold-700); font-size: 12px; font-weight: 700; }
+
+  /* ── States ── */
+  .state { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .state.err { color: var(--barn-500); }
+  .skel { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+  .skel .thumb { aspect-ratio: 16 / 10; background: linear-gradient(100deg, var(--raised) 30%, var(--border) 50%, var(--raised) 70%); background-size: 200% 100%; animation: sheen 1.3s infinite; }
+  .skel .ln { height: 11px; margin: 12px 13px; border-radius: 6px; background: var(--border); }
+  .skel .ln.short { width: 50%; }
+  @keyframes sheen { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+  @media (prefers-reduced-motion: reduce) { .skel .thumb { animation: none; } }
+  .more-row { text-align: center; padding: 6px 0 50px; }
+
+  /* ── Detail modal ── */
+  .lb { position: fixed; inset: 0; z-index: 60; display: grid; place-items: start center;
+    background: rgba(8, 12, 8, 0.72); padding: 5vh 16px; overflow-y: auto; }
+  .lb[hidden] { display: none; }
+  .sheet {
+    width: 100%; max-width: 720px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; box-shadow: var(--shadow-2); overflow: hidden;
+  }
+  .sheet .cover { position: relative; aspect-ratio: 16 / 9; background: var(--raised); }
+  .sheet .cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .sheet-x {
+    position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.25); background: rgba(0,0,0,0.45); color: #fff; font-size: 15px;
+  }
+  .sheet-x:hover { background: rgba(0,0,0,0.7); }
+  .sheet .pad { padding: 18px 22px 24px; }
+  .sheet h3 { font-family: var(--font-display); font-size: 1.5rem; margin: 0 0 2px; line-height: 1.15; }
+  .sheet .by { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+  .metaline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .pill { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); background: var(--raised); }
+  .pill.ok { background: color-mix(in srgb, var(--green-600) 16%, transparent); color: var(--primary); border-color: color-mix(in srgb, var(--green-600) 40%, var(--border)); }
+  .desc { color: var(--text); font-size: 14.5px; white-space: pre-wrap; max-height: 260px; overflow-y: auto; margin-bottom: 18px; }
+  .desc:empty::before { content: "No description provided by the source."; color: var(--muted); font-style: italic; }
+  .src-list { display: flex; flex-direction: column; gap: 8px; }
+  .src-row {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: var(--radius); background: var(--raised);
+  }
+  .src-row .lbl { font-weight: 700; font-size: 13.5px; }
+  .src-row .meta { color: var(--muted); font-size: 12.5px; }
+  .src-row .go { margin-left: auto; font-weight: 600; font-size: 13px; white-space: nowrap; }
+  .attrib { margin-top: 16px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  /* ── Footer ── */
+  footer { border-top: 1px solid var(--border); background: var(--surface); padding: 34px 0 44px; margin-top: 20px; }
+  footer .cols { display: flex; gap: 30px; flex-wrap: wrap; justify-content: space-between; }
+  footer p { color: var(--muted); font-size: 13px; margin: 0 0 8px; max-width: 60ch; }
+  footer .links { display: flex; gap: 18px; flex-wrap: wrap; font-size: 14px; font-weight: 600; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-in">
+    <a class="brand" href="/" aria-label="Silo home">
+      <span class="logo">S</span>
+      <span>
+        <h1>Silo</h1>
+        <span class="sub">FS25 mod catalog</span>
+      </span>
+    </a>
+    <div class="top-spacer"></div>
+    <button class="btn icon-btn" id="themeBtn" type="button" aria-label="Toggle light / dark theme" title="Toggle theme">◐</button>
+    <a class="btn primary" href="/#download">Get the app</a>
+  </div>
+</header>
+
+<main>
+  <section class="head">
+    <div class="wrap">
+      <p class="eyebrow">Public catalog · no account · no tracking</p>
+      <h2>Browse the FS25 mod catalog.</h2>
+      <p>
+        <span class="count" id="statLine">Loading the catalog…</span>
+        aggregated from ModHub, GitHub and Nexus into one searchable record each.
+        Every mod links back to its original source — Silo indexes, it doesn't host.
+      </p>
+    </div>
+  </section>
+
+  <div class="controls">
+    <div class="wrap">
+      <div class="searchrow">
+        <label class="search">
+          <span class="sr-only">Search mods</span>
+          <input id="q" type="search" placeholder="Search mods by name…" autocomplete="off" />
+        </label>
+        <select class="sel" id="sort" aria-label="Sort">
+          <option value="popular">Most popular</option>
+          <option value="recent">Recently updated</option>
+          <option value="rating">Highest rated</option>
+          <option value="downloads">Most downloaded</option>
+          <option value="name">Name (A–Z)</option>
+        </select>
+      </div>
+      <div class="cats" id="cats"></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="grid" id="grid" aria-live="polite"></div>
+    <div class="more-row"><button class="btn" id="moreBtn" type="button" hidden>Load more</button></div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap cols">
+    <div>
+      <p>
+        <strong>Silo</strong> is a free, open-source mod manager for Farming Simulator 25.
+        This catalog aggregates publicly available mod information from ModHub, GitHub and Nexus
+        and links back to each source. Silo does not host or redistribute mod files, and this
+        page sets no cookies and runs no analytics.
+      </p>
+      <p>Mod names, images and descriptions belong to their respective authors and platforms.</p>
+    </div>
+    <div class="links">
+      <a href="/">Home</a>
+      <a href="https://github.com/HLLMR/silo" rel="noopener">Source</a>
+      <a href="/#download">Download</a>
+    </div>
+  </div>
+</footer>
+
+<div id="lightbox" class="lb" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="cover" id="sheetCover">
+      <button class="sheet-x" type="button" aria-label="Close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="pad">
+      <h3 id="sheetTitle">—</h3>
+      <div class="by" id="sheetBy"></div>
+      <div class="metaline" id="sheetMeta"></div>
+      <div class="desc" id="sheetDesc"></div>
+      <div class="src-list" id="sheetSources"></div>
+      <p class="attrib">
+        Information indexed from public sources and linked above. Silo does not host these files —
+        download from the original source. Provenance status reflects whether Silo has hashed the
+        published build against its source; it is an integrity signal, not a safety guarantee.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+  "use strict";
+  var API = (function () {
+    // Allow ?api= override for local testing; default to the live read API.
+    var p = new URLSearchParams(location.search).get("api");
+    return (p || "https://silo-api.hllmr.com").replace(/\/+$/, "");
+  })();
+
+  var SRC_LABEL = { modhub: "ModHub", github: "GitHub", nexus: "Nexus", kingmods: "KingMods", silo: "Silo" };
+
+  // ── Theme toggle (respects OS default; persists the user's explicit choice) ──
+  (function () {
+    var saved = null;
+    try { saved = localStorage.getItem("silo-theme"); } catch (e) {}
+    if (saved) document.documentElement.setAttribute("data-theme", saved);
+    document.getElementById("themeBtn").addEventListener("click", function () {
+      var cur = document.documentElement.getAttribute("data-theme");
+      if (!cur) cur = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      var next = cur === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      try { localStorage.setItem("silo-theme", next); } catch (e) {}
+    });
+  })();
+
+  // ── State ──
+  var state = { q: "", category: "", sort: "popular", offset: 0, limit: 30, total: 0, loading: false };
+  var grid = document.getElementById("grid");
+  var moreBtn = document.getElementById("moreBtn");
+
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function fmt(n) { return Number(n).toLocaleString("en-US"); }
+
+  function skeletons(n) {
+    var h = "";
+    for (var i = 0; i < n; i++) h += '<div class="skel"><div class="thumb"></div><div class="ln"></div><div class="ln short"></div></div>';
+    return h;
+  }
+
+  function sourceChips(sources) {
+    if (!sources || !sources.length) return "";
+    var seen = {}, out = "";
+    for (var i = 0; i < sources.length; i++) {
+      var s = sources[i].source;
+      if (seen[s]) continue; seen[s] = 1;
+      out += '<span class="src-chip ' + esc(s) + '">' + esc(SRC_LABEL[s] || s) + "</span>";
+    }
+    return out;
+  }
+
+  function card(m) {
+    var img = m.imageUrl
+      ? '<img loading="lazy" src="' + esc(m.imageUrl) + '" alt="" onerror="this.remove();this.parentNode.classList.add(\'noimg\')">'
+      : "";
+    var thumbCls = m.imageUrl ? "thumb" : "thumb noimg";
+    var badge = m.verified ? '<span class="verified-badge" title="Silo verified this build against its source">✓ Verified</span>' : "";
+    var rating = (m.rating != null && m.ratingCount) ? '<span class="rating">★ ' + Number(m.rating).toFixed(1) + "</span>" : "";
+    var ver = m.latestVersion ? '<span class="ver">v' + esc(String(m.latestVersion).replace(/^v/i, "")) + "</span>" : "";
+    return (
+      '<button class="card" type="button" onclick="openDetail(\'' + esc(m.id) + "')\">" +
+      '<span class="' + thumbCls + '">' + img + badge + "</span>" +
+      '<span class="body">' +
+      '<span class="title">' + esc(m.title || m.techName) + "</span>" +
+      '<span class="author">' + esc(m.author || "Unknown author") + "</span>" +
+      '<span class="foot">' + sourceChips(m.sources) + rating + ver + "</span>" +
+      "</span></button>"
+    );
+  }
+
+  var reqId = 0;
+  async function load(reset) {
+    if (state.loading) return;
+    if (reset) { state.offset = 0; grid.innerHTML = skeletons(8); }
+    state.loading = true; moreBtn.disabled = true;
+    var mine = ++reqId;
+    var url = API + "/mods?limit=" + state.limit + "&offset=" + state.offset +
+      "&sort=" + encodeURIComponent(state.sort) +
+      (state.q ? "&q=" + encodeURIComponent(state.q) : "") +
+      (state.category ? "&category=" + encodeURIComponent(state.category) : "");
+    try {
+      var res = await fetch(url);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      var data = await res.json();
+      if (mine !== reqId) return; // a newer request superseded this one
+      state.total = data.total || 0;
+      if (reset) grid.innerHTML = "";
+      if ((data.mods || []).length === 0 && state.offset === 0) {
+        grid.innerHTML = '<div class="state">No mods match that search.</div>';
+      } else {
+        grid.insertAdjacentHTML("beforeend", data.mods.map(card).join(""));
+      }
+      state.offset += (data.mods || []).length;
+      moreBtn.hidden = state.offset >= state.total;
+    } catch (e) {
+      if (mine !== reqId) return;
+      if (state.offset === 0) grid.innerHTML = '<div class="state err">Couldn\'t reach the catalog. Please try again in a moment.</div>';
+    } finally {
+      if (mine === reqId) { state.loading = false; moreBtn.disabled = false; }
+    }
+  }
+
+  // ── Controls wiring ──
+  var qEl = document.getElementById("q"), sortEl = document.getElementById("sort");
+  var qTimer;
+  qEl.addEventListener("input", function () {
+    clearTimeout(qTimer);
+    qTimer = setTimeout(function () { state.q = qEl.value.trim(); load(true); }, 260);
+  });
+  sortEl.addEventListener("change", function () { state.sort = sortEl.value; load(true); });
+  moreBtn.addEventListener("click", function () { load(false); });
+
+  // ── Categories + stats ──
+  async function boot() {
+    try {
+      var s = await (await fetch(API + "/stats")).json();
+      document.getElementById("statLine").textContent = fmt(s.mods) + " mods across " + fmt(s.sources) + " sources,";
+    } catch (e) { document.getElementById("statLine").textContent = "Thousands of mods,"; }
+
+    try {
+      var c = await (await fetch(API + "/categories")).json();
+      var el = document.getElementById("cats");
+      var chips = ['<button class="chip on" data-cat="" type="button">All</button>'];
+      (c.categories || []).slice(0, 14).forEach(function (row) {
+        chips.push('<button class="chip" data-cat="' + esc(row.category) + '" type="button">' + esc(row.category) + '<span class="n">' + fmt(row.count) + "</span></button>");
+      });
+      el.innerHTML = chips.join("");
+      el.addEventListener("click", function (ev) {
+        var b = ev.target.closest(".chip"); if (!b) return;
+        el.querySelectorAll(".chip").forEach(function (x) { x.classList.remove("on"); });
+        b.classList.add("on");
+        state.category = b.getAttribute("data-cat") || "";
+        load(true);
+      });
+    } catch (e) { /* categories are optional chrome */ }
+
+    load(true);
+  }
+
+  // ── Detail sheet ──
+  var lb = document.getElementById("lightbox");
+  window.openDetail = async function (id) {
+    document.getElementById("sheetTitle").textContent = "Loading…";
+    document.getElementById("sheetBy").textContent = "";
+    document.getElementById("sheetMeta").innerHTML = "";
+    document.getElementById("sheetDesc").textContent = "";
+    document.getElementById("sheetSources").innerHTML = "";
+    var cover = document.getElementById("sheetCover");
+    cover.querySelectorAll("img").forEach(function (n) { n.remove(); });
+    lb.hidden = false; document.body.style.overflow = "hidden";
+    try {
+      var m = await (await fetch(API + "/mods/" + encodeURIComponent(id))).json();
+      renderDetail(m, cover);
+    } catch (e) {
+      document.getElementById("sheetTitle").textContent = "Couldn't load this mod.";
+    }
+  };
+  function renderDetail(m, cover) {
+    if (m.imageUrl) cover.insertAdjacentHTML("afterbegin", '<img src="' + esc(m.imageUrl) + '" alt="">');
+    document.getElementById("sheetTitle").textContent = m.title || m.techName || "Mod";
+    document.getElementById("sheetBy").textContent = m.author ? "by " + m.author : "";
+    var meta = [];
+    if (m.verified) meta.push('<span class="pill ok">✓ Verified build</span>');
+    if (m.category) meta.push('<span class="pill">' + esc(m.category) + "</span>");
+    if (m.latestVersion) meta.push('<span class="pill">v' + esc(String(m.latestVersion).replace(/^v/i, "")) + "</span>");
+    if (m.rating != null && m.ratingCount) meta.push('<span class="pill">★ ' + Number(m.rating).toFixed(1) + " (" + fmt(m.ratingCount) + ")</span>");
+    document.getElementById("sheetMeta").innerHTML = meta.join("");
+    document.getElementById("sheetDesc").textContent = m.description || "";
+    var srcs = m.sources || [];
+    document.getElementById("sheetSources").innerHTML = srcs.map(function (s) {
+      var url = s.sourceUrl || s.downloadUrl || "";
+      var label = SRC_LABEL[s.source] || s.source;
+      var meta = [s.version ? "v" + String(s.version).replace(/^v/i, "") : "", s.installable ? "direct download" : "opens source page"].filter(Boolean).join(" · ");
+      var go = url ? '<a class="go" href="' + esc(url) + '" target="_blank" rel="noopener nofollow">View on ' + esc(label) + " ↗</a>" : "";
+      return '<div class="src-row"><span class="lbl">' + esc(label) + '</span><span class="meta">' + esc(meta) + "</span>" + go + "</div>";
+    }).join("") || '<div class="src-row"><span class="meta">No linked sources.</span></div>';
+  }
+  window.closeDetail = function () { lb.hidden = true; document.body.style.overflow = ""; };
+  lb.addEventListener("click", function (e) { if (e.target === lb) window.closeDetail(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !lb.hidden) window.closeDetail(); });
+
+  boot();
+</script>
+</body>
+</html>
