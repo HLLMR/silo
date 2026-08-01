@@ -247,6 +247,67 @@ pub fn download_zip(url: &str, token: Option<&str>, dest: &std::path::Path) -> R
     result
 }
 
+/// Verify a downloaded update is actually the mod it's replacing, before overwriting the
+/// installed archive. Two guards:
+///
+/// 1. **Structural** — the new zip must contain a readable root `modDesc.xml`. Rejects a source
+///    archive, docs bundle, or unrelated release asset that merely happens to be a valid zip.
+/// 2. **Identity** — when the current file is itself a readable mod, the new one must identify as
+///    the *same* mod: matching `uniqueType` if both declare one, otherwise matching author+title.
+///
+/// Only a *provable* mismatch refuses the update. Missing/uncomparable identity fields (or an
+/// unreadable current file) fall through to the structural guard, so a legitimate update is never
+/// blocked just because a modDesc omits a field.
+fn verify_update_identity(new_zip: &std::path::Path, dest: &std::path::Path) -> Result<(), String> {
+    let new_xml = crate::scan::read_moddesc_xml(new_zip, "zip").map_err(|_| {
+        "the downloaded file isn't a Farming Simulator mod (no modDesc.xml) — it may be a source \
+         archive or the wrong release asset"
+            .to_string()
+    })?;
+    let new_md = crate::moddesc::parse(&new_xml);
+
+    // Compare against the currently-installed mod only if we can read it as a mod.
+    let cur_md = if dest.exists() {
+        crate::scan::read_moddesc_xml(dest, "zip")
+            .ok()
+            .map(|xml| crate::moddesc::parse(&xml))
+    } else {
+        None
+    };
+    let Some(cur_md) = cur_md else { return Ok(()) };
+
+    // Prefer uniqueType — GIANTS' explicit identity primitive — when both declare one.
+    if let (Some(cur_ut), Some(new_ut)) =
+        (cur_md.unique_type.as_deref(), new_md.unique_type.as_deref())
+    {
+        if !cur_ut.trim().eq_ignore_ascii_case(new_ut.trim()) {
+            return Err(format!(
+                "refusing to replace this mod: the download declares uniqueType {new_ut:?}, but \
+                 the installed mod is {cur_ut:?} — that's a different mod"
+            ));
+        }
+        return Ok(());
+    }
+
+    // Otherwise fall back to author + title (stable across versions of the same mod).
+    if let (Some(ca), Some(ct), Some(na), Some(nt)) = (
+        cur_md.author.as_deref(),
+        cur_md.title.as_deref(),
+        new_md.author.as_deref(),
+        new_md.title.as_deref(),
+    ) {
+        let same =
+            ca.trim().eq_ignore_ascii_case(na.trim()) && ct.trim().eq_ignore_ascii_case(nt.trim());
+        if !same {
+            return Err(format!(
+                "refusing to replace this mod: the download identifies as {nt:?} by {na:?}, not \
+                 the installed {ct:?} by {ca:?}"
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// Stream `resp` to `part`, validate it's a real zip, back up `dest`, then overwrite
 /// `dest` in place (inode preserved). The caller removes `part` afterward.
 fn stream_install(
@@ -275,6 +336,12 @@ fn stream_install(
     zip::ZipArchive::new(f).map_err(|_| {
         "Downloaded file is not a valid .zip archive (corrupt or truncated)".to_string()
     })?;
+
+    // 2b. Identity guard: prove the download really is the mod it's replacing before we touch
+    //     dest. A GitHub release can hold many assets (source archives, docs, other editions),
+    //     and a valid ZIP of the *wrong* mod is still a valid ZIP — this refuses to overwrite an
+    //     installed mod with something that isn't the same mod.
+    verify_update_identity(part, dest)?;
 
     // 3. Back up the current file FIRST; abort if we can't preserve a copy.
     let bak = dest.with_extension("zip.bak");
@@ -582,5 +649,71 @@ mod tests {
         assert!(!is_newer("1.0.0.0", "1.0.0.0"));
         assert!(!is_newer("1.0", "1.0.0.1"));
         assert!(is_newer("v8.1.0.3", "8.1.0.2"));
+    }
+
+    // ── Update identity guard ──
+    fn zip_with(path: &std::path::Path, files: &[(&str, &str)]) {
+        use std::io::Write;
+        let f = std::fs::File::create(path).unwrap();
+        let mut zw = zip::ZipWriter::new(f);
+        let opts = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored);
+        for (name, body) in files {
+            zw.start_file(*name, opts).unwrap();
+            zw.write_all(body.as_bytes()).unwrap();
+        }
+        zw.finish().unwrap();
+    }
+    fn md(author: &str, title: &str) -> String {
+        format!(
+            "<modDesc descVersion=\"100\"><author>{author}</author><title><en>{title}</en></title></modDesc>"
+        )
+    }
+    fn md_ut(ut: &str) -> String {
+        format!(
+            "<modDesc descVersion=\"100\"><author>X</author><title><en>Y</en></title><uniqueType>{ut}</uniqueType></modDesc>"
+        )
+    }
+
+    #[test]
+    fn update_identity_guard() {
+        let dir = std::env::temp_dir().join(format!("silo_upd_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let cur = dir.join("FS25_Cool.zip");
+        zip_with(&cur, &[("modDesc.xml", &md("Alice", "Cool Mod"))]);
+
+        // Same mod, newer build → accepted.
+        let ok = dir.join("new_ok.zip");
+        zip_with(&ok, &[("modDesc.xml", &md("Alice", "Cool Mod"))]);
+        assert!(verify_update_identity(&ok, &cur).is_ok());
+
+        // Valid zip, WRONG mod (different author/title) → refused.
+        let wrong = dir.join("new_wrong.zip");
+        zip_with(&wrong, &[("modDesc.xml", &md("Bob", "Other Mod"))]);
+        assert!(verify_update_identity(&wrong, &cur).is_err());
+
+        // Valid zip that isn't a mod at all (no modDesc.xml) → refused.
+        let notmod = dir.join("new_notmod.zip");
+        zip_with(&notmod, &[("readme.txt", "just a source archive")]);
+        assert!(verify_update_identity(&notmod, &cur).is_err());
+
+        // Fresh install (no current file): a real mod passes the structural guard, a non-mod fails.
+        let missing = dir.join("does_not_exist.zip");
+        assert!(verify_update_identity(&ok, &missing).is_ok());
+        assert!(verify_update_identity(&notmod, &missing).is_err());
+
+        // uniqueType is the strong identity: match accepted, mismatch refused.
+        let cur_ut = dir.join("cur_ut.zip");
+        zip_with(&cur_ut, &[("modDesc.xml", &md_ut("ALICE_COOL"))]);
+        let ut_same = dir.join("ut_same.zip");
+        zip_with(&ut_same, &[("modDesc.xml", &md_ut("ALICE_COOL"))]);
+        let ut_diff = dir.join("ut_diff.zip");
+        zip_with(&ut_diff, &[("modDesc.xml", &md_ut("BOB_OTHER"))]);
+        assert!(verify_update_identity(&ut_same, &cur_ut).is_ok());
+        assert!(verify_update_identity(&ut_diff, &cur_ut).is_err());
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
