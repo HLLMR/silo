@@ -106,6 +106,18 @@
 
   .note{color:var(--muted);font-size:14px;border-left:3px solid var(--gold-500);background:color-mix(in srgb,var(--gold-500) 7%,var(--surface));padding:12px 16px;border-radius:var(--radius-sm);margin-top:22px;}
 
+  .nerd-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+  .nerd-grid .stat{min-width:0;}
+  .nerd-grid .n{font-family:var(--font-mono);}
+  .act-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);}
+  table.act{border-collapse:collapse;width:100%;font-size:14px;}
+  table.act th,table.act td{padding:9px 14px;text-align:right;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;}
+  table.act th:first-child,table.act td:first-child{text-align:left;font-weight:600;}
+  table.act thead th{background:var(--surface);color:var(--muted);font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;}
+  table.act tbody tr:last-child td{border-bottom:none;}
+  table.act tbody tr.total td{font-weight:700;background:color-mix(in srgb,var(--primary) 6%,transparent);}
+  @media (max-width:760px){.nerd-grid{grid-template-columns:1fr 1fr;}}
+
   footer{border-top:1px solid var(--border);background:var(--surface);padding:30px 0 44px;margin-top:20px;}
   footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;align-items:center;}
   footer .links{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;font-weight:600;}
@@ -233,6 +245,32 @@
   </div>
 </section>
 
+<section class="band" id="nerds">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">For nerds</p>
+      <h2>The whole system, by the numbers.</h2>
+      <p>The only data we have is <strong>aggregate counts</strong> — no account, no telemetry, nothing about you or your library. Here's all of it, warts and small numbers included (it's an early beta).</p>
+    </div>
+    <div class="nerd-grid">
+      <div class="stat"><div class="n" id="nDownloads">—</div><div class="l">Silo downloads · all releases</div></div>
+      <div class="stat"><div class="n" id="nMods">—</div><div class="l">mods indexed</div></div>
+      <div class="stat"><div class="n" id="nSources">—</div><div class="l">source records</div></div>
+      <div class="stat"><div class="n" id="nHosted">0</div><div class="l">mods we host</div></div>
+    </div>
+    <div class="act-wrap" id="actWrap" hidden>
+      <table class="act">
+        <thead><tr><th>SiloAPI traffic</th><th>Queries</th><th>Unique clients</th></tr></thead>
+        <tbody id="actBody"></tbody>
+      </table>
+    </div>
+    <p class="note" id="nerdNote">
+      Live API traffic — queries and <em>unique clients</em> over 1h / 24h / 5d / 30d — is aggregated
+      from request counts only (never stored per person) and will appear here shortly.
+    </p>
+  </div>
+</section>
+
 <footer><div class="wrap">
   <div class="links"><a href="/">Home</a><a href="/browse/">Browse</a><a href="/help/">Help</a><a href="https://github.com/HLLMR/silo" rel="noopener">Source</a><a href="/legal/">Legal</a></div>
   <div class="copy">Aggregated from public sources · not affiliated with GIANTS Software</div>
@@ -247,12 +285,44 @@
   (function(){
     var API="https://silo-api.hllmr.com";
     function fmt(n){return Number(n).toLocaleString("en-US");}
+    function set(id,v){var el=document.getElementById(id);if(el&&v!=null)el.textContent=fmt(v);}
+
+    // Catalog counts (hero + nerds tiles) from the public read API.
     fetch(API+"/stats").then(function(r){return r.json();}).then(function(s){
-      if(s&&s.mods)document.getElementById("statMods").textContent=fmt(s.mods);
-      if(s&&s.sources)document.getElementById("statSources").textContent=fmt(s.sources);
+      if(s&&s.mods){set("statMods",s.mods);set("nMods",s.mods);}
+      if(s&&s.sources){set("statSources",s.sources);set("nSources",s.sources);}
     }).catch(function(){});
     fetch(API+"/categories").then(function(r){return r.json();}).then(function(c){
-      if(c&&c.categories)document.getElementById("statCats").textContent=fmt(c.categories.length);
+      if(c&&c.categories)set("statCats",c.categories.length);
+    }).catch(function(){});
+
+    // Total downloads — summed straight from GitHub's public release data (CORS-open).
+    fetch("https://api.github.com/repos/HLLMR/silo/releases").then(function(r){return r.json();}).then(function(rel){
+      if(!Array.isArray(rel))return;
+      var total=0;
+      rel.forEach(function(x){(x.assets||[]).forEach(function(a){total+=a.download_count||0;});});
+      set("nDownloads",total);
+    }).catch(function(){});
+
+    // API traffic table — from a privacy-preserving metrics feed (aggregate counts only, derived
+    // from NPM access logs). Try a same-origin static metrics.json first (no CORS), then the API.
+    // Absent for now → the panel keeps its "coming shortly" note and hides the empty table.
+    var WINDOWS=[["1h","1h"],["24h","24h"],["5d","5d"],["30d","30d"]];
+    function loadJson(u){return fetch(u).then(function(r){return r.ok?r.json():Promise.reject();});}
+    loadJson("/metrics.json").catch(function(){return loadJson(API+"/metrics");}).then(function(m){
+      var api=m&&m.api; if(!api||!api.queries)return;
+      var rows="";
+      WINDOWS.forEach(function(w){
+        var q=api.queries[w[0]], u=(api.uniques||{})[w[0]];
+        rows+="<tr><td>"+w[1]+"</td><td>"+(q!=null?fmt(q):"—")+"</td><td>"+(u!=null?fmt(u):"—")+"</td></tr>";
+      });
+      if(api.queries.total!=null)
+        rows+="<tr class='total'><td>total</td><td>"+fmt(api.queries.total)+"</td><td>—</td></tr>";
+      document.getElementById("actBody").innerHTML=rows;
+      document.getElementById("actWrap").hidden=false;
+      var note=document.getElementById("nerdNote");
+      if(note)note.textContent="Aggregate request counts only — never anything about you or your library. Unique clients are counted per window, not stored per person.";
+      if(m.catalog&&m.catalog.hostedMods!=null)set("nHosted",m.catalog.hostedMods);
     }).catch(function(){});
   })();
 </script>
