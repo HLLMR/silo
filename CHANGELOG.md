@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-01
+
 ### Added
 
 - **Version shown in the UI.** The app version now appears beside the **Silo** wordmark in the
