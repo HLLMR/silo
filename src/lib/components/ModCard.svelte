@@ -46,7 +46,7 @@
     <div class="card-title" title={m.title}>{m.title}</div>
     <div class="card-meta">
       {#if m.author}<span class="author">{m.author}</span>{/if}
-      {#if m.latestVersion}<span class="ver">v{m.latestVersion}</span>{/if}
+      {#if m.latestVersion}<span class="ver">v{m.latestVersion.replace(/^v/i, "")}</span>{/if}
     </div>
     {#if m.rating != null || m.downloads != null}
       <div class="stats">
