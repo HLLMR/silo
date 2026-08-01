@@ -9,6 +9,7 @@
     roots,
     gameInfo,
     userDir,
+    appVer,
     autoFileNew,
     organizedCount,
     unorganizedCount,
@@ -27,6 +28,7 @@
     roots: string[];
     gameInfo: GameInfo | null;
     userDir: string | null;
+    appVer: string | null;
     autoFileNew: boolean;
     organizedCount: number;
     unorganizedCount: number;
@@ -176,6 +178,8 @@
       </button>
     {/if}
   </div>
+
+  <div class="set-foot">Silo {appVer ? `v${appVer}` : "—"}</div>
 </div>
 
 <style>
@@ -228,6 +232,15 @@
     color: var(--text-muted);
     line-height: 1.5;
     margin-bottom: 8px;
+  }
+  .set-foot {
+    padding: 10px 4px 4px;
+    text-align: center;
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
   }
   .set-link {
     border: none;

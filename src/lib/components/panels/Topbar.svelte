@@ -2,6 +2,7 @@
   let {
     topbarH = $bindable(),
     view,
+    appVer,
     hasSavegames,
     savesOpen,
     loadoutsOpen,
@@ -28,6 +29,7 @@
   }: {
     topbarH: number;
     view: "library" | "browse";
+    appVer: string | null;
     hasSavegames: boolean;
     savesOpen: boolean;
     loadoutsOpen: boolean;
@@ -58,7 +60,9 @@
   <div class="brand">
     <div class="logo">S</div>
     <div>
-      <h1>Silo</h1>
+      <h1>
+        Silo{#if appVer}<span class="ver" title="Silo version {appVer}">v{appVer}</span>{/if}
+      </h1>
       <p class="tagline">Farming Simulator 25 mod library</p>
     </div>
   </div>
@@ -181,6 +185,14 @@
   h1 {
     font-size: 20px;
     line-height: 1.1;
+  }
+  .ver {
+    margin-left: 6px;
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    vertical-align: super;
   }
   .tagline {
     margin: 0;

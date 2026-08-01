@@ -1167,6 +1167,13 @@ fn backup_savegame(folder: String) -> Result<String, String> {
     savegame::backup(&dir, &folder)
 }
 
+/// The app version from Cargo/tauri.conf package info — the single source of truth
+/// the UI reads so a build always shows the number it was cut from.
+#[tauri::command]
+fn app_version(app: tauri::AppHandle) -> String {
+    app.package_info().version.to_string()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1245,7 +1252,8 @@ pub fn run() {
             mods_with_settings,
             get_mod_settings,
             save_mod_settings,
-            save_mod_settings_raw
+            save_mod_settings_raw,
+            app_version
         ])
         .run(tauri::generate_context!())
         .expect("error while running Silo");
