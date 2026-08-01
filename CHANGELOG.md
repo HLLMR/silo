@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Doubled "v" in version labels.** Catalog sources that already prefix their version with a
+  "v" produced `vv1.2.3` on Browse cards (and could on library rows). The label now strips any
+  leading "v" before adding its own, so it always reads `v1.2.3`.
 - **GitHub "Enable actions" now shows the device code.** Escalating an already-connected,
   read-only account to Star/Watch scope opened GitHub's device page but never surfaced the
   code in Silo — the code display was unreachable while connected. It now renders during the

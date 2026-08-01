@@ -104,7 +104,7 @@
   <div class="main" onclick={onOpenDetail}>
     <div class="titleline">
       <span class="title">{mod.title ?? mod.techName}</span>
-      {#if mod.version}<span class="ver tnum">v{mod.version}</span>{/if}
+      {#if mod.version}<span class="ver tnum">v{mod.version.replace(/^v/i, "")}</span>{/if}
       {#if curation.rating > 0}<span class="rating">{"★".repeat(curation.rating)}</span>{/if}
     </div>
     <div class="sub">
