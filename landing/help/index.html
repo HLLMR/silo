@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Help & documentation — Silo</title>
+<meta name="description" content="How to use Silo, the free open-source Farming Simulator 25 mod manager: organizing your library, loadouts, conflict and crash diagnosis, mod integrity verification, savegame tools, multiplayer sync, and more." />
+<meta property="og:title" content="Help & documentation — Silo" />
+<meta property="og:description" content="Full user documentation for Silo, the FS25 mod manager: library, loadouts, diagnosis, provenance, and every tool." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://silo.hllmr.com/help/" />
+<meta property="og:image" content="https://silo.hllmr.com/og.png" />
+<link rel="canonical" href="https://silo.hllmr.com/help/" />
+<meta name="robots" content="index, follow, max-image-preview:large" />
+<meta name="theme-color" content="#4a7330" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#171a14" media="(prefers-color-scheme: dark)" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<style>
+  :root {
+    --green-300:#9cc06e;--green-500:#5c8a3a;--green-600:#4a7330;--green-700:#395a25;
+    --gold-300:#f2d26b;--gold-500:#e3b23c;--gold-700:#a5751f;--soil-500:#8a6a45;--barn-500:#b34a38;
+    --bg:#f6f3ec;--surface:#fcfaf4;--raised:#ffffff;--border:#e4dece;--text:#2a2a22;--muted:#6b6a5c;
+    --primary:var(--green-600);--primary-hover:var(--green-700);--on-primary:#fff;
+    --font-display:"Fraunces","Iowan Old Style","Palatino Linotype",Georgia,serif;
+    --font-ui:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --font-mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+    --radius:12px;--radius-sm:8px;
+    --shadow-1:0 1px 2px rgba(40,30,10,.06),0 8px 24px rgba(40,30,10,.06);
+    --shadow-2:0 12px 40px rgba(20,15,5,.16);--maxw:1180px;
+  }
+  @media (prefers-color-scheme: dark){:root{
+    --bg:#171a14;--surface:#1f231c;--raised:#282d24;--border:#39402f;--text:#edebe0;--muted:#a8a897;
+    --primary:var(--green-500);--primary-hover:var(--green-300);--on-primary:#12180e;
+    --shadow-1:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.28);--shadow-2:0 14px 44px rgba(0,0,0,.45);}}
+  :root[data-theme="dark"]{--bg:#171a14;--surface:#1f231c;--raised:#282d24;--border:#39402f;--text:#edebe0;--muted:#a8a897;--primary:var(--green-500);--primary-hover:var(--green-300);--on-primary:#12180e;--shadow-1:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.28);--shadow-2:0 14px 44px rgba(0,0,0,.45);}
+  :root[data-theme="light"]{--bg:#f6f3ec;--surface:#fcfaf4;--raised:#ffffff;--border:#e4dece;--text:#2a2a22;--muted:#6b6a5c;--primary:var(--green-600);--primary-hover:var(--green-700);--on-primary:#fff;--shadow-1:0 1px 2px rgba(40,30,10,.06),0 8px 24px rgba(40,30,10,.06);--shadow-2:0 12px 40px rgba(20,15,5,.16);}
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto;}}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-ui);line-height:1.6;-webkit-font-smoothing:antialiased;}
+  a{color:var(--primary);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  .wrap{width:100%;max-width:var(--maxw);margin:0 auto;padding:0 20px;}
+  button{font-family:inherit;cursor:pointer;}
+
+  .top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--border);}
+  .top-in{display:flex;align-items:center;gap:16px;padding:12px 0;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:11px;}
+  .logo{width:38px;height:38px;border-radius:var(--radius);display:grid;place-items:center;font-family:var(--font-display);font-weight:600;font-size:21px;color:#fff;background:linear-gradient(135deg,var(--green-500),var(--green-700));box-shadow:var(--shadow-1);}
+  .brand h1{font-size:19px;line-height:1.05;margin:0;font-family:var(--font-display);}
+  .brand .sub{font-size:11.5px;color:var(--muted);}
+  .top-spacer{flex:1 1 auto;}
+  .nav-links{display:flex;gap:20px;align-items:center;}
+  .nav-links a{color:var(--muted);font-weight:600;font-size:14px;}
+  .nav-links a:hover{color:var(--text);text-decoration:none;}
+  .btn{border:1px solid var(--border);background:var(--raised);color:var(--text);padding:8px 15px;border-radius:var(--radius);font-weight:600;font-size:14px;}
+  .btn.primary{background:var(--primary);border-color:var(--primary);color:var(--on-primary);}
+  .btn.primary:hover{background:var(--primary-hover);text-decoration:none;}
+  .icon-btn{padding:8px 11px;font-size:15px;line-height:1;}
+
+  .hero{padding:40px 0 10px;}
+  .hero .eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--primary);margin:0 0 8px;}
+  .hero h2{font-family:var(--font-display);font-size:clamp(1.9rem,3.6vw,2.7rem);line-height:1.08;margin:0;}
+  .hero p{color:var(--muted);margin:10px 0 0;max-width:64ch;}
+
+  .layout{display:grid;grid-template-columns:250px 1fr;gap:40px;align-items:start;padding:22px 0 70px;}
+  .side{position:sticky;top:78px;max-height:calc(100vh - 96px);overflow-y:auto;scrollbar-width:thin;padding-right:6px;}
+  .side .filter{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--raised);color:var(--text);font-family:inherit;font-size:14px;margin-bottom:14px;}
+  .nav-group{margin-bottom:16px;}
+  .nav-h{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 6px;}
+  .nav-group ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px;}
+  .nav-group a{display:block;padding:5px 10px;border-radius:var(--radius-sm);color:var(--muted);font-size:14px;font-weight:500;border-left:2px solid transparent;}
+  .nav-group a:hover{color:var(--text);background:var(--surface);text-decoration:none;}
+  .nav-group a.active{color:var(--primary);background:color-mix(in srgb,var(--primary) 10%,transparent);border-left-color:var(--primary);font-weight:600;}
+
+  .content{min-width:0;}
+  .content section{scroll-margin-top:84px;padding:14px 0 34px;border-bottom:1px solid var(--border);}
+  .content section:last-child{border-bottom:none;}
+  .content h2{font-family:var(--font-display);font-size:1.7rem;line-height:1.15;margin:0 0 14px;}
+  .content h3{font-size:1.12rem;margin:22px 0 6px;}
+  .content p{margin:0 0 12px;}
+  .content ul,.content ol{margin:0 0 14px;padding-left:22px;}
+  .content li{margin:4px 0;}
+  .content code{font-family:var(--font-mono);font-size:.88em;background:color-mix(in srgb,var(--primary) 9%,var(--surface));border:1px solid var(--border);border-radius:5px;padding:1px 5px;}
+  .content pre{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;overflow-x:auto;margin:0 0 14px;}
+  .content pre code{background:none;border:none;padding:0;}
+  .content a{font-weight:600;}
+  .content blockquote.note{margin:0 0 16px;padding:12px 16px;border:1px solid color-mix(in srgb,var(--gold-500) 40%,var(--border));border-left:3px solid var(--gold-500);border-radius:var(--radius-sm);background:color-mix(in srgb,var(--gold-500) 8%,var(--surface));color:var(--text);}
+  .content blockquote.note p:last-child{margin-bottom:0;}
+  .content table{border-collapse:collapse;width:100%;margin:0 0 16px;font-size:14.5px;display:block;overflow-x:auto;}
+  .content th,.content td{border:1px solid var(--border);padding:8px 11px;text-align:left;vertical-align:top;}
+  .content th{background:var(--surface);font-weight:700;}
+
+  footer{border-top:1px solid var(--border);background:var(--surface);padding:30px 0 44px;}
+  footer .links{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;font-weight:600;}
+  footer p{color:var(--muted);font-size:13px;margin:0 0 10px;}
+
+  @media (max-width:820px){
+    .layout{grid-template-columns:1fr;gap:8px;}
+    .side{position:static;max-height:none;border:1px solid var(--border);border-radius:var(--radius);padding:14px;background:var(--surface);margin-bottom:16px;}
+    .nav-links a:not(.btn){display:none;}
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-in">
+    <a class="brand" href="/" aria-label="Silo home">
+      <span class="logo">S</span>
+      <span><h1>Silo</h1><span class="sub">Help &amp; documentation</span></span>
+    </a>
+    <div class="top-spacer"></div>
+    <nav class="nav-links" aria-label="Site">
+      <a href="/browse/">Browse mods</a>
+      <a href="https://github.com/HLLMR/silo" rel="noopener">Source</a>
+    </nav>
+    <button class="btn icon-btn" id="themeBtn" type="button" aria-label="Toggle light / dark theme" title="Toggle theme">◐</button>
+    <a class="btn primary" href="/#download">Get the app</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <p class="eyebrow">User guide</p>
+    <h2>Everything Silo can do, explained.</h2>
+    <p>From your first scan to conflict triage, mod verification, savegame edits and multiplayer sync. Silo is free and open source, and everything it changes on disk is reversible.</p>
+  </div>
+</section>
+
+<div class="wrap">
+  <div class="layout">
+    <aside class="side">
+      <input class="filter" id="filter" type="search" placeholder="Filter topics…" autocomplete="off" aria-label="Filter topics" />
+      <nav id="toc" aria-label="Help topics">
+<div class="nav-group"><p class="nav-h">Getting started</p><ul><li><a href="#getting-started" data-slug="getting-started">Getting started</a></li></ul></div>
+<div class="nav-group"><p class="nav-h">Your library</p><ul><li><a href="#library" data-slug="library">The library: active vs. parked</a></li>
+<li><a href="#curation" data-slug="curation">Curating your library: favorites, tags &amp; flags</a></li>
+<li><a href="#loadouts" data-slug="loadouts">Loadouts</a></li>
+<li><a href="#health" data-slug="health">Library health</a></li></ul></div>
+<div class="nav-group"><p class="nav-h">Finding &amp; verifying mods</p><ul><li><a href="#browsing-installing" data-slug="browsing-installing">Browsing &amp; installing mods</a></li>
+<li><a href="#updates" data-slug="updates">Keeping mods updated</a></li>
+<li><a href="#provenance" data-slug="provenance">Mod integrity &amp; provenance</a></li></ul></div>
+<div class="nav-group"><p class="nav-h">When something breaks</p><ul><li><a href="#conflicts" data-slug="conflicts">Conflict detection</a></li>
+<li><a href="#crash-triage" data-slug="crash-triage">Crash &amp; log triage</a></li>
+<li><a href="#guided-bisection" data-slug="guided-bisection">Guided bisection</a></li></ul></div>
+<div class="nav-group"><p class="nav-h">Tools</p><ul><li><a href="#savegames" data-slug="savegames">Savegame &amp; settings editing</a></li>
+<li><a href="#mod-config" data-slug="mod-config">Editing a mod's own config</a></li>
+<li><a href="#multiplayer" data-slug="multiplayer">Multiplayer mod-set sync</a></li>
+<li><a href="#filltype-bridge" data-slug="filltype-bridge">Filltype bridge (the sugar-beet fix)</a></li>
+<li><a href="#bindings" data-slug="bindings">Bindings map</a></li></ul></div>
+<div class="nav-group"><p class="nav-h">Settings &amp; FAQ</p><ul><li><a href="#settings-accounts" data-slug="settings-accounts">Settings &amp; accounts</a></li>
+<li><a href="#troubleshooting" data-slug="troubleshooting">Troubleshooting &amp; FAQ</a></li></ul></div>
+      </nav>
+    </aside>
+    <main class="content" id="content">
+<section id="getting-started"><h2 id="getting-started-h">Getting started</h2>
+
+<p>Silo is a desktop app for managing your Farming Simulator 25 mods. It is <strong>not an in-game mod</strong> and you don't install it into the game — it's a standalone program that runs on your computer alongside FS25. It scans your existing mod library, organizes it, catches conflicts before you launch, triages crashes, and tracks updates.</p>
+
+<p>Silo never edits the game itself. It works with the files FS25 already keeps in <code>Documents\My Games\FarmingSimulator2025\</code>, and everything it does to those files is reversible.</p>
+
+<h3>Installing on Windows</h3>
+
+<ol>
+<li>Download the latest installer from the <a href="https://github.com/HLLMR/silo/releases">Releases page</a> (also linked from <a href="https://silo.hllmr.com">silo.hllmr.com</a>). You'll find a setup <code>.exe</code> and an <code>.msi</code> — either works; the <code>.exe</code> is the usual choice.</li>
+<li>Run it. Silo installs for your user account and doesn't need administrator rights.</li>
+</ol>
+
+<blockquote class="note"><strong>The blue "Windows protected your PC" warning is expected.</strong> Silo is a free, open-source beta and the installer isn't code-signed yet, so Microsoft SmartScreen flags it as from an unknown publisher. To continue, click <strong>More info</strong>, then <strong>Run anyway</strong>. This warning goes away once signing is in place.</blockquote>
+
+<h3>What happens on first run</h3>
+
+<p>When Silo opens it lands on the <strong>Library</strong> view and looks for your FS25 mods folder automatically — on Windows that's <code>Documents\My Games\FarmingSimulator2025\mods</code>. If it finds one, it starts scanning right away; a progress bar shows how many mods it has read. A cold scan of a large library takes seconds, and later scans are near-instant.</p>
+
+<p>When the scan finishes you'll see your whole library, with counts for mods, maps, and scripts. You can confirm which folder Silo found under <strong>Settings</strong> (the gear icon), in the <strong>Mods folder</strong> section. If nothing was found, the list reads <em>"No mods found yet. Point Silo at your mods folder and rescan"</em> — check that the folder exists, then use the <strong>Rescan</strong> button.</p>
+
+<h3>Your files stay safe</h3>
+
+<p>Silo is built so it never changes your original mod files destructively. On first run it only reads and catalogs — it moves nothing until you ask. When you do organize or activate mods, Silo projects them into the game's <code>mods/</code> folder using links (hardlinks or junctions), so there's no duplication and your originals are untouched. The <strong>Restore vanilla layout</strong> button in Settings undoes all of Silo's organization at any time, and your mods are never deleted.</p>
+
+<blockquote class="note"><strong>macOS and Linux are experimental.</strong> Silo is built and tested Windows-first. It can run on macOS and Linux (via Proton), but game-file discovery on those platforms isn't fully verified yet — expect rough edges.</blockquote>
+
+</section>
+
+<section id="library"><h2 id="library-h">The library: active vs. parked</h2>
+<p>Farming Simulator loads mods from one flat folder: <code>Documents/My Games/FarmingSimulator2025/mods/</code>. Every <code>.zip</code> in there is read at startup, with no subfolders and no notion of "installed but off." Silo's core idea is to separate that dumping ground into two things: your whole <strong>curated source library</strong> — everything you own, browsable on the <strong>Library</strong> tab — and the flat <code>mods/</code> folder the game actually reads, which Silo fills with only the set you want loaded.</p>
+
+<h3>Active vs. parked</h3>
+<p>Every mod in your library is either <strong>active</strong> (loaded by the game) or <strong>parked</strong> (kept in the library, filed away, not loaded). Each row has a dot on the left: click it to toggle. The tooltip reads <em>"Active — click to park"</em> or <em>"Parked — click to activate,"</em> parked mods carry a small <code>parked</code> badge and dim slightly, and the detail drawer shows <code>● Active</code> or <code>○ Parked</code>. Use the checkbox in the toolbar to activate or park everything in the current view at once. Parking never deletes anything — it just leaves the mod out of the game's folder.</p>
+
+<h3>Organize</h3>
+<p>Reach for <strong>Organize</strong> when your <code>mods/</code> folder is a flat pile and you want it sorted. It moves each loose <code>.zip</code> into <code>mods/archive/&lt;Category&gt;/</code> — subfolders the game deliberately ignores, since it only reads the flat root. Your active mods stay loaded; nothing is duplicated. You'll find the button in the top bar (<em>Organize N</em>, showing how many loose mods it found) and under <strong>Settings → Library layout</strong>.</p>
+<p>Before it touches a file, Organize shows a read-only <strong>dry run</strong>: a preview grouped by destination category (for example "12 into Vehicles, 3 into Maps"), each file with its exact <code>archive/&lt;Category&gt;/…</code> target. Nothing has moved yet — you confirm with the <em>Organize N mods</em> button or <strong>Cancel</strong>. Power users can tick <em>Don't preview next time</em>, or turn on <strong>Auto-file new mods</strong> in Settings to file new downloads automatically.</p>
+
+<h3>Projection at launch</h3>
+<p>Silo keeps the flat <code>mods/</code> folder holding exactly your active set by <strong>projecting</strong> the archived originals back into it — <code>.zip</code> mods as same-volume <strong>hardlinks</strong>, unpacked mod folders as directory symlinks/junctions, with a copy fallback where links aren't permitted. Hardlinks use no extra disk and need no admin rights or Developer Mode. When you hit <strong>▶ Launch</strong>, the game reads that folder and loads precisely the mods you marked active.</p>
+
+<blockquote class="note"><strong>It's reversible, and it never destroys your originals.</strong> Moves are instant same-volume renames (or a safe copy-then-swap across volumes) — the original is never lost mid-operation. <strong>Restore vanilla layout</strong> (Settings, shown once anything is organized) undoes everything: it drops Silo's projections, moves the archived files back into a plain flat <code>mods/</code>, and removes only empty archive folders. It never deletes a file it doesn't recognize, never removes the only copy of a mod, and won't touch a file you swapped in yourself — you're always one step from stock.</blockquote>
+</section>
+
+<section id="curation"><h2 id="curation-h">Curating your library: favorites, tags & flags</h2>
+<p>Curation is your personal layer of judgment on top of the raw mod list: which mods you love, which are half-broken, which you never want to see, plus star ratings, tags, and notes. It helps you find the right mods fast in a library of hundreds. Everything here is Silo-only metadata stored in Silo's own database and keyed to each mod's internal tech-name, so it survives version updates and file moves.</p>
+
+<blockquote class="note">None of this touches your mod files or the game. Flags, ratings, tags, and notes are stored beside your library, never written into the mod archive or your <code>mods/</code> folder. Every marking is a toggle you can clear at any time, and hiding a mod never deactivates or deletes it.</blockquote>
+
+<h3>The three flags</h3>
+<p>Each mod carries three independent flags, toggled from the icon buttons on its row or from the actions in its detail drawer:</p>
+<ul>
+<li><strong>Favorite</strong> (<code>☆</code> / <code>★</code>) — marks the mods you reach for most.</li>
+<li><strong>Hidden</strong> (<code>⊘</code>) — dims the row and drops it from the list by default. Use it for clutter you keep installed but rarely want to look at.</li>
+<li><strong>Broken</strong> (<code>⚠</code>) — flags a mod as broken or unfinished so you remember not to trust it. This is your own note-to-self, separate from Silo's automatic conflict detection.</li>
+</ul>
+
+<h3>Ratings, tags, and notes</h3>
+<p>Open a mod's detail drawer to reach the rest, in the <strong>Rating</strong>, <strong>Tags</strong>, and <strong>Notes</strong> sections:</p>
+<ul>
+<li><strong>Rating</strong> — click a star (1–5) to set it; click the same star again to clear back to unrated.</li>
+<li><strong>Tags</strong> — type into the <em>add tag…</em> box and press Enter to attach a free-text label; duplicates are ignored. Click a tag's name to filter the whole library by it, or the <code>✕</code> to remove it.</li>
+<li><strong>Notes</strong> — a free-text box for anything you want to remember. It saves when you click away.</li>
+</ul>
+<p>When you clear every flag, the rating, and the note on a mod, Silo drops its curation record entirely, keeping the database tidy.</p>
+
+<h3>Filtering and sorting by curation</h3>
+<p>The toggles in the top bar filter the list: <strong>Favorites</strong> shows only favorites, <strong>Hidden</strong> reveals the mods you've hidden, and <strong>Flagged</strong> shows only mods you marked broken. Clicking a tag adds a <code>#tag</code> crumb above the list; use its <code>✕</code> to clear it. Ratings show as stars on each row, and the toolbar's <strong>Sort</strong> menu includes <em>My rating</em> (alongside Name, Category, Size, Recently added, and Version), with the arrow button flipping ascending/descending.</p>
+</section>
+
+<section id="loadouts"><h2 id="loadouts-h">Loadouts</h2>
+<p>A <strong>loadout</strong> is a named set of active mods you can switch to in one click. If you run several playthroughs — a heavy-realism seasonal save, a lightweight co-op save, a clean vanilla-ish test — each wants a different mix of mods active. Instead of hand-toggling dozens of mods every time you change games, you save each mix once and apply it when you need it.</p>
+
+<p>Loadouts store the <em>list</em> of active mods, not the mod files themselves. Deleting a loadout never touches your mods, and applying one never deletes anything from your library — it only changes which mods are projected into the game's <code>mods/</code> folder.</p>
+
+<h3>Opening the panel</h3>
+<p>Click <strong>Loadouts</strong> in the top bar to open the Loadouts panel. When your current active set exactly matches a saved loadout, that button shows the loadout's name with a dot (for example <code>● Seasons Co-op</code>) instead of the word "Loadouts". The panel header shows how many mods are currently active.</p>
+
+<h3>Saving a loadout</h3>
+<p>First activate the mods you want (toggle them in the library, or use the filter + select-all to build a set quickly). Then, in the Loadouts panel, click <strong>+ Save current active set as a loadout</strong> and give it a name. The set is saved as-is. This button is disabled while nothing is active.</p>
+<p>To update an existing loadout to match what you have active now, click its <strong>overwrite</strong> icon (⭯, "Overwrite with current active set").</p>
+
+<h3>Applying a loadout</h3>
+<p>Click a loadout's name to apply it. Silo makes the game's active set <em>exactly</em> that loadout: it links in the mods that should be active and removes the links for mods that shouldn't be. The filled dot moves to the loadout you just applied.</p>
+<blockquote class="note">Applying is reversible and safe. Silo only adds or removes its own projected entries (junction, symlink, hardlink, or marked copy) in the <code>mods/</code> folder — your archived source files are never moved or deleted. If it finds a file it didn't project (you swapped in your own build), or the archived copy behind a link is missing, it leaves that file alone and reports it rather than deleting it.</blockquote>
+
+<h3>Building a loadout from a savegame</h3>
+<p>In the Savegames panel, click <strong>→ Loadout</strong> next to a save to build a loadout from the mods that save actually used. Silo creates a loadout named after the save from the mods you have, notes any that are missing, and applies it — a fast way to bind the right mods to the right playthrough.</p>
+
+<h3>Exporting and importing</h3>
+<p>Click a loadout's <strong>export</strong> icon (⇪) to save it as a <code>.silo</code> file — a small JSON file listing the loadout's name and mod tech-names (no mod ZIPs are included). Share that file, and the recipient clicks <strong>↧ Import a .silo file</strong> to add it as a new loadout (<code>.silo</code> or <code>.json</code> accepted). Import only creates the loadout entry; the person still needs the actual mods in their library for every mod to activate.</p>
+
+<h3>Deleting</h3>
+<p>The <strong>✕</strong> icon removes a loadout after a confirm. As the prompt says, your mods aren't affected — only the saved set is discarded.</p>
+</section>
+
+<section id="health"><h2 id="health-h">Library health</h2>
+<p>The <strong>Health</strong> panel reports problems with your <em>whole library</em> — issues that exist no matter which mods you have switched on. This is different from <strong>Conflicts</strong>, which only looks at the mods in your current active set and how they collide with each other. Reach for Health when you want to know whether the library itself is sound: are any mods broken, missing something they need, or quietly unloadable by the game?</p>
+
+<h3>Opening it</h3>
+<p>In the status bar along the bottom, find the <strong>need attention</strong> button. The number on it is the total count of health issues; the button is highlighted whenever that count is above zero. Click it to open the <strong>Library health</strong> panel. If nothing is wrong you will see <em>"Everything looks healthy — no problems found."</em> Click the backdrop to close the panel.</p>
+<p>The panel is read-only. It only inspects and reports — it never moves, renames, deletes, or rewrites any file — so opening it and reading it is completely safe and there is nothing to undo. Fixing what it finds is always a separate, deliberate action you take yourself.</p>
+
+<h3>What it reports</h3>
+<p>Issues are grouped into up to three sections, each with a count:</p>
+<ul>
+<li><strong>Missing dependencies</strong> — a mod's <code>modDesc.xml</code> declares another mod it depends on, and that mod is not present anywhere in your library. Each row names the mod and the dependency it <em>needs</em>, marked <em>not in your library</em>. To fix, add the required mod (for example via the <strong>Browse</strong> tab's in-app install, or by dropping it into your library) and rescan. Note this checks whether the dependency <em>exists</em> in the library, not whether it is currently active.</li>
+<li><strong>Ignored by the game — name starts with a digit</strong> — Farming Simulator silently refuses to load any mod whose folder or file name begins with a number, so the mod appears installed but never runs. Each row shows the offending name. To fix, rename the mod so it starts with a letter.</li>
+<li><strong>Corrupt / unreadable</strong> — Silo could not read or parse the mod (for example a damaged archive or malformed <code>modDesc.xml</code>). The row shows the underlying error. These usually mean an interrupted or corrupted download; re-download or reinstall the mod, then rescan.</li>
+</ul>
+
+<h3>When to check it</h3>
+<p>Check Health after a batch of installs or updates, before building a loadout for a play session, or whenever a mod you expected to work simply is not appearing in-game. Because the list is derived live from the last scan, it refreshes on its own as your library changes — resolve an issue and rescan, and the corresponding row disappears.</p>
+
+<blockquote class="note">Health flags library-wide soundness. For clashes <em>between</em> the mods you have enabled, use the Conflicts panel instead.</blockquote>
+</section>
+
+<section id="browsing-installing"><h2 id="browsing-installing-h">Browsing &amp; installing mods</h2>
+
+<p>The <strong>Browse</strong> tab is where you find new mods without leaving Silo. It reads the SiloAPI catalog, a single index that merges the same mod across <strong>GitHub</strong>, <strong>ModHub</strong>, and <strong>Nexus Mods</strong>, so you see one card per mod instead of three scattered listings. The header shows how many mods and sources the catalog currently holds.</p>
+
+<h3>Finding a mod</h3>
+<ul>
+<li><strong>Search</strong> — type in the <em>Search the catalog by title</em> box. Results refresh as you type (after a short pause).</li>
+<li><strong>Category</strong> — the <em>All categories</em> dropdown filters by mod category, with a count next to each.</li>
+<li><strong>Sort</strong> — order by Popular, Most downloaded, Top rated, Newest, or Name (A–Z).</li>
+<li><strong>More results</strong> — the grid loads 60 at a time; use <em>Load more</em> at the bottom to page through.</li>
+</ul>
+<p>Any mod you already have shows an <strong>In library</strong> badge, so you can tell at a glance what is new.</p>
+
+<h3>Source buttons and versions</h3>
+<p>Each card carries one button per source the mod lives on — <code>GH</code>, <code>MH</code>, <code>Nexus</code> — each labelled with <em>that source's own version</em>, because those versions drift apart. A download arrow (⬇) means Silo can install it for you; an up-right arrow (↗) means the button opens the source's page instead.</p>
+
+<h3>Installing from GitHub, in-app</h3>
+<p>GitHub release mods are directly installable. Click the GitHub button (or <strong>Install ⬇</strong> in the detail drawer) and Silo downloads the <code>.zip</code> straight into your mods folder, showing a live progress bar with the megabytes transferred. When it finishes you'll see <em>Installed …</em> and the library rescans automatically. You do not need to connect a GitHub account just to install — connecting is only for Star/Watch actions.</p>
+
+<blockquote class="note">Installing only adds a new <code>.zip</code> to your mods folder; it never edits or removes anything you already have. To undo an install, remove that mod from your library like any other.</blockquote>
+
+<h3>ModHub and Nexus are index-only</h3>
+<p>Silo can list ModHub and Nexus mods but cannot download them for you — those CDNs require the download to go through their own website. Their buttons read <strong>Open page ↗</strong> and take you to the source. Grab the <code>.zip</code> there, drop it in your mods folder, and Silo files it automatically on the next scan.</p>
+
+<h3>The detail drawer</h3>
+<p>Click <strong>Details</strong> on any card to open a side drawer with the cover image, author, version, category, tech name, rating and downloads, and the full <em>Available from</em> source list. For a GitHub source it also shows live repo stats (stars, forks, watchers, issues) and, once you connect GitHub, Star and Watch buttons. Use <em>Read more →</em> to expand the full description.</p>
+
+<h3>Browsing without the app</h3>
+<p>You can also explore the same catalog in any web browser at <a href="https://silo.hllmr.com/browse">silo.hllmr.com/browse</a>. It reads the public SiloAPI directly; in-app installing still happens inside Silo.</p>
+</section>
+
+<section id="updates"><h2 id="updates-h">Keeping mods updated</h2>
+
+<p>Silo checks your whole mod library against a canonical catalog and tells you which mods have a newer version available. It is designed to avoid a common false alarm: a mod you installed from ModHub showing as "outdated" only because a different version exists on GitHub (or the reverse). Silo compares against the <strong>latest across all known sources</strong>, so you see a real update, not a source mismatch.</p>
+
+<h3>Running the library-wide check</h3>
+
+<p>In the top bar, click <strong>⟳ Updates</strong>. (The button appears once you have mods in your library.) While it works, the button reads <strong>Checking…</strong> and a <strong>Mod updates</strong> panel opens with a running count of how many updates are available.</p>
+
+<p>Two things happen behind the scenes:</p>
+
+<ol>
+<li>One request sends your whole library to the SiloAPI catalog, which answers with the latest version per mod across GitHub, ModHub, and Nexus.</li>
+<li>Any mods you have personally linked to a GitHub repo are then checked directly, and that result takes precedence for those mods — your chosen source wins.</li>
+</ol>
+
+<p>Each mod with a newer version shows its title, a source badge (for example <code>github</code>), and <code>current → latest</code>. A bottom line summarizes how many mods are <strong>Up to date</strong> and how many hit an <strong>error</strong>. If nothing in your library matches the catalog, you'll see a note that mods on GitHub can also be linked to their repo in the detail panel.</p>
+
+<blockquote class="note">The check is read-only. Nothing on disk changes until you explicitly install an update. If the catalog can't be reached, Silo quietly falls back to checking only your linked GitHub repos.</blockquote>
+
+<h3>Per-mod status in the detail drawer</h3>
+
+<p>Open any mod to see its own <strong>GitHub updates</strong> section. If the mod's <code>modDesc</code> points at a repository, Silo suggests <code>owner/repo</code> for you — click <strong>Link</strong> to confirm, or type your own. Then use <strong>Check for update</strong>. The result reads either <em>Update available: &lt;tag&gt; (you have &lt;version&gt;)</em> or <em>Up to date</em>, with an <strong>Open repo</strong> / <strong>View release</strong> link for context.</p>
+
+<h3>Applying an update</h3>
+
+<p>Where a downloadable asset exists, click <strong>Install</strong> in the Updates panel (or <strong>Download &amp; install</strong> in the drawer). Silo downloads the new archive, verifies it is a valid, complete <code>.zip</code>, backs up your current file, and only then writes the new version in place. Afterward it rescans so your library reflects the new version.</p>
+
+<blockquote class="note">Safety: Silo will not overwrite your file until the download is validated and a backup is made. If the write fails partway, it restores the original from that backup, so you're never left with a broken mod. Mods indexed as open-page only (typical for ModHub and Nexus) have no direct-download asset — for those, use the source link to update manually.</blockquote>
+</section>
+
+<section id="provenance"><h2 id="provenance-h">Mod integrity &amp; provenance</h2>
+<p>The integrity check answers one question: <strong>is this the mod its author published, or has it been altered since?</strong> It hashes the archive you have installed and compares it to the canonical build that SiloAPI computed from the mod's own source. Reach for it when a mod came from somewhere other than its official page, when an update behaves unexpectedly, or when you simply want to confirm that what's on disk is exactly what shipped.</p>
+
+<blockquote class="note">This is provenance, not antivirus. A <strong>Verified</strong> result proves origin and integrity — that the files match the published build. It does not judge intent, and it cannot tell you whether a mod is <em>safe</em>. The check only reads and hashes files; it never writes, moves, or modifies anything, so running it is always safe to do.</blockquote>
+
+<h3>Running the check</h3>
+<p>Open a mod's <strong>detail drawer</strong> and find the <strong>Integrity</strong> section, then click <strong>Verify integrity</strong>. Silo hashes the archive on a background thread (you'll see <em>Hashing &amp; comparing…</em>) and shows one of three verdicts. Only packaged mods can be checked — for an unpacked folder you'll see <em>Folder mods can't be verified — there's no archive to hash.</em></p>
+
+<h3>The three verdicts</h3>
+<ul>
+<li><strong>Verified</strong> — the mod matches the published build. Either a byte-for-byte match with the exact archive, or a content match (repackaged, but every file inside is identical). The matched version is shown.</li>
+<li><strong>Modified from the published build</strong> — it's the same mod, but files differ. You get a count of <em>changed / added / removed</em> and expandable lists naming the <strong>exact files</strong>. This tells you precisely what diverged — it does not, by itself, mean the change is malicious. Long lists are capped with a <em>+N more</em> line.</li>
+<li><strong>Unverified</strong> — there's no hashed canonical build to compare against yet, so no conclusion can be drawn either way. You'll see why: the mod isn't in the catalog, or there's no hashed build for this exact version yet.</li>
+</ul>
+
+<p>After a Modified or Unverified result you can click <strong>Re-check</strong> to run it again. Verified and Modified verdicts also surface as a small badge on the mod's row so you can see them at a glance.</p>
+
+<h3>Coverage grows over time</h3>
+<p>Coverage is popular-first and GitHub-first, and it expands continually. Canonical builds are hashed from source, so mods distributed that way are covered first; others may report <strong>Unverified</strong> until a hashed build exists. An <strong>Unverified</strong> result is never a mark against a mod — it only means Silo has nothing trusted to compare it to yet.</p>
+</section>
+
+<section id="conflicts"><h2 id="conflicts-h">Conflict detection</h2>
+<p>Some mods can't coexist. Two of them may claim the same slot, or one may silently overwrite another's settings — and you won't find out until the game crashes on load or an item behaves oddly. Silo re-parses the <code>modDesc.xml</code> of every mod in your <strong>active set</strong> and flags these collisions before you launch, so you can fix them while it's still a two-second edit.</p>
+
+<h3>What Silo checks for</h3>
+<ul>
+<li><strong>Duplicate active map</strong> (critical) — more than one map enabled at once. FS loads a second map's scripts even when it isn't the one you're playing, which typically crashes on load. Keep exactly one map active.</li>
+<li><strong>uniqueType collisions</strong> (critical) — two mods share a <code>uniqueType</code>. FS loads only one, so the others never take effect.</li>
+<li><strong>Specialization / type / registration collisions</strong> (critical) — multiple mods register the same specialization, vehicle type, placeable type, input action, brand, or store category. Only one registration wins; the others may break.</li>
+<li><strong>Script collisions</strong> (warning) — two mods inject a global Lua script with the same filename; they can override each other by load order. If the file is byte-identical in each mod, Silo downgrades it to <em>info</em> — it's a shared library, not a real fight.</li>
+<li><strong>Cross-mod fillType override</strong> (warning) — two mods define the same-named <code>fillType</code>. Whichever loads last silently overrides the other's capacity, price, and other settings.</li>
+</ul>
+<p>When every mod in a clash shares the same author, Silo treats it as likely intentional and softens the severity, so the critical list stays trustworthy.</p>
+
+<h3>Reading the conflicts panel</h3>
+<p>The stat bar shows a <strong>conflicts</strong> button with a live count; it turns red when any conflict is critical. Click it to open <strong>Conflicts in the active set</strong>. The header shows how many are critical. Each row lists its <strong>severity</strong> (critical, warning, or info), the <strong>kind</strong> of collision, the offending <strong>name</strong>, the <strong>mods involved</strong>, and a plain-language explanation of what breaks. Rows are ordered critical first.</p>
+<p>To see the culprits in your library, use the <strong>⚠ In conflict</strong> filter in the stat bar — it narrows the list to just the mods named in a conflict.</p>
+
+<h3>Resolving a conflict</h3>
+<ol>
+<li>Decide which mod in the clash you want to keep.</li>
+<li>In the library, click the status toggle on the other mod's row to <strong>park</strong> it (an active mod reads <code>● Active — click to park</code>).</li>
+<li>Silo re-checks the active set automatically after any change, so the count updates on its own — no rescan needed.</li>
+</ol>
+<blockquote class="note">Parking is fully reversible and touches no files. It only removes the mod from the set Silo will project into the game's <code>mods/</code> folder at launch; the mod stays in your library, and one click reactivates it.</blockquote>
+</section>
+
+<section id="crash-triage"><h2 id="crash-triage-h">Crash &amp; log triage</h2>
+
+<p>When Farming Simulator 25 crashes or misbehaves, it leaves an explanation in a file called <code>log.txt</code> — but that file is thousands of lines of engine chatter, and most of it is harmless. Silo's <strong>diagnose</strong> feature reads that log for you, tells you whether the last run actually crashed, and names the specific mod that logged errors right before it stopped. It separates the real breakage from the cosmetic noise that scares people for no reason.</p>
+
+<p>No FS25 tool does this on its own. The usual community advice is to manually disable half your mods and relaunch over and over. Silo starts by simply reading the name the engine already wrote next to each error.</p>
+
+<h3>When to use it</h3>
+<ul>
+<li>Right after the game crashes to desktop, freezes on load, or quits unexpectedly.</li>
+<li>When something in-game is clearly broken and you want to know which mod is complaining.</li>
+<li>Any time you just want a quick health check on your last session.</li>
+</ul>
+
+<h3>How to open it</h3>
+<p>In the stat bar, click the <strong>◆ diagnose</strong> button. Silo reads <code>log.txt</code> from your FS25 user folder and shows a report. Use <strong>↻ Re-read log</strong> to refresh it after another launch.</p>
+
+<blockquote class="note">This feature only <em>reads</em> your log — it never edits <code>log.txt</code>, your mods, or any game file. There is nothing to undo. It is completely safe to run as often as you like.</blockquote>
+
+<h3>How to read the result</h3>
+<p>The headline verdict comes in one of three forms:</p>
+<ul>
+<li><strong>Healthy</strong> — the last run exited cleanly and no mod logged a real error. If anything appears, it is cosmetic only. Nothing to do.</li>
+<li><strong>Exited cleanly, but…</strong> — the game closed normally, yet one or more mods logged errors worth a look. Not necessarily a crash, but worth checking.</li>
+<li><strong>The last run ended abnormally</strong> — the log stops mid-session with no clean-exit marker. That is what a crash looks like.</li>
+</ul>
+
+<p>Below the verdict, mods are grouped by severity:</p>
+<ul>
+<li><strong>Likely culprits</strong> — mods that logged genuine errors (for example Lua script failures). Each row shows the mod's name, its error and warning counts, and a sample log line.</li>
+<li><strong>Worth a look</strong> — mods with real warnings but no errors.</li>
+<li>A collapsed <strong>cosmetic warnings only — safe to ignore</strong> group, tucked away because missing-translation notices and the like never cause a crash.</li>
+</ul>
+
+<p>Silo only blames a mod when the log names it directly (via its <code>mods/</code> path or an <code>in mod '…'</code> clause) — it never guesses. Anything it can't attribute is counted as engine or base-game and reported separately, with an <strong>Open log.txt</strong> link so you can read the raw lines yourself.</p>
+
+<p>If the run crashed but no mod is named, the log genuinely can't identify the cause — usually a mod interaction. In that case Silo offers <strong>Run guided bisection</strong> to isolate it automatically. See the guided bisection section for that workflow.</p>
+</section>
+
+<section id="guided-bisection"><h2 id="guided-bisection-h">Guided bisection</h2>
+<p>Sometimes FS25 crashes or misbehaves and the log never names a mod. The cause is usually an <em>interaction</em> between mods that no single line can point to. Guided bisection automates the community ritual for these cases — disable half your mods, relaunch, see if the problem survives, and repeat — so Silo does the bookkeeping and you just play and report what happened.</p>
+
+<p>Instead of testing mods one at a time, it halves the suspect list every round. A library of, say, 60 active mods is isolated in roughly six launches rather than sixty.</p>
+
+<h3>When to reach for it</h3>
+<p>Open the <strong>◆ diagnose</strong> panel (Crash &amp; log triage) after a bad run. If Silo can tie the crash to a specific mod, it lists that mod directly and you don't need bisection. If the log shows an abnormal exit but <em>no</em> mod logged an error first, the panel says the cause is likely an interaction and offers <strong>◆ Run guided bisection</strong>. There's also a <strong>Run guided bisection →</strong> link for something misbehaving that the log doesn't explain even after a clean exit. You need at least two active non-map mods for the button to enable.</p>
+
+<h3>The loop you'll follow</h3>
+<ol>
+<li>Press <strong>Start</strong>. Silo tells you the mod count and roughly how many launches to expect.</li>
+<li>Each round it applies a test half (the rest are temporarily off) and shows <strong>Round N</strong> with how many launches remain at most.</li>
+<li>Press <strong>▶ Launch FS25</strong>, load the save that was breaking, try to reproduce the problem, then quit to desktop.</li>
+<li>Back in Silo, press <strong>I've quit the game →</strong>. Silo peeks at the log and hints whether it looks like another crash or a clean exit.</li>
+<li>Answer the verdict: <strong>Still broken</strong> or <strong>It's fine now</strong>. Silo narrows to the guilty half and sets up the next round.</li>
+</ol>
+<p>It ends one of two ways. <strong>Most likely culprit</strong> names a single mod — disable or update it, or report the pairing to its author if it only breaks alongside another mod. <strong>No single mod is at fault</strong> means every half came back clean, so the problem is a combination (or isn't mod-related). Silo reports this honestly rather than blaming an innocent mod.</p>
+
+<h3>Safety and reversibility</h3>
+<blockquote class="note">Bisection is crash-safe. Before it changes anything, Silo snapshots your exact active set. It's restored automatically when you reach a result, when you press <strong>Restore my mods &amp; finish</strong>, or when you cancel with the <strong>✕</strong> (Cancel &amp; restore). Maps and required mods stay on every round so your save still loads. If the app closes mid-run, the next time you open Silo a banner offers <strong>Restore my mod set</strong> — your originals are never lost.</blockquote>
+</section>
+
+<section id="savegames"><h2 id="savegames-h">Savegame & settings editing</h2>
+
+<p>Silo can edit two FS25 configuration files for you without launching the game: a career save's <strong>careerSavegame.xml</strong> (difficulty and gameplay rules) and the global <strong>game.xml</strong> (graphics and performance). Both are plain XML that the game normally only lets you touch through in-game menus. Reach for this when you want to dial in difficulty before you start playing, drop graphics to chase frame rate, or copy the same settings across saves quickly.</p>
+
+<h3>Editing a savegame's settings</h3>
+
+<p>Open the <strong>Savegames</strong> panel from the top bar. Each row shows the save's name, its slot and map, and how many of its mods are in your library. Click <strong>Configure</strong> to open the editor for that save.</p>
+
+<p>The editor lists a curated, safe subset of fields — <em>Save name</em>, <em>Economic difficulty</em>, <em>Growth</em>, <em>Fuel usage</em>, <em>Dirt interval</em>, <em>Time scale</em>, <em>Autosave interval</em>, and toggles for crop destruction, plowing required, stones, weeds, lime, snow, traffic, and whether helpers buy their own fuel, seeds, and fertilizer. Two <strong>Presets</strong>, <em>Casual</em> and <em>Realistic</em>, fill several fields at once; you can still adjust anything afterward. Silo edits only the values you change and leaves the save's internal fields alone.</p>
+
+<h3>Editing graphics & performance</h3>
+
+<p>Open <strong>Settings</strong> (the gear, top right), find <strong>Graphics & performance</strong>, and click <strong>Edit game.xml ↗</strong>. Fields include <em>Performance class</em>, <em>Anisotropic filtering</em>, <em>Shadow map size</em>, <em>Max shadow lights</em>, <em>Soft shadows</em>, <em>FSR upscaling</em>, <em>Volumetric fog</em>, <em>Cloud shadows</em>, and <em>V-Sync</em>, with <em>Performance</em>, <em>Balanced</em>, and <em>Quality</em> presets. Graphics changes take effect the next time you launch the game.</p>
+
+<h3>Saving changes</h3>
+
+<p>In either editor, <strong>Save changes</strong> stays disabled until you actually change something, then writes your edits and briefly shows <em>saved ✓</em>. Close the panel any time with the ✕ to discard unsaved edits.</p>
+
+<blockquote class="note"><p><strong>Every save is reversible.</strong> Before overwriting a file, Silo copies the original to a <code>.bak</code> file beside it (for example <code>game.xml.bak</code>) — and if that backup can't be made, the write is aborted rather than risking your file. The new file is then swapped in atomically, so a disk or permission error can't leave a half-written config. To roll back, delete the edited <code>.xml</code> and rename the <code>.bak</code> back. Writes are confined to your FS25 user folder.</p></blockquote>
+
+<p>For a full snapshot of a career before you experiment, use <strong>Back up</strong> in the Savegames panel. It copies the entire savegame folder into a <code>SiloBackups</code> folder in your FS25 user directory, timestamped, leaving the original untouched.</p>
+
+</section>
+
+<section id="mod-config"><h2 id="mod-config-h">Editing a mod's own config</h2>
+<p>Many FS25 mods keep their own options in a small settings XML file that the game writes under <code>modSettings/&lt;ModName&gt;/</code> in your FS25 user folder. Silo's mod-config editor lets you change those values from a form instead of hand-editing the file. This is separate from editing your savegame or <code>game.xml</code> graphics/game settings, which have their own editor with a curated set of known options.</p>
+
+<h3>Opening the editor</h3>
+<p>On a mod's row in your library, click the gear button (<code>⚙</code>, tooltipped <em>Edit this mod's settings</em>). It only appears for mods that actually have a settings file, so if you don't see it, that mod has nothing for Silo to edit yet. The panel opens with the mod's title at the top and <strong>Mod settings</strong> beneath it. If Silo finds no files, it says <em>No settings files found for this mod yet.</em></p>
+
+<h3>The generated form</h3>
+<p>For each settings file, Silo reads the mod's typed values and builds a field per option:</p>
+<ul>
+<li>A true/false value becomes a <strong>toggle switch</strong>.</li>
+<li>A whole number or decimal becomes a <strong>number input</strong>.</li>
+<li>Anything else becomes a plain <strong>text box</strong>.</li>
+</ul>
+<p>Labels come from the mod's own setting names, so they read the way the mod author wrote them. Change what you want, then click <strong>Save changes</strong> — the button stays disabled until you've actually edited something. Only the values you changed are written back; the rest of the file is re-emitted exactly as it was read. A brief <em>saved ✓</em> confirms the write.</p>
+
+<h3>Raw XML mode</h3>
+<p>Each file has a <strong>raw XML</strong> link in its header that swaps the form for a text area of the file's exact contents; the same link (now reading <strong>form</strong>) switches back. Use raw mode when you need to edit something the form doesn't cover — Silo will tell you when it <em>couldn't model this file as a form — use "raw XML" to edit it directly.</em> Click <strong>Save raw XML</strong> to write your text back verbatim.</p>
+
+<h3>Safety and reversibility</h3>
+<blockquote class="note">Every save is reversible. Before writing, Silo copies the current file to <code>&lt;name&gt;.xml.bak</code> in the same folder, and that backup must succeed or the save is aborted. The new content is written to a temporary sibling file and then atomically renamed into place, so a disk or permission error can never leave you with a half-written config — if the swap fails, the original is restored from the backup. Writes are confined to your FS25 user folder. To undo a change, restore the file from its <code>.xml.bak</code>.</blockquote>
+</section>
+
+<section id="multiplayer"><h2 id="multiplayer-h">Multiplayer mod-set sync</h2>
+<p>Everyone in an FS25 session needs the same mods, at the same versions, with the same files. A mismatch is the number-one reason a join fails, and the game's error rarely tells you <em>which</em> mod is wrong. Silo turns that guessing game into a checklist: the host publishes a hashed list of their active set, and each joiner checks their own set against it.</p>
+<p>Open it from the <strong>Multiplayer</strong> button in the top bar. The panel has two sides: <strong>Host — share your set</strong> and <strong>Joiner — check you match</strong>. Both act only on your current <em>active set</em> (the mods Silo has switched on).</p>
+
+<blockquote class="note">This whole feature is read-only for your mods. It hashes files and writes one manifest file where you choose. It never changes your active set, your mods, or your game files — you make any fixes yourself.</blockquote>
+
+<h3>Host: export your set</h3>
+<p>Click <strong>Export active set →</strong>. Silo hashes each active zip mod (recording its name, version, content hash, and size), then prompts you to save a <code>.silomp</code> file (default <code>my-modset.silomp</code>). You'll see a note like "Saved a manifest of N mods." Send that file to everyone joining — over Discord, email, or a shared folder. Re-export whenever you change your loadout so the manifest stays current.</p>
+
+<h3>Joiner: verify against the host's manifest</h3>
+<p>Click <strong>Verify against a manifest…</strong> and pick the <code>.silomp</code> file the host sent. Silo hashes your active set, compares it, and shows either <strong>"Your set matches. You're clear to join."</strong> or <strong>"Your set doesn't match yet."</strong> with a grouped fix-list:</p>
+<ul>
+<li><strong>Get these</strong> — the host has them, you don't. Add each mod.</li>
+<li><strong>Wrong version</strong> — shows "yours X → need Y". Update to the host's version.</li>
+<li><strong>Same version, different file</strong> — the version matches but the bytes differ. Re-download to be safe.</li>
+<li><strong>Turn these off</strong> — you have mods the host doesn't. Disable them for this session.</li>
+</ul>
+<p>Work through the list, then click <strong>Verify against a manifest…</strong> again to confirm you're clear.</p>
+
+<h3>What Silo can and can't check</h3>
+<p>The comparison is byte-strict: a re-zip with identical contents still reads as different, so Silo errs toward "re-download to be sure" — the safe direction for multiplayer. Unpacked folder mods (dev mods) can't be byte-verified; if any are active you'll see a caveat, and they're marked unmatched in a manifest. For clean verification, use packed <code>.zip</code> mods on both sides.</p>
+</section>
+
+<section id="filltype-bridge"><h2 id="filltype-bridge-h">Filltype bridge (the sugar-beet fix)</h2>
+
+<p>Some maps add their own fill types (a custom crop or material) that none of your equipment will touch. FS25 decides what a trailer, shovel, silo, or sell point can handle <em>by category</em> — a trailer takes <code>BULK</code>, a front loader takes <code>SHOVEL</code>, and so on. When a map's fill type isn't a member of any category your gear accepts, nothing can harvest, haul, store, or sell it, and there's no in-game setting to fix it.</p>
+
+<p>The <strong>filltype bridge</strong> solves this without editing a single vehicle. Silo generates a tiny standalone companion mod whose only job is to add the fill type into the categories you choose. It references the fill type <em>by name</em> and adds nothing else — no textures, no redefinition, no balance changes. It's a data-only mod, so it's multiplayer-safe as long as everyone in the session has it.</p>
+
+<h3>When to reach for it</h3>
+<p>Use it when a map fill type simply won't work with equipment that should obviously handle it — your trailer won't fill, a silo won't store it, or a sell point doesn't list it. The classic case is a sugar-beet-style crop a map introduces that the base trailers ignore.</p>
+
+<h3>Generate one</h3>
+<ol>
+<li>Click the <strong>⛓ bridge</strong> button in the stat bar. The <strong>Filltype compatibility bridge</strong> panel opens.</li>
+<li>In <strong>Fill type name(s)</strong>, type the internal name(s), space- or comma-separated (for example <code>SUGARBEET BEETPULP</code>). Case doesn't matter; it's usually the crop or material name in caps. The chips below echo what Silo parsed.</li>
+<li>Under <strong>Add to</strong>, pick the categories, grouped as <em>Haul &amp; load</em>, <em>Store &amp; sell</em>, and <em>Forage &amp; feed</em>. A sensible default is preselected (trailers, tippers, front loaders, farm silos, and bulk sell points).</li>
+<li>Leave the <strong>Mod name</strong> as is or rename it — it must start with <code>FS25_</code>. This is the <code>.zip</code> filename.</li>
+<li>Click <strong>Generate bridge mod</strong>.</li>
+</ol>
+
+<p>Silo writes the <code>.zip</code> into your mods folder and rescans, so it appears in your library right away. Enable it, load your save, and the fill type should now work with the equipment in the categories you checked.</p>
+
+<blockquote class="note"><strong>Reversible and low-risk.</strong> The bridge only adds category membership — it never changes realism or economy. If two mods both define the fill type, load order still decides its properties. To undo it completely, just disable or delete the generated <code>.zip</code>. Silo won't overwrite an existing file: if a bridge of the same name is already there, generation stops and tells you.</blockquote>
+</section>
+
+<section id="bindings"><h2 id="bindings-h">Bindings map</h2>
+<p>The <strong>Bindings map</strong> shows the complete control layout that FS25's in-game help never fully lists: every action paired with the key, mouse button, or gamepad button that triggers it. Silo reads this straight from the game's own <code>inputBinding.xml</code> and lays it out so you can scan it in one place.</p>
+
+<h3>When to reach for it</h3>
+<p>Open it when a control feels double-booked — you press a key and two things happen, or a mod's action seems to collide with a base-game one. It is the fastest way to answer "what is <em>everything</em> this key does?" without hunting through the settings menus one action at a time.</p>
+
+<h3>Opening it</h3>
+<ol>
+<li>Find the <strong>⌨ bindings</strong> button in the stat bar near the top of the main window.</li>
+<li>Click it. Silo reads <code>inputBinding.xml</code> from your FS25 user folder and opens the <strong>Control bindings</strong> panel.</li>
+</ol>
+<p>If you have never launched FS25, there is no bindings file yet and Silo tells you so: <em>"No inputBinding.xml found — launch FS25 at least once first."</em> Start the game once, set your controls, and try again.</p>
+
+<h3>What you'll see</h3>
+<p>The header shows totals — how many actions, bindings, and devices were found. Below that, bindings are grouped by device (typically <strong>Keyboard &amp; Mouse</strong> and <strong>Gamepad</strong>). Each device has up to two parts:</p>
+<ul>
+<li><strong>Inputs bound to more than one action</strong> — a highlighted list of every physical input that drives two or more actions on that device, with all the actions it maps to. This is where a real clash would show up.</li>
+<li><strong>All bindings</strong> — the full action-to-input list for that device.</li>
+</ul>
+<p>Key names are cleaned up for reading (prefixes like <code>KEY_</code> are dropped, and multi-key combinations are joined with <code>+</code>).</p>
+
+<h3>Finding a specific control</h3>
+<p>Use the <strong>Search actions or keys…</strong> box at the top of the panel. Typing filters both sections live — search by action name (for example, <code>handtool</code>) or by key (for example, <code>x</code>) to jump straight to what you care about.</p>
+
+<h3>It's a view, not a verdict</h3>
+<p>The reused-input section is deliberately <em>not</em> called a conflict list. On a normal profile the same input legitimately drives many actions in non-overlapping contexts — a mouse axis feeds a dozen contextual controls; one button is a flashlight on foot and headlights in a vehicle. Silo surfaces the reuse and lets <em>you</em> judge whether any of it is actually a problem.</p>
+
+<blockquote class="note">Read-only and completely safe. The Bindings map only reads <code>inputBinding.xml</code>; it never edits, rebinds, or writes anything back. Silo has no binding editor — to change a control, use the settings menu inside FS25. Nothing here can alter your game files, so there is nothing to undo.</blockquote>
+</section>
+
+<section id="settings-accounts"><h2 id="settings-accounts-h">Settings & accounts</h2>
+
+<p>Open the <strong>Settings</strong> panel from the gear icon (<code>⚙</code>) in the top bar. It slides out on the right and covers appearance, your detected folders, account connections, diagnostics, and library layout. Nothing here changes your game files until you press a specific button, and the file-touching actions are reversible.</p>
+
+<h3>Appearance</h3>
+<p>Under <strong>Appearance</strong>, pick <strong>system</strong>, <strong>light</strong>, or <strong>dark</strong>. <em>System</em> follows your OS theme; the other two force that look. Your choice is saved and reapplied on the next launch.</p>
+
+<h3>Folders</h3>
+<p><strong>Mods folder</strong> and <strong>Game</strong> show the paths Silo detected, each with an <strong>Open ↗</strong> link to reveal it in your file manager. If the game install isn't found, the Launch button is hidden. When your user directory is known, <strong>Graphics &amp; performance</strong> offers <strong>Edit game.xml ↗</strong> to tune presets (Performance / Balanced / Quality) without starting the game.</p>
+
+<h3>Diagnostics — Export report</h3>
+<p><strong>Export report ↗</strong> writes a shareable Markdown file (<code>silo-report.md</code>) summarizing your environment, library counts by category, active set, detected conflicts, and health issues. Reach for it when asking for help or comparing setups. It only reads your library and saves a text file — it changes nothing.</p>
+
+<h3>Auto-file new mods</h3>
+<p>This toggle is <strong>off</strong> by default. When on, Silo moves newly-downloaded <code>.zip</code> mods into your library on load and keeps them active, so you skip the manual Organize step. Leave it off if you prefer to review new downloads first. The setting is remembered between sessions.</p>
+
+<h3>Library layout &amp; maintenance</h3>
+<p>Under <strong>Library layout</strong>:</p>
+<ul>
+<li><strong>Organize</strong> sorts your <code>.zip</code> mods into <code>mods/archive/&lt;Category&gt;/</code> subfolders (which the game ignores) and projects the active set back via hardlinks — no duplication, fully reversible.</li>
+<li><strong>↻ Rebuild categories</strong> re-scans every mod from scratch. Use it after a Silo update improves categorization so existing mods pick up the better categories.</li>
+<li><strong>Restore vanilla layout</strong> appears only when mods are organized. It moves every mod back out of <code>archive/</code> and removes all links, returning you to a plain flat <code>mods/</code> folder. You'll confirm first.</li>
+</ul>
+<blockquote class="note">Restore vanilla does <strong>not</strong> delete any mods — it only undoes Silo's organization. If some files can't be moved, Silo reports the errors rather than leaving things half-done.</blockquote>
+
+<h3>Connecting GitHub</h3>
+<p>Under <strong>GitHub account</strong>, press <strong>Connect GitHub</strong>. A browser opens to <strong>github.com/login/device</strong>; enter the code Silo shows and authorize. Connecting gives faster update checks (5,000 requests/hour) and access to private repos, and it enables in-app GitHub installs from the Browse tab. By default the connection is read-only; use <strong>Enable actions</strong> to grant the <code>public_repo</code> scope so <em>Star</em> and <em>Watch</em> land on your account. You can <strong>Disconnect</strong> anytime, or use a Personal Access Token instead via the token option.</p>
+
+<h3>Connecting Nexus Mods</h3>
+<p>Under <strong>Nexus Mods account</strong>, press <strong>Connect Nexus</strong>, then paste your personal API key (there's a <strong>Get your key ↗</strong> link to your Nexus account page). The key stays on this machine. Once connected, you can endorse mods from their detail cards. <strong>Disconnect</strong> removes the key.</p>
+
+<p>The panel footer shows your installed Silo version.</p>
+</section>
+
+<section id="troubleshooting"><h2 id="troubleshooting-h">Troubleshooting & FAQ</h2>
+
+<h3>Windows SmartScreen (or macOS Gatekeeper) warns on first launch</h3>
+<p>Expected. Silo is open source and its builds are <strong>unsigned</strong>, so the operating system doesn't recognize the publisher yet. It is not a sign anything is wrong.</p>
+<ul>
+<li><strong>Windows:</strong> click <strong>More info</strong>, then <strong>Run anyway</strong>.</li>
+<li><strong>macOS:</strong> right-click the app and choose <strong>Open</strong> from the menu.</li>
+</ul>
+<p>If you'd rather not take our word for it, you can read or build the source yourself from the GitHub repository.</p>
+
+<h3>Do I need Developer Mode or administrator rights?</h3>
+<p>Almost never. When you organize your library, Silo tucks each mod into a <code>mods/archive/&lt;Category&gt;/</code> subfolder (the game only reads the flat root, so it ignores these) and projects the active set back into the root:</p>
+<ul>
+<li><strong>Packed <code>.zip</code> mods project as hardlinks</strong> — same volume, no admin, no Developer Mode, and no second copy on disk.</li>
+<li><strong>Only unpacked folder-mods</strong> use a directory junction/symlink, and if that isn't available Silo falls back to a plain copy.</li>
+</ul>
+<p>Since most mods are zips, most people never hit an elevation prompt.</p>
+
+<h3>Is my library safe? Can I undo this?</h3>
+<p>Yes. Projection is fully reversible. Open <strong>Settings</strong> and use <strong>Restore vanilla layout</strong> to move every mod back into a plain flat <code>mods/</code> folder and clear Silo's bookkeeping.</p>
+<blockquote class="note">Silo never deletes a file it doesn't recognize and never removes the only copy of a mod. If you swap your own build into the mods folder, Silo detects that it isn't the file it projected and leaves it untouched. Config edits are backed up to a <code>.bak</code> first.</blockquote>
+
+<h3>Where does Silo store its data?</h3>
+<p>Your mods stay in your game's mods folder — Silo only rearranges them. Silo's own database (<code>silo.db</code>: the library index and cache) lives in the app's per-user data directory. Any account tokens go into your OS credential store (Windows Credential Manager, macOS Keychain, Linux Secret Service), not in plain text.</p>
+
+<h3>Why does a mod show "Unverified"?</h3>
+<p>The <strong>Integrity</strong> check in a mod's detail drawer compares your file against the trusted build SiloAPI hashed from its source. <strong>Unverified</strong> means there's no trusted build to compare against yet — usually because that mod isn't in the catalog. It is not a warning about the mod. Folder mods can't be verified at all (there's no archive to hash). This is a provenance check, not a virus scan.</p>
+
+<h3>Connecting GitHub or Nexus accounts</h3>
+<p>Both are optional and live in <strong>Settings</strong>.</p>
+<ul>
+<li><strong>GitHub account → Connect GitHub:</strong> a browser opens to <code>github.com/login/device</code>; type in the code shown. This raises update-check limits to 5,000/hr and enables Star/Watch on mod pages.</li>
+<li><strong>Nexus Mods account → Connect Nexus:</strong> paste your personal API key to endorse mods from their cards.</li>
+</ul>
+<p>Credentials stay on your machine, and a <strong>Disconnect</strong> button removes them at any time.</p>
+</section>
+    </main>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>Silo is a free, open-source mod manager for Farming Simulator 25. Not affiliated with GIANTS Software.</p>
+    <div class="links">
+      <a href="/">Home</a>
+      <a href="/browse/">Browse mods</a>
+      <a href="https://github.com/HLLMR/silo" rel="noopener">Source &amp; issues</a>
+      <a href="/#download">Download</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  "use strict";
+  // Theme toggle (OS default, persists explicit choice).
+  (function(){var s=null;try{s=localStorage.getItem("silo-theme");}catch(e){}
+    if(s)document.documentElement.setAttribute("data-theme",s);
+    document.getElementById("themeBtn").addEventListener("click",function(){
+      var c=document.documentElement.getAttribute("data-theme");
+      if(!c)c=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";
+      var n=c==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);
+      try{localStorage.setItem("silo-theme",n);}catch(e){}});})();
+
+  // Scrollspy: highlight the section currently in view.
+  (function(){
+    var links={};document.querySelectorAll("#toc a[data-slug]").forEach(function(a){links[a.getAttribute("data-slug")]=a;});
+    var secs=[].slice.call(document.querySelectorAll(".content section[id]"));
+    var cur=null;
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(e){if(e.isIntersecting){var id=e.target.id;
+        if(cur)cur.classList.remove("active");if(links[id]){links[id].classList.add("active");cur=links[id];}}});
+    },{rootMargin:"-80px 0px -70% 0px",threshold:0});
+    secs.forEach(function(s){io.observe(s);});
+  })();
+
+  // Topic filter.
+  (function(){
+    var f=document.getElementById("filter");if(!f)return;
+    f.addEventListener("input",function(){
+      var q=f.value.trim().toLowerCase();
+      document.querySelectorAll("#toc a[data-slug]").forEach(function(a){
+        var hit=!q||a.textContent.toLowerCase().indexOf(q)>=0;
+        a.style.display=hit?"":"none";});
+      document.querySelectorAll(".nav-group").forEach(function(g){
+        var any=[].slice.call(g.querySelectorAll("a")).some(function(a){return a.style.display!=="none";});
+        g.style.display=any?"":"none";});
+    });
+  })();
+</script>
+</body>
+</html>
