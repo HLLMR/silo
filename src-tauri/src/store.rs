@@ -61,7 +61,7 @@ fn parse_store_category(xml: &str) -> Option<String> {
                 let last = stack.last().map(String::as_str).unwrap_or("");
                 let parent = stack.iter().rev().nth(1).map(String::as_str).unwrap_or("");
                 if last == "category" && parent == "storeData" {
-                    if let Ok(txt) = t.unescape() {
+                    if let Some(txt) = crate::xmltext::text(&t) {
                         let v = txt.trim().to_string();
                         if !v.is_empty() {
                             return Some(v);

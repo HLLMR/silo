@@ -74,7 +74,7 @@ fn element_slots(e: &BytesStart) -> Vec<Slot> {
     for a in e.attributes().flatten() {
         let key = local(a.key.as_ref());
         let val = a
-            .unescape_value()
+            .normalized_value(quick_xml::XmlVersion::Implicit1_0)
             .map(|c| c.into_owned())
             .unwrap_or_default();
         if key == "name" {
@@ -148,7 +148,7 @@ fn edited_start<'a>(e: &BytesStart<'a>, base_id: usize, edits: &[Edit]) -> Bytes
     for a in e.attributes().flatten() {
         let key = local(a.key.as_ref());
         let orig = a
-            .unescape_value()
+            .normalized_value(quick_xml::XmlVersion::Implicit1_0)
             .map(|c| c.into_owned())
             .unwrap_or_default();
         let is_slot = slots.get(slot_i).map(|s| s.attr == key).unwrap_or(false);

@@ -24,6 +24,7 @@ pub mod settings_form;
 pub mod siloapi;
 pub mod store;
 pub mod xmlconfig;
+pub mod xmltext;
 
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -442,17 +443,22 @@ async fn nexus_description(mod_id: u64) -> Result<String, String> {
 
 #[tauri::command]
 async fn download_update(
-    app: tauri::AppHandle,
+    _app: tauri::AppHandle,
     path: String,
     asset_url: String,
 ) -> Result<(), String> {
-    let db = db_path(&app)?;
+    // No DB/token needed: a public release asset is downloaded unauthenticated.
     tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
         let dest = std::path::Path::new(&path);
+        // Defence against a compromised webview naming an arbitrary write target: the path
+        // must contain no `..` AND its parent must resolve inside a real mods root (the flat
+        // root or its `archive/`). An absolute path outside the mods folder — which
+        // `no_traversal` alone would pass — is rejected here.
         paths::no_traversal(dest)?;
-        let conn = db::open(&db)?;
-        let token = secrets::get(&conn, "gh_token");
-        github::download_zip(&asset_url, token.as_deref(), dest)
+        paths::ensure_write_under(&fsgame::default_mods_paths(), dest)?;
+        // Public release assets don't need auth, and a download must never carry the user's
+        // GitHub credential — keep the token for explicit API actions only.
+        github::download_zip(&asset_url, None, dest)
     })
     .await
     .map_err(|e| e.to_string())?

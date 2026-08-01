@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security & reliability (hardening pass)
+
+- **Organize can never delete your only copy.** The restore/deactivate paths now
+  refuse to remove a file from the mods root unless the archived copy exists behind
+  it — so an update or organize interrupted by a crash or power loss leaves your
+  original untouched rather than risking the last copy. Added a regression test for
+  that exact interrupted state.
+- **Mod downloads carry no credentials.** Release assets are public and are now
+  fetched unauthenticated; your GitHub token is used only for explicit actions you
+  take (star / watch), never attached to a download, and never over plaintext HTTP.
+- **Update writes are confined to your mods folder.** The destination is validated to
+  resolve inside a real mods root before anything is written.
+- **Interrupted updates roll back.** If an in-place update fails mid-write, Silo
+  restores the previous version from its backup instead of leaving a truncated file.
+- **Hardened XML parsing.** Upgraded `quick-xml` to close two denial-of-service
+  advisories (RUSTSEC-2026-0194 / 0195) a malformed mod could otherwise trigger.
+- **The CI dependency audit is now a release gate** — the build fails on any known
+  vulnerable dependency.
+
+### Changed
+
+- Catalog images now load from SiloAPI's server-side cache when available (faster and
+  referer-free), falling back to the in-app proxy for not-yet-cached images.
+
 ## [0.1.0] - 2026-07-30
 
 First public beta.
@@ -20,8 +44,9 @@ First public beta.
 - **Zip organizing** — moves loose mod zips into `mods/archive/<Category>/`;
   dev **folder** mods are left untouched (zip-only, never destructive).
 - **Symlink/junction projection** — only the active set is projected into the
-  game's flat `mods/` folder at launch, via symlink/junction with a copy
-  fallback. Your original files are never moved.
+  game's flat `mods/` folder at launch, via symlink/junction (zips via hardlink)
+  with a copy fallback. Organizing moves your zips into a local `archive/` folder,
+  fully reversible with one-click Flatten; nothing ever leaves your machine.
 - **Loadouts & profiles** — save the current active set as a loadout;
   apply / overwrite / delete; export to a `.silo` file and re-import. Active
   loadout name shows in the toolbar. Build a loadout from a savegame's mod list.

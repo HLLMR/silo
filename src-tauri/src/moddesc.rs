@@ -67,7 +67,11 @@ fn attr(e: &quick_xml::events::BytesStart, key: &[u8]) -> Option<String> {
     e.attributes()
         .flatten()
         .find(|a| a.key.as_ref() == key)
-        .and_then(|a| a.unescape_value().ok().map(|c| c.into_owned()))
+        .and_then(|a| {
+            a.normalized_value(quick_xml::XmlVersion::Implicit1_0)
+                .ok()
+                .map(|c| c.into_owned())
+        })
 }
 
 /// Parse a `modDesc.xml` document into the fields Silo needs.
@@ -103,7 +107,7 @@ pub fn parse(xml: &str) -> ModDesc {
                 stack.pop();
             }
             Ok(Event::Text(t)) => {
-                if let Ok(txt) = t.unescape() {
+                if let Some(txt) = crate::xmltext::text(&t) {
                     absorb_text(&mut md, &mut mod_title, &mut map_title, &stack, txt.trim());
                 }
             }

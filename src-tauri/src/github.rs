@@ -203,14 +203,20 @@ pub fn device_poll(client_id: &str, device_code: &str) -> Result<PollResult, Str
 /// arbitrary URL handed in from the webview/catalog, so a hostile `downloadUrl` can't
 /// harvest the user's credential.
 pub fn is_github_host(url: &str) -> bool {
-    let host = match url.split_once("://") {
-        Some((_, rest)) => rest
-            .split(['/', '?', '#'])
-            .next()
-            .unwrap_or("")
-            .to_ascii_lowercase(),
+    let (scheme, rest) = match url.split_once("://") {
+        Some(x) => x,
         None => return false,
     };
+    // Require HTTPS — never attach a bearer credential to a plaintext `http://github.com`
+    // URL, where it would be sent in the clear before any TLS redirect.
+    if !scheme.eq_ignore_ascii_case("https") {
+        return false;
+    }
+    let host = rest
+        .split(['/', '?', '#'])
+        .next()
+        .unwrap_or("")
+        .to_ascii_lowercase();
     let host = host.split('@').next_back().unwrap_or(""); // ignore any userinfo
     let host = host.split(':').next().unwrap_or(""); // strip port
     host == "github.com"
@@ -271,24 +277,55 @@ fn stream_install(
     })?;
 
     // 3. Back up the current file FIRST; abort if we can't preserve a copy.
-    if dest.exists() {
-        std::fs::copy(dest, dest.with_extension("zip.bak")).map_err(|e| {
+    let bak = dest.with_extension("zip.bak");
+    let had_dest = dest.exists();
+    if had_dest {
+        std::fs::copy(dest, &bak).map_err(|e| {
             format!("aborted before overwriting — couldn't back up the current file: {e}")
         })?;
     }
 
     // 4. Write the validated bytes over dest IN PLACE: truncate the existing inode and
-    //    stream the .part into it, so any active hardlink projection stays valid.
-    let mut src = std::fs::File::open(part).map_err(|e| e.to_string())?;
-    let mut dst = std::fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .open(dest)
-        .map_err(|e| e.to_string())?;
-    std::io::copy(&mut src, &mut dst).map_err(|e| e.to_string())?;
-    dst.sync_all().map_err(|e| e.to_string())?;
-    Ok(())
+    //    stream the .part into it, so any active hardlink projection stays valid. If this
+    //    fails after truncation, dest is now corrupt — restore it from the backup so the
+    //    user is never left with a broken (and silently unusable) mod file.
+    let write = (|| -> Result<(), String> {
+        let mut src = std::fs::File::open(part).map_err(|e| e.to_string())?;
+        let mut dst = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(dest)
+            .map_err(|e| e.to_string())?;
+        std::io::copy(&mut src, &mut dst).map_err(|e| e.to_string())?;
+        dst.sync_all().map_err(|e| e.to_string())
+    })();
+
+    match write {
+        Ok(()) => {
+            let _ = std::fs::remove_file(&bak); // update landed — drop the backup
+            Ok(())
+        }
+        Err(e) => {
+            if had_dest && bak.exists() {
+                // Best-effort rollback to the pre-update file (inode preserved).
+                if let Ok(mut b) = std::fs::File::open(&bak) {
+                    if let Ok(mut d) = std::fs::OpenOptions::new()
+                        .write(true)
+                        .create(true)
+                        .truncate(true)
+                        .open(dest)
+                    {
+                        let _ = std::io::copy(&mut b, &mut d);
+                        let _ = d.sync_all();
+                    }
+                }
+            }
+            Err(format!(
+                "update failed and was rolled back to the previous version: {e}"
+            ))
+        }
+    }
 }
 
 /// The authenticated user's login name (verifies a token).
@@ -531,6 +568,11 @@ mod tests {
             "https://staticdelivery.nexusmods.com/a.png"
         ));
         assert!(!is_github_host("http://github.com@evil.com/x"));
+        // Plaintext HTTP must never qualify — a bearer token can't be sent in the clear.
+        assert!(!is_github_host(
+            "http://github.com/o/r/releases/download/v1/a.zip"
+        ));
+        assert!(!is_github_host("http://api.github.com/repos/o/r"));
     }
 
     #[test]

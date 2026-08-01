@@ -127,7 +127,12 @@ pub fn apply_organize(conn: &Connection, root: &Path, mods: &[ModInput]) -> Repo
         // Manifest-first: record the row BEFORE moving the file. If the DB write fails we
         // never move, so we can't leave a file orphaned in the archive (which flatten
         // would later be unable to tell from junk). If the move then fails, roll the row
-        // back. Net effect: an archived file always has a manifest row, and vice versa.
+        // back. This holds under normal errors; a HARD crash between the row write and the
+        // move can still leave a row with no archived file and the original still in the
+        // root. That window is made non-destructive on the read side: flatten/set_active
+        // never remove a root entry unless the archived copy exists behind it, so the only
+        // copy is never deleted. (A journalled, startup-reconciled operation log would close
+        // the window entirely — tracked as a follow-up.)
         let row = OrganizedRow {
             tech_name: m.tech_name.clone(),
             file_name: m.file_name.clone(),
@@ -171,12 +176,26 @@ pub fn set_active(conn: &Connection, root: &Path, active: &HashSet<String>) -> R
                 Err(e) => rep.errors.push(format!("{}: link: {e}", row.tech_name)),
             }
         } else if !want && linked {
-            match remove_link(&link) {
-                Ok(()) => {
-                    let _ = db::set_organized_active(conn, &row.tech_name, false);
-                    rep.changed += 1;
+            // Only drop the root entry if the archived copy exists behind it. A genuine
+            // projection is always backed by an archive file; a root entry with NO archive
+            // is the only copy (e.g. a crash between the manifest write and the move landed
+            // the original here) — deleting it to "deactivate" would destroy it.
+            if src.exists() {
+                match remove_link(&link) {
+                    Ok(()) => {
+                        if let Err(e) = db::set_organized_active(conn, &row.tech_name, false) {
+                            rep.errors.push(format!("{}: manifest: {e}", row.tech_name));
+                        }
+                        rep.changed += 1;
+                    }
+                    Err(e) => rep.errors.push(format!("{}: unlink: {e}", row.tech_name)),
                 }
-                Err(e) => rep.errors.push(format!("{}: unlink: {e}", row.tech_name)),
+            } else {
+                rep.errors.push(format!(
+                    "{}: no archived copy behind the root file — kept it (won't delete the only copy)",
+                    row.tech_name
+                ));
+                rep.skipped += 1;
             }
         } else {
             rep.skipped += 1;
@@ -194,20 +213,34 @@ pub fn flatten(conn: &Connection, root: &Path) -> Report {
         let link = root.join(&row.file_name);
         let src = archive_path(root, &row.category, &row.file_name);
 
-        // Remove an active projection first so the root slot is free.
-        if link.symlink_metadata().is_ok() {
-            if let Err(e) = remove_link(&link) {
-                rep.errors.push(format!("{}: unlink: {e}", row.tech_name));
-                continue;
-            }
-        }
         if src.exists() {
+            // Normal restore: drop the projection to free the slot, then move the archived
+            // original back into the root.
+            if link.symlink_metadata().is_ok() {
+                if let Err(e) = remove_link(&link) {
+                    rep.errors.push(format!("{}: unlink: {e}", row.tech_name));
+                    continue;
+                }
+            }
             if let Err(e) = move_path(&src, &link) {
                 rep.errors.push(format!("{}: restore: {e}", row.tech_name));
                 continue;
             }
+        } else if link.exists() {
+            // A file sits in the root slot but there is NO archived copy behind it. That is
+            // the original, not a projection (a projection always has an archive) — this is
+            // exactly the state a crash between the manifest write and the move leaves. Never
+            // delete it: keep the file, drop the stale manifest row.
+            rep.errors.push(format!(
+                "{}: no archived copy — kept the file in the mods root (not deleted)",
+                row.tech_name
+            ));
         }
-        let _ = db::delete_organized(conn, &row.tech_name);
+        // else: neither archive nor root file — nothing to restore; just clear the row.
+        if let Err(e) = db::delete_organized(conn, &row.tech_name) {
+            rep.errors.push(format!("{}: manifest: {e}", row.tech_name));
+            continue;
+        }
         rep.changed += 1;
     }
     // NEVER `remove_dir_all` the archive — that would destroy any file we don't have a
@@ -363,6 +396,45 @@ mod tests {
         assert!(
             archive.exists(),
             "archive kept because it still holds the orphan"
+        );
+
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn flatten_never_deletes_the_original_when_no_archive_copy_exists() {
+        // Simulate the crash window: a manifest row was written but the move never happened,
+        // so the ORIGINAL still sits in the flat root and there is no archived copy. Flatten
+        // must keep the file and only clear the stale row — never delete the only copy.
+        let base = std::env::temp_dir().join(format!("silo_crashwin_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).unwrap();
+        let conn = db::open(&base.join("silo.db")).unwrap();
+
+        let row = OrganizedRow {
+            tech_name: "FS25_Foo".into(),
+            file_name: "FS25_Foo.zip".into(),
+            kind: "zip".into(),
+            category: "Vehicles".into(),
+            subcategory: None,
+            active: false,
+        };
+        db::upsert_organized(&conn, &row).unwrap();
+        let original = base.join("FS25_Foo.zip");
+        std::fs::write(&original, b"PK\x03\x04 the user's only copy").unwrap();
+        // No archive/Vehicles/FS25_Foo.zip exists.
+
+        let rep = flatten(&conn, &base);
+
+        assert!(original.exists(), "the only copy must NOT be deleted");
+        assert!(
+            db::load_organized(&conn).is_empty(),
+            "the stale manifest row should be cleared"
+        );
+        assert!(
+            rep.errors.iter().any(|e| e.contains("kept the file")),
+            "the kept-file case should be reported, got: {:?}",
+            rep.errors
         );
 
         let _ = std::fs::remove_dir_all(&base);

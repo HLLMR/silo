@@ -133,7 +133,7 @@ fn fill_type_names(xml: &[u8]) -> Vec<String> {
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(e)) | Ok(Event::Empty(e)) if e.name().as_ref() == b"fillType" => {
                 if let Some(a) = e.attributes().flatten().find(|a| a.key.as_ref() == b"name") {
-                    if let Ok(v) = a.unescape_value() {
+                    if let Ok(v) = a.normalized_value(quick_xml::XmlVersion::Implicit1_0) {
                         let n = v.trim().to_uppercase();
                         if !n.is_empty() && !out.contains(&n) {
                             out.push(n);

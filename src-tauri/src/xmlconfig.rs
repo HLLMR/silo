@@ -62,7 +62,7 @@ pub fn get_values(xml: &str, paths: &[String]) -> HashMap<String, String> {
         for a in e.attributes().flatten() {
             let key = local(a.key.as_ref());
             if let Some(rk) = want_attr.get(&(path.to_string(), key)) {
-                if let Ok(v) = a.unescape_value() {
+                if let Ok(v) = a.normalized_value(quick_xml::XmlVersion::Implicit1_0) {
                     out.insert(rk.clone(), v.into_owned());
                 }
             }
@@ -87,7 +87,7 @@ pub fn get_values(xml: &str, paths: &[String]) -> HashMap<String, String> {
             Ok(Event::Text(t)) => {
                 let path = stack.join(".");
                 if let Some(rk) = want_text.get(&path) {
-                    if let Ok(v) = t.unescape() {
+                    if let Some(v) = crate::xmltext::text(&t) {
                         let v = v.trim();
                         if !v.is_empty() {
                             out.insert(rk.clone(), v.to_string());
@@ -108,7 +108,7 @@ fn rebuild_start<'a>(e: &BytesStart<'a>, path: &str, edits: &[Edit]) -> BytesSta
     for a in e.attributes().flatten() {
         let key = local(a.key.as_ref());
         let orig = a
-            .unescape_value()
+            .normalized_value(quick_xml::XmlVersion::Implicit1_0)
             .map(|c| c.into_owned())
             .unwrap_or_default();
         let target = format!("{path}@{key}");

@@ -64,9 +64,13 @@ jobs:
   audit:
     name: Security audit (cargo-audit)
     runs-on: ubuntu-latest
-    # Informational for now: surfaces advisories in the log without blocking a build we
-    # can't hotfix instantly. Flip to a hard gate once the first run is reviewed.
-    continue-on-error: true
+    # Hard gate on VULNERABILITIES: `cargo audit` exits non-zero only for actual security
+    # advisories, so this fails the build if a vulnerable dependency lands. The remaining
+    # ~18 warnings are `unmaintained`/`unsound` advisories on TRANSITIVE crates with no
+    # upstream fix (the gtk-rs GTK3 bindings Tauri v2 pulls in on Linux, `proc-macro-error`,
+    # the `unic-*` set, and the `glib`/`event-listener` unsoundness) — `cargo audit` reports
+    # them in the log for visibility but they do not affect the exit code, so they don't
+    # block. Reviewed 2026-07; revisit when Tauri moves off GTK3.
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

@@ -34,7 +34,11 @@ fn attr(e: &quick_xml::events::BytesStart, key: &[u8]) -> Option<String> {
     e.attributes()
         .flatten()
         .find(|a| a.key.as_ref() == key)
-        .and_then(|a| a.unescape_value().ok().map(|c| c.into_owned()))
+        .and_then(|a| {
+            a.normalized_value(quick_xml::XmlVersion::Implicit1_0)
+                .ok()
+                .map(|c| c.into_owned())
+        })
 }
 
 /// Parse a `careerSavegame.xml` into name/map/mod-list.
@@ -82,7 +86,7 @@ fn parse(xml: &str, index: u32, folder: &str) -> Savegame {
             Ok(Event::Text(t)) => {
                 let last = stack.last().map(String::as_str).unwrap_or("");
                 let parent = stack.iter().rev().nth(1).map(String::as_str).unwrap_or("");
-                if let Ok(txt) = t.unescape() {
+                if let Some(txt) = crate::xmltext::text(&t) {
                     let txt = txt.trim();
                     if parent == "settings" && last == "savegameName" {
                         name = txt.to_string();
