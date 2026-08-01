@@ -47,8 +47,10 @@ is the management layer the game left out.
 - **Conflict detection** — duplicate active maps (an instant crash), plus colliding
   filltypes, vehicle types and scripts across your active set.
 - **Cross-source catalog** — one record per mod aggregating ModHub + GitHub + Nexus,
-  with the latest version found across all of them (backed by
-  [SiloAPI](https://silo-api.hllmr.com)).
+  with the latest version found across all of them. See the
+  [catalog & provenance page](https://silo.hllmr.com/catalog/) or
+  [browse it live](https://silo.hllmr.com/browse/); it's served by the public
+  [SiloAPI](https://silo-api.hllmr.com) read API.
 - **Integrity check** — hashes an installed mod and compares it to the trusted build its
   source published: a clean match, or the exact files that changed. Provenance, not
   antivirus — it confirms what a mod is, not whether it means well. It works across
