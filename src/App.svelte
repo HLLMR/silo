@@ -117,11 +117,13 @@
   let editing = $state<{ techName: string; x: number; y: number } | null>(null);
   let activeSet = $state<Set<string>>(new Set());
   let busy = $state<string | null>(null);
-  // Auto-file newly-appeared mods into the archive on load (kept active). Persisted.
+  // Auto-file newly-appeared mods into the archive on load (kept active). OPT-IN:
+  // defaults OFF so a first run never moves the user's files without them choosing to.
+  // Enable it via Settings, or use the explicit "Organize" button. Persisted.
   let autoFileNew = $state(
     typeof localStorage !== "undefined"
-      ? localStorage.getItem("silo.autoFile") !== "false"
-      : true,
+      ? localStorage.getItem("silo.autoFile") === "true"
+      : false,
   );
   function setAutoFile(v: boolean) {
     autoFileNew = v;
