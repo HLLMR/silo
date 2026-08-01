@@ -107,6 +107,16 @@
 </script>
 
 <div class="gha">
+  {#snippet flowDisplay()}
+    <div class="gha-flow">
+      <div class="gha-hint">
+        A browser opened to <b>github.com/login/device</b>. Enter this code there:
+      </div>
+      <div class="gha-code tnum">{flow?.userCode}</div>
+      <div class="gha-hint">Waiting for you to authorize… keep this open.</div>
+    </div>
+  {/snippet}
+
   {#if status.user}
     <div class="gha-row">
       <div>
@@ -121,7 +131,11 @@
       </div>
       <button class="gha-btn" onclick={disconnect}>Disconnect</button>
     </div>
-    {#if !status.canWrite && !flow}
+    {#if flow}
+      <!-- Escalating scope (read-only → actions) while already connected: the code MUST
+           show here, since the connected branch owns the render when status.user is set. -->
+      {@render flowDisplay()}
+    {:else if !status.canWrite}
       <div class="gha-row">
         <div class="gha-hint">
           Enable ⭐ Star / 👁 Watch on mod pages — grants the <code>public_repo</code>
@@ -131,11 +145,7 @@
       </div>
     {/if}
   {:else if flow}
-    <div class="gha-flow">
-      <div class="gha-hint">1. A browser opened to <b>github.com/login/device</b>. Enter this code:</div>
-      <div class="gha-code tnum">{flow.userCode}</div>
-      <div class="gha-hint">Waiting for you to authorize… keep this open.</div>
-    </div>
+    {@render flowDisplay()}
   {:else if status.clientId}
     <div class="gha-row">
       <div class="gha-hint">Connect your GitHub account for faster update checks (5,000/hr) and private repos.</div>
