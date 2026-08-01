@@ -1,9 +1,10 @@
 name: Release
 
 # Cut a release by pushing a version tag, e.g. `git tag v0.1.0 && git push origin v0.1.0`.
-# tauri-action builds native installers per-OS and attaches them to a DRAFT prerelease,
-# so you review before publishing. No code signing (open-source; unsigned bundles are
-# expected — users can build from source to verify).
+# tauri-action builds native installers per-OS and attaches them to a DRAFT (non-prerelease)
+# release, so you review before publishing. Bundles are signed for the in-app updater
+# (minisign), but NOT OS-code-signed — SmartScreen/Gatekeeper still warn; users can build
+# from source to verify.
 on:
   push:
     tags: ['v*']
@@ -81,5 +82,8 @@ jobs:
             Silo is open source and unsigned — Windows SmartScreen / macOS Gatekeeper
             may warn on first launch. You can inspect or build from source at any time.
           releaseDraft: true
-          prerelease: true
+          # Stable "Latest" channel: publish as a full (non-prerelease) release so the
+          # in-app updater's /releases/latest/ endpoint resolves to it. Still created as a
+          # draft for review; publishing it makes it Latest.
+          prerelease: false
           args: ${{ matrix.args }}
