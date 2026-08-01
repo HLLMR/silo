@@ -94,21 +94,25 @@ mod tests {
 
     #[test]
     fn blocks_ssrf_and_non_https() {
-        for bad in [
-            "http://silo-api.hllmr.com/",             // not https
-            "https://169.254.169.254/latest/meta",    // link-local (cloud metadata)
-            "https://10.0.0.5/x",                     // private
-            "https://192.168.1.1/x",                  // private
-            "https://172.16.9.9/x",                   // private
-            "https://100.64.0.1/x",                   // CGNAT
-            "https://127.0.0.1/x",                    // loopback, no dev mode
-            "https://[::1]/x",                        // loopback v6
-            "https://[fc00::1]/x",                    // ULA v6
-            "https://localhost/x",                    // localhost, no dev mode
-            "ftp://example.com/x",                    // wrong scheme
+        // non-https; cloud-metadata (link-local); private; CGNAT; loopback v4/v6; ULA v6;
+        // localhost; wrong scheme; and garbage — all rejected without a dev flag.
+        let bad = [
+            "http://silo-api.hllmr.com/",
+            "https://169.254.169.254/latest/meta",
+            "https://10.0.0.5/x",
+            "https://192.168.1.1/x",
+            "https://172.16.9.9/x",
+            "https://100.64.0.1/x",
+            "https://127.0.0.1/x",
+            "https://[::1]/x",
+            "https://[fc00::1]/x",
+            "https://localhost/x",
+            "ftp://example.com/x",
             "not a url",
-        ] {
-            assert!(validate_outbound_url(bad, false).is_err(), "should block {bad}");
+        ];
+        for u in bad {
+            let blocked = validate_outbound_url(u, false).is_err();
+            assert!(blocked, "should block {u}");
         }
     }
 
