@@ -26,6 +26,7 @@ closes the app). A packaged build is `npm run tauri:build`.
 - [x] `[app]` Initial scan lists the full library; counts (mods/maps/scripts/DLC) look right; "scanned in N ms" shows.
 - [x] `[app]` Rescan re-reads without error; warm scan is fast.
 - [x] `[app]` Organize moves loose zips into `mods/archive/<Category>/`; dev **folder** mods are left untouched (zip-only).
+- [ ] `[app]` **Organize preview**: clicking **Organize N** (auto-file OFF) opens a dry-run preview grouping the planned moves by category **before** anything moves; **Cancel** touches nothing; **Organize N** applies it. Ticking **"Don't preview next time"** and confirming makes the next Organize skip straight to applying (clear `localStorage silo.organizePreviewSkip` to re-enable).
 - [x] `[app]` Category rail filters; search filters by title/author/tech name; Favorites/Hidden toggles work.
 - [x] `[app]` Select-all checkbox activates/deactivates the filtered set.
 

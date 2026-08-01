@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Organize preview.** The manual **Organize** button now shows a read-only dry run
+  first — exactly which zips move into which `archive/<Category>/` folder — before a
+  single file is touched. Confirm to apply, Cancel to touch nothing. Dismissible for
+  good with "Don't preview next time" so power users aren't nagged. (The opt-in
+  auto-filer still runs silently — you already chose it.)
+
 ### Security & reliability (hardening pass)
 
 - **Organize can never delete your only copy.** The restore/deactivate paths now

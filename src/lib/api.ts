@@ -13,6 +13,7 @@ import type {
   TagRow,
   ModInput,
   OrganizeReport,
+  PlannedMove,
   Loadout,
   Savegame,
   Conflict,
@@ -95,6 +96,10 @@ export function setOverride(row: CategoryOverride): Promise<void> {
 }
 
 // ── Organize / projection ──
+export function planOrganize(mods: ModInput[]): Promise<PlannedMove[]> {
+  return invoke<PlannedMove[]>("plan_organize", { root: null, mods });
+}
+
 export function applyOrganize(mods: ModInput[]): Promise<OrganizeReport> {
   return invoke<OrganizeReport>("apply_organize", { root: null, mods });
 }

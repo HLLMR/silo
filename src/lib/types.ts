@@ -77,6 +77,15 @@ export interface OrganizeReport {
   errors: string[];
 }
 
+/** One planned move from a dry-run `plan_organize` (read-only preview). */
+export interface PlannedMove {
+  techName: string;
+  fileName: string;
+  category: string;
+  relFrom: string;
+  relTo: string;
+}
+
 export interface Loadout {
   id: number;
   name: string;

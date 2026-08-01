@@ -8,6 +8,7 @@
     setCuration,
     getOverrides,
     setOverride,
+    planOrganize,
     applyOrganize,
     setActive,
     flatten,
@@ -47,6 +48,7 @@
     ScanResult,
     CurationRow,
     ModInput,
+    PlannedMove,
     Loadout,
     Savegame,
     Conflict,
@@ -93,6 +95,7 @@
   import Topbar from "./lib/components/panels/Topbar.svelte";
   import StatBar from "./lib/components/panels/StatBar.svelte";
   import LibraryToolbar from "./lib/components/panels/LibraryToolbar.svelte";
+  import OrganizePreview from "./lib/components/OrganizePreview.svelte";
   import { fmtSize } from "./lib/format";
 
   let roots = $state<string[]>([]);
@@ -535,25 +538,32 @@
     }
   }
 
-  // File loose (unorganized) mods into the archive. `keepActive` preserves their
-  // loaded state (used by both the auto-filer and the manual button).
-  async function fileLooseMods(keepActive: boolean) {
+  // Build the organize inputs for every loose (unorganized) zip currently in view.
+  function looseInputs(): { inputs: ModInput[]; techNames: string[] } {
     const targets = effectiveMods.filter(isFileable);
-    if (targets.length === 0) return;
-    busy = `Filing ${targets.length} mod${targets.length > 1 ? "s" : ""} into the library…`;
-    const inputs: ModInput[] = targets.map((m) => ({
-      techName: m.techName,
-      fileName: fileName(m.path),
-      kind: m.kind,
-      category: m.category,
-      subcategory: m.subcategory,
-    }));
+    return {
+      inputs: targets.map((m) => ({
+        techName: m.techName,
+        fileName: fileName(m.path),
+        kind: m.kind,
+        category: m.category,
+        subcategory: m.subcategory,
+      })),
+      techNames: targets.map((m) => m.techName),
+    };
+  }
+
+  // Apply a prepared set of organize inputs. `keepActive` re-projects them so their
+  // loaded state is preserved (used by both the auto-filer and the manual button).
+  async function applyLoose(inputs: ModInput[], techNames: string[], keepActive: boolean) {
+    if (inputs.length === 0) return;
+    busy = `Filing ${inputs.length} mod${inputs.length > 1 ? "s" : ""} into the library…`;
     try {
       const rep = await applyOrganize(inputs);
       if (rep.errors.length) {
         errorMsg = rep.errors.slice(0, 3).join("; ");
       } else if (keepActive) {
-        const next = new Set([...activeSet, ...targets.map((m) => m.techName)]);
+        const next = new Set([...activeSet, ...techNames]);
         activeSet = next;
         await setActive([...next]);
       }
@@ -564,10 +574,51 @@
     await runScan(false);
   }
 
-  // Auto-filer: file new mods and keep them active (transparent to the game).
-  const autoFile = () => fileLooseMods(true);
-  // Manual "Organize N" button: file new mods, keep them active too.
-  const organizeNew = () => fileLooseMods(true);
+  // Auto-filer (opt-in): file new mods and keep them active — no prompt, they chose it.
+  async function autoFile() {
+    const { inputs, techNames } = looseInputs();
+    await applyLoose(inputs, techNames, true);
+  }
+
+  // ── Manual "Organize N" button → dry-run preview → confirm ───────────────────
+  // A read-only preview of exactly what will move, shown before any file is touched.
+  // Dismissible for good ("Don't preview next time"), so power users aren't nagged.
+  let organizePreview = $state<{
+    inputs: ModInput[];
+    techNames: string[];
+    plan: PlannedMove[];
+    loading: boolean;
+    applying: boolean;
+  } | null>(null);
+
+  const PREVIEW_SKIP_KEY = "silo.organizePreviewSkip";
+
+  async function organizeNew() {
+    const { inputs, techNames } = looseInputs();
+    if (inputs.length === 0) return;
+    // Honor a remembered "don't preview" choice.
+    if (localStorage.getItem(PREVIEW_SKIP_KEY) === "true") {
+      await applyLoose(inputs, techNames, true);
+      return;
+    }
+    organizePreview = { inputs, techNames, plan: [], loading: true, applying: false };
+    try {
+      const plan = await planOrganize(inputs);
+      if (organizePreview) organizePreview = { ...organizePreview, plan, loading: false };
+    } catch (e) {
+      errorMsg = String(e);
+      organizePreview = null;
+    }
+  }
+
+  async function confirmOrganize(skipNext: boolean) {
+    if (!organizePreview) return;
+    if (skipNext) localStorage.setItem(PREVIEW_SKIP_KEY, "true");
+    const { inputs, techNames } = organizePreview;
+    organizePreview = { ...organizePreview, applying: true };
+    await applyLoose(inputs, techNames, true);
+    organizePreview = null;
+  }
 
   async function rebuildLibrary() {
     busy = "Rebuilding library (re-scanning every mod)…";
@@ -1217,6 +1268,16 @@
       <div class="bar" style="width: {pct}%"></div>
       <span class="progress-text tnum">{progress.done} / {progress.total}</span>
     </div>
+  {/if}
+
+  {#if organizePreview}
+    <OrganizePreview
+      plan={organizePreview.plan}
+      loading={organizePreview.loading}
+      applying={organizePreview.applying}
+      onConfirm={confirmOrganize}
+      onCancel={() => (organizePreview = null)}
+    />
   {/if}
 
   {#if busy}
