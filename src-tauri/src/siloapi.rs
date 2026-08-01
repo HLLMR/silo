@@ -410,6 +410,9 @@ pub fn download_to<F: Fn(u64, Option<u64>)>(
     on_progress: F,
 ) -> Result<(), String> {
     const CAP: u64 = 500 * 1024 * 1024;
+    // SSRF guard: the URL is catalog/frontend-influenced. Downloads must be public https —
+    // never a private/loopback host (no dev localhost exception for a mod download).
+    crate::net::validate_outbound_url(url, false)?;
     let resp = ureq::get(url)
         .set("User-Agent", UA)
         .call()

@@ -14,6 +14,7 @@ pub mod icons;
 pub mod logscan;
 pub mod moddesc;
 pub mod mpsync;
+pub mod net;
 pub mod nexus;
 pub mod organize;
 pub mod paths;
@@ -483,6 +484,11 @@ fn siloapi_status(app: tauri::AppHandle) -> Result<String, String> {
 fn siloapi_set_base(app: tauri::AppHandle, base: String) -> Result<(), String> {
     let conn = db::open(&db_path(&app)?)?;
     let v = base.trim().trim_end_matches('/');
+    // SSRF guard: a custom base drives every catalog request, so validate it before storing.
+    // Allow localhost so a self-hoster/dev can point at their own endpoint; block private IPs.
+    if !v.is_empty() {
+        net::validate_outbound_url(v, true)?;
+    }
     db::set_app_setting(
         &conn,
         "siloapi_base",

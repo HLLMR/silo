@@ -48,6 +48,8 @@ image_dds = "0.7"
 base64 = "0.22"
 rusqlite = { version = "0.32", features = ["bundled"] }
 ureq = { version = "2", features = ["json"] }
+# URL parsing for the outbound-request SSRF guard (already in the tree via ureq).
+url = "2"
 # OS credential store for tokens (Windows Credential Manager / macOS Keychain / Linux
 # Secret Service via pure-Rust zbus — no extra system libs). Falls back to SQLite only
 # where no keychain exists; see src/secrets.rs.
