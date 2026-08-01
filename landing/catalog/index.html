@@ -132,7 +132,14 @@
   table.act thead th{background:var(--surface);color:var(--muted);font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;}
   table.act tbody tr:last-child td{border-bottom:none;}
   table.act tbody tr.total td{font-weight:700;background:color-mix(in srgb,var(--primary) 6%,transparent);}
-  @media (max-width:760px){.nerd-grid{grid-template-columns:1fr 1fr;} .nerd-cols{grid-template-columns:1fr;}}
+  .reach{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:22px;padding-top:20px;border-top:1px solid var(--border);}
+  .reach[hidden]{display:none;}
+  .reach-h{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+  .rstat{display:flex;align-items:baseline;gap:7px;}
+  .rstat .rn{font-family:var(--font-mono);font-size:1.3rem;font-weight:600;font-variant-numeric:tabular-nums;}
+  .rstat .rl{color:var(--muted);font-size:13px;}
+  .reach .rcap{color:var(--muted);font-size:12px;margin-left:auto;}
+  @media (max-width:760px){.nerd-grid{grid-template-columns:1fr 1fr;} .nerd-cols{grid-template-columns:1fr;} .reach .rcap{margin-left:0;width:100%;}}
 
   footer{border-top:1px solid var(--border);background:var(--surface);padding:30px 0 44px;margin-top:20px;}
   footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;align-items:center;}
@@ -298,6 +305,14 @@
         <p class="nerd-cap" id="nerdCap">Aggregate request counts only — never anything about you. Fills in the moment the metrics feed goes live.</p>
       </div>
     </div>
+
+    <div class="reach" id="reach" hidden>
+      <span class="reach-h">30-day reach</span>
+      <div class="rstat"><span class="rn" id="rApp">—</span><span class="rl">Silo app clients</span></div>
+      <div class="rstat"><span class="rn" id="rWeb">—</span><span class="rl">Browse visitors</span></div>
+      <div class="rstat"><span class="rn" id="rSite">—</span><span class="rl">Landing visitors</span></div>
+      <span class="rcap">unique, by surface · small now, honest — it climbs at launch</span>
+    </div>
   </div>
 </section>
 
@@ -360,6 +375,14 @@
       var cap=document.getElementById("nerdCap");
       if(cap)cap.textContent="Aggregate request counts only — never anything about you. Unique clients are counted per window, not stored per person.";
       if(m.catalog&&m.catalog.hostedMods!=null)set("nHosted",m.catalog.hostedMods);
+
+      // Reach split (the "both Silo & SiloAPI" view): 30-day uniques by surface.
+      function u30(o){return o&&o.uniques?o.uniques["30d"]:null;}
+      var app=u30(api.app), web=u30(api.web), sit=u30(m.site);
+      if(app!=null||web!=null||sit!=null){
+        set("rApp",app); set("rWeb",web); set("rSite",sit);
+        document.getElementById("reach").hidden=false;
+      }
     }).catch(function(){});
   })();
 </script>
