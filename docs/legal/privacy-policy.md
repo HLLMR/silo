@@ -10,8 +10,6 @@ This Privacy Policy explains how **HLLMR Ventures LLC** ("HLLMR", "we", "us", or
 
 The short version: Silo is built to be **local-first**. The desktop app has no telemetry, no analytics, no ads, and no user account. It keeps your data on your own machine. The rest of this document explains the details honestly, including the limited, necessary processing that happens on our public API and through third-party services you choose to use.
 
-> **Draft notice.** This is a draft template that must be reviewed by a qualified attorney before it is relied upon. Bracketed items marked like [this] are placeholders that must be completed.
-
 ## Who this policy covers
 
 This policy applies to:
@@ -86,7 +84,7 @@ We are not responsible for the privacy practices of these third parties. We enco
 ## Data retention
 
 - **App data** (the local SQLite cache and any tokens in your OS keychain) lives on your machine and is retained until you delete it or uninstall the app. We do not hold it.
-- **Server logs** for the public API (including IP addresses and request metadata) are retained transiently for rate-limiting, security, and operational purposes for **[retention period]**, after which they are deleted or aggregated. Cloudflare retains logs according to its own policies.
+- **Server logs** for the public API (including IP addresses and request metadata) are retained transiently for rate-limiting, security, and operational purposes for **30 days**, after which they are deleted or aggregated. Cloudflare retains logs according to its own policies.
 - **Website theme preference** remains in your browser's localStorage until you clear it.
 
 ## No tracking, no ads, no profiling
@@ -95,7 +93,7 @@ We do not build advertising profiles, we do not sell or rent personal informatio
 
 ## Children's privacy
 
-The Services are general-purpose software for managing game mods and are not directed to children. We do not knowingly collect personal information from children. Because the app is local-first and the API holds no accounts, we do not knowingly hold personal information about any child. If you believe a child has provided us with personal information through the Services, please contact us at **[legal contact email]** and we will address it.
+The Services are general-purpose software for managing game mods and are not directed to children. We do not knowingly collect personal information from children. Because the app is local-first and the API holds no accounts, we do not knowingly hold personal information about any child. If you believe a child has provided us with personal information through the Services, please contact us at **legal@hllmr.com** and we will address it.
 
 ## Your privacy rights
 
@@ -103,11 +101,11 @@ Depending on where you live, you may have rights over your personal information,
 
 In practice, the Services hold very little that identifies you: the app keeps your data locally on your own machine (which you can access or delete yourself at any time), and our API only processes IP addresses and request metadata transiently for rate-limiting and security. We do not sell personal information, and we do not use it for targeted advertising.
 
-If you wish to make a data-subject request or have questions about your rights, contact us at **[legal contact email]**. We will respond as required by applicable law. Because we do not maintain accounts, we may be unable to identify or locate transient server-log data associated with a specific individual.
+If you wish to make a data-subject request or have questions about your rights, contact us at **legal@hllmr.com**. We will respond as required by applicable law. Because we do not maintain accounts, we may be unable to identify or locate transient server-log data associated with a specific individual.
 
 ## International users
 
-The Services are operated from **[operating jurisdiction]**, and our service providers (including Cloudflare) may process data in multiple locations. If you access the Services from outside that jurisdiction, you understand that limited operational data, such as IP addresses and request metadata processed by the API and its CDN, may be processed in countries other than your own, which may have different data-protection laws. We rely on the minimal, purpose-limited nature of this processing to protect your information.
+The Services are operated from **Texas, United States**, and our service providers (including Cloudflare) may process data in multiple locations. If you access the Services from outside that jurisdiction, you understand that limited operational data, such as IP addresses and request metadata processed by the API and its CDN, may be processed in countries other than your own, which may have different data-protection laws. We rely on the minimal, purpose-limited nature of this processing to protect your information.
 
 ## Security
 
@@ -131,14 +129,14 @@ We may update this Privacy Policy from time to time. When we do, we will revise 
 
 ## Governing law
 
-This Privacy Policy is governed by the laws of the **[State of formation]**, without regard to its conflict-of-laws rules, except where applicable data-protection law provides otherwise.
+This Privacy Policy is governed by the laws of the **Texas**, without regard to its conflict-of-laws rules, except where applicable data-protection law provides otherwise.
 
 ## Contact us
 
 If you have questions about this Privacy Policy or our data practices, contact:
 
 **HLLMR Ventures LLC**
-Email: **[legal contact email]**
+Email: **legal@hllmr.com**
 
 ---
 [← Legal index](./README.md)

@@ -1,12 +1,21 @@
 # Silo — legal documents (DRAFTS)
 
 Draft legal terms for the Silo public site, owned/operated by **HLLMR Ventures LLC**.
+These `.md` files are the editable source; they are rendered to styled pages at
+`landing/legal/*.html` and are **live at silo.hllmr.com/legal/ with a prominent "DRAFT — NOT
+REVIEWED" banner** on each page (published in good faith by the owner's decision, to signal
+good-faith compliance while review is pending).
 
-> ## ⚠️ These are AI-drafted templates, not legal advice
-> Nothing here has been reviewed by an attorney. **Do not publish these to silo.hllmr.com or treat them
-> as binding until a qualified lawyer has reviewed them** and every `[bracketed placeholder]` is filled.
-> They are intentionally kept in `docs/` (not `landing/`) so they do **not** auto-deploy to the live site.
-> When they're approved, they can be rendered into styled `/legal/` pages and linked from the footer.
+> ## ⚠️ These are AI-drafted templates, not legal advice — still pending attorney review
+> Published as clearly-marked drafts, but **not yet reviewed by a lawyer**. Get them reviewed and
+> update both the `.md` source and the rendered `landing/legal/*.html` when finalized.
+>
+> **Filled in:** state of formation + governing law = **Texas, United States**; contact =
+> **legal@hllmr.com**; server-log retention = **30 days**; DMCA notices accepted by email.
+>
+> **Still needs a human:** a physical mailing address for the DMCA **Designated Agent** and a
+> formal **U.S. Copyright Office** agent registration (~$6) to actually secure DMCA safe-harbor
+> — the takedown page currently operates by email only and says so.
 
 ## Documents
 
@@ -32,7 +41,7 @@ I searched the Silo repo, SiloAPI repo, git history, stashes, the scratchpad, an
 ## 1. Placeholders a human must fill
 These are required by the doc set regardless of draft wording — confirm each is present and filled:
 
-- **Legal entity + form:** "HLLMR Ventures LLC" — state of formation/organization (e.g. `[State] LLC`).
+- **Legal entity + form:** "HLLMR Ventures LLC" — state of formation/organization (e.g. `Texas LLC`).
 - **Entity mailing address** (needed for ToS notices, DMCA agent, and often required by app stores / EU transparency).
 - **Contact email(s):** general/legal contact, privacy contact, and abuse/security. Repo uses `hllmr.com`/`silo.hllmr.com` — pick concrete addresses (e.g. `legal@`, `privacy@`, `dmca@`).
 - **DMCA designated agent:** name/role, physical address, email, phone — and whether you'll register with the U.S. Copyright Office DMCA Agent Directory (required for safe-harbor; ~$6). ⚠️ verify the takedown doc names a real agent, not a placeholder.

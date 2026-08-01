@@ -36,7 +36,7 @@ Platform operators (for example, ModHub, GitHub, or Nexus Mods) and individual m
 
 ## 4. How to submit a takedown notice
 
-To request the removal or correction of content in the Silo catalog, please send a written notice to our designated contact at **[legal contact email]**. To help us act quickly and in good faith, your notice should include **all** of the following:
+To request the removal or correction of content in the Silo catalog, please send a written notice to our designated contact at **legal@hllmr.com**. To help us act quickly and in good faith, your notice should include **all** of the following:
 
 1. **Identification of the copyrighted work or other right** you claim has been infringed (for example, the specific mod, image, description, or other material, and, where relevant, a link to the authoritative source you control).
 2. **Identification of the material on Silo** that you want removed or disabled, described with enough detail for us to locate it — ideally the specific catalog record URL(s) on silo.hllmr.com (for example, a `/browse` record link) and/or the mod's technical name as shown in the catalog.
@@ -51,10 +51,13 @@ A notice that omits these elements may delay our ability to evaluate and respond
 
 Notices, counter-notices, and other communications under this Policy should be sent to:
 
-- **Designated contact:** [Designated agent name / role placeholder]
-- **HLLMR Ventures LLC**
-- **Email:** [legal contact email]
-- **Mailing address:** [Designated agent mailing address placeholder]
+- **Designated contact:** DMCA Agent, HLLMR Ventures LLC
+- **Email:** legal@hllmr.com
+- **Entity:** HLLMR Ventures LLC (Texas, United States)
+
+Email is the fastest and preferred channel for notices under this Policy. We are in the
+process of completing a formal Designated Agent registration with the U.S. Copyright Office; a
+physical mailing address for the agent will be listed here once that registration is complete.
 
 ## 6. How we respond
 
@@ -69,7 +72,7 @@ Because catalog records are assembled from public source data and are periodical
 
 ## 7. Counter-notice
 
-If your content was removed from the Silo catalog and you believe the removal was a mistake or misidentification, you may submit a **counter-notice** to **[legal contact email]**. Your counter-notice should include:
+If your content was removed from the Silo catalog and you believe the removal was a mistake or misidentification, you may submit a **counter-notice** to **legal@hllmr.com**. Your counter-notice should include:
 
 1. **Identification of the material** that was removed and the location where it previously appeared in the catalog (for example, the record URL or technical name).
 2. **A statement, under penalty of perjury** (or the equivalent under applicable law), that you have a good-faith belief the material was removed as a result of mistake or misidentification.
@@ -97,11 +100,11 @@ We may update this Policy from time to time. When we do, we will revise the effe
 
 ## 12. Governing law
 
-This Policy is governed by the laws of the **[State of formation]**, without regard to its conflict-of-laws principles, except where mandatory local law or applicable copyright law requires otherwise.
+This Policy is governed by the laws of the **Texas**, without regard to its conflict-of-laws principles, except where mandatory local law or applicable copyright law requires otherwise.
 
 ## 13. Contact
 
-For any copyright or takedown matter under this Policy, contact **[legal contact email]**.
+For any copyright or takedown matter under this Policy, contact **legal@hllmr.com**.
 
 ---
 
