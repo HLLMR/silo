@@ -106,17 +106,33 @@
 
   .note{color:var(--muted);font-size:14px;border-left:3px solid var(--gold-500);background:color-mix(in srgb,var(--gold-500) 7%,var(--surface));padding:12px 16px;border-radius:var(--radius-sm);margin-top:22px;}
 
-  .nerd-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+  .nerd-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
   .nerd-grid .stat{min-width:0;}
   .nerd-grid .n{font-family:var(--font-mono);}
+  .nerd-cols{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start;}
+  .nerd-h{font-size:1rem;margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+  .nerd-cap{color:var(--muted);font-size:12.5px;margin:10px 0 0;line-height:1.5;}
+  .livedot{font-size:10px;}
+  .livedot.pending{color:var(--gold-500);}
+  .livedot.live{color:var(--green-500);animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+  @media (prefers-reduced-motion: reduce){.livedot.live{animation:none;}}
+
+  .dlbars{display:flex;flex-direction:column;gap:9px;}
+  .bar{display:grid;grid-template-columns:64px 1fr 44px;align-items:center;gap:10px;}
+  .bar .bl{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);}
+  .bar .bt{height:16px;border-radius:5px;background:color-mix(in srgb,var(--primary) 16%,var(--surface));overflow:hidden;}
+  .bar .bf{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--green-600),var(--green-500));min-width:3px;}
+  .bar .bv{font-family:var(--font-mono);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums;}
+
   .act-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);}
   table.act{border-collapse:collapse;width:100%;font-size:14px;}
-  table.act th,table.act td{padding:9px 14px;text-align:right;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;}
+  table.act th,table.act td{padding:8px 14px;text-align:right;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;}
   table.act th:first-child,table.act td:first-child{text-align:left;font-weight:600;}
   table.act thead th{background:var(--surface);color:var(--muted);font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;}
   table.act tbody tr:last-child td{border-bottom:none;}
   table.act tbody tr.total td{font-weight:700;background:color-mix(in srgb,var(--primary) 6%,transparent);}
-  @media (max-width:760px){.nerd-grid{grid-template-columns:1fr 1fr;}}
+  @media (max-width:760px){.nerd-grid{grid-template-columns:1fr 1fr;} .nerd-cols{grid-template-columns:1fr;}}
 
   footer{border-top:1px solid var(--border);background:var(--surface);padding:30px 0 44px;margin-top:20px;}
   footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;align-items:center;}
@@ -253,21 +269,35 @@
       <p>The only data we have is <strong>aggregate counts</strong> — no account, no telemetry, nothing about you or your library. Here's all of it, warts and small numbers included (it's an early beta).</p>
     </div>
     <div class="nerd-grid">
-      <div class="stat"><div class="n" id="nDownloads">—</div><div class="l">Silo downloads · all releases</div></div>
-      <div class="stat"><div class="n" id="nMods">—</div><div class="l">mods indexed</div></div>
-      <div class="stat"><div class="n" id="nSources">—</div><div class="l">source records</div></div>
+      <div class="stat"><div class="n" id="nDownloads">21</div><div class="l">Silo downloads · all releases</div></div>
+      <div class="stat"><div class="n" id="nReleases">4</div><div class="l">releases shipped</div></div>
+      <div class="stat"><div class="n" id="nLatest">0.2.3</div><div class="l">latest version</div></div>
       <div class="stat"><div class="n" id="nHosted">0</div><div class="l">mods we host</div></div>
     </div>
-    <div class="act-wrap" id="actWrap" hidden>
-      <table class="act">
-        <thead><tr><th>SiloAPI traffic</th><th>Queries</th><th>Unique clients</th></tr></thead>
-        <tbody id="actBody"></tbody>
-      </table>
+
+    <div class="nerd-cols">
+      <div class="nerd-col">
+        <h3 class="nerd-h">Downloads by release</h3>
+        <div class="dlbars" id="dlbars"></div>
+        <p class="nerd-cap">Counted from GitHub's public release data.</p>
+      </div>
+      <div class="nerd-col">
+        <h3 class="nerd-h">SiloAPI traffic <span class="livedot pending" id="liveDot" title="waiting for the metrics feed">●</span></h3>
+        <div class="act-wrap">
+          <table class="act">
+            <thead><tr><th>Window</th><th>Queries</th><th>Unique clients</th></tr></thead>
+            <tbody id="actBody">
+              <tr><td>1h</td><td>—</td><td>—</td></tr>
+              <tr><td>24h</td><td>—</td><td>—</td></tr>
+              <tr><td>5d</td><td>—</td><td>—</td></tr>
+              <tr><td>30d</td><td>—</td><td>—</td></tr>
+              <tr class="total"><td>total</td><td>—</td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="nerd-cap" id="nerdCap">Aggregate request counts only — never anything about you. Fills in the moment the metrics feed goes live.</p>
+      </div>
     </div>
-    <p class="note" id="nerdNote">
-      Live API traffic — queries and <em>unique clients</em> over 1h / 24h / 5d / 30d — is aggregated
-      from request counts only (never stored per person) and will appear here shortly.
-    </p>
   </div>
 </section>
 
@@ -287,41 +317,48 @@
     function fmt(n){return Number(n).toLocaleString("en-US");}
     function set(id,v){var el=document.getElementById(id);if(el&&v!=null)el.textContent=fmt(v);}
 
-    // Catalog counts (hero + nerds tiles) from the public read API.
+    function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+
+    // Catalog counts drive the HERO tiles (the nerds panel deliberately doesn't repeat them).
     fetch(API+"/stats").then(function(r){return r.json();}).then(function(s){
-      if(s&&s.mods){set("statMods",s.mods);set("nMods",s.mods);}
-      if(s&&s.sources){set("statSources",s.sources);set("nSources",s.sources);}
+      if(s&&s.mods)set("statMods",s.mods);
+      if(s&&s.sources)set("statSources",s.sources);
     }).catch(function(){});
     fetch(API+"/categories").then(function(r){return r.json();}).then(function(c){
       if(c&&c.categories)set("statCats",c.categories.length);
     }).catch(function(){});
 
-    // Total downloads — summed straight from GitHub's public release data (CORS-open).
+    // Release data (downloads total + per-release bars, releases count, latest) from GitHub.
     fetch("https://api.github.com/repos/HLLMR/silo/releases").then(function(r){return r.json();}).then(function(rel){
-      if(!Array.isArray(rel))return;
-      var total=0;
-      rel.forEach(function(x){(x.assets||[]).forEach(function(a){total+=a.download_count||0;});});
+      if(!Array.isArray(rel)||!rel.length)return;
+      var per=rel.map(function(x){return {tag:x.tag_name,dl:(x.assets||[]).reduce(function(a,b){return a+(b.download_count||0);},0)};});
+      var total=per.reduce(function(a,b){return a+b.dl;},0);
       set("nDownloads",total);
+      set("nReleases",rel.length);
+      var latest=(rel[0].tag_name||"").replace(/^v/i,"");
+      if(latest){var el=document.getElementById("nLatest");if(el)el.textContent=latest;}
+      var max=per.reduce(function(a,b){return Math.max(a,b.dl);},1);
+      document.getElementById("dlbars").innerHTML=per.map(function(p){
+        var pct=Math.max(3,Math.round((p.dl/max)*100));
+        return '<div class="bar"><span class="bl">'+esc(p.tag)+'</span><span class="bt"><span class="bf" style="width:'+pct+'%"></span></span><span class="bv">'+fmt(p.dl)+'</span></div>';
+      }).join("");
     }).catch(function(){});
 
-    // API traffic table — from a privacy-preserving metrics feed (aggregate counts only, derived
-    // from NPM access logs). Try a same-origin static metrics.json first (no CORS), then the API.
-    // Absent for now → the panel keeps its "coming shortly" note and hides the empty table.
-    var WINDOWS=[["1h","1h"],["24h","24h"],["5d","5d"],["30d","30d"]];
+    // Time-window API traffic — from a privacy-preserving feed (aggregate counts only, derived from
+    // NPM access logs). Same-origin /metrics.json first (no CORS), then the API. The table always
+    // shows its window rows; when the feed is live they fill in and the dot turns green.
+    var WINDOWS=["1h","24h","5d","30d"];
+    function cell(v){return v!=null?fmt(v):"—";}
     function loadJson(u){return fetch(u).then(function(r){return r.ok?r.json():Promise.reject();});}
     loadJson("/metrics.json").catch(function(){return loadJson(API+"/metrics");}).then(function(m){
       var api=m&&m.api; if(!api||!api.queries)return;
-      var rows="";
-      WINDOWS.forEach(function(w){
-        var q=api.queries[w[0]], u=(api.uniques||{})[w[0]];
-        rows+="<tr><td>"+w[1]+"</td><td>"+(q!=null?fmt(q):"—")+"</td><td>"+(u!=null?fmt(u):"—")+"</td></tr>";
-      });
-      if(api.queries.total!=null)
-        rows+="<tr class='total'><td>total</td><td>"+fmt(api.queries.total)+"</td><td>—</td></tr>";
+      var q=api.queries, u=api.uniques||{};
+      var rows=WINDOWS.map(function(w){return "<tr><td>"+w+"</td><td>"+cell(q[w])+"</td><td>"+cell(u[w])+"</td></tr>";}).join("");
+      rows+="<tr class='total'><td>total</td><td>"+cell(q.total)+"</td><td>—</td></tr>";
       document.getElementById("actBody").innerHTML=rows;
-      document.getElementById("actWrap").hidden=false;
-      var note=document.getElementById("nerdNote");
-      if(note)note.textContent="Aggregate request counts only — never anything about you or your library. Unique clients are counted per window, not stored per person.";
+      var dot=document.getElementById("liveDot"); if(dot){dot.className="livedot live";dot.title="live";}
+      var cap=document.getElementById("nerdCap");
+      if(cap)cap.textContent="Aggregate request counts only — never anything about you. Unique clients are counted per window, not stored per person.";
       if(m.catalog&&m.catalog.hostedMods!=null)set("nHosted",m.catalog.hostedMods);
     }).catch(function(){});
   })();
