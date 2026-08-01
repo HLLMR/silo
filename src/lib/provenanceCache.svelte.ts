@@ -1,0 +1,21 @@
+// Session cache of integrity verdicts, keyed by a mod's file identity (path + size + mtime)
+// so a changed file invalidates automatically. Reactive (SvelteMap) so the drawer remembers
+// its last verdict and the library rows can badge verified/modified mods at a glance.
+// In-memory for the session; a DB-backed cache + auto-verify-all sweep are follow-ups.
+
+import { SvelteMap } from "svelte/reactivity";
+import type { ModEntry, VerifyResult } from "./types";
+
+const cache = new SvelteMap<string, VerifyResult>();
+
+export function provKey(m: ModEntry): string {
+  return `${m.path}|${m.size}|${m.mtimeMs}`;
+}
+
+export function getVerdict(m: ModEntry): VerifyResult | undefined {
+  return cache.get(provKey(m));
+}
+
+export function setVerdict(m: ModEntry, r: VerifyResult): void {
+  cache.set(provKey(m), r);
+}

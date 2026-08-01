@@ -7,6 +7,7 @@
 <script lang="ts">
   import type { ModEntry, CurationRow } from "../types";
   import { getModIcon } from "../api";
+  import { getVerdict } from "../provenanceCache.svelte";
 
   type Flag = "favorite" | "hidden" | "broken";
   let {
@@ -36,6 +37,9 @@
     active?: boolean;
     hasSettings?: boolean;
   } = $props();
+
+  // At-a-glance integrity badge, populated once this mod is verified (drawer or sweep).
+  const verdict = $derived(getVerdict(mod));
 
   // Lazy icon: rows only mount when scrolled into view (virtualized), so this
   // fetches on-screen icons only. Guarded so a slow response can't land on a row
@@ -121,6 +125,11 @@
       {mod.category}{mod.subcategory ? " · " + mod.subcategory : ""}
     </button>
     {#if organized && !active}<span class="badge parked">parked</span>{/if}
+    {#if verdict?.status === "verified"}
+      <span class="badge verified" title="Verified against the published build">✓ Verified</span>
+    {:else if verdict?.status === "modified"}
+      <span class="badge modded" title="Modified from the published build">⚠ Modified</span>
+    {/if}
     {#if mod.isMap}<span class="badge map">Map</span>{/if}
     {#if mod.mpSupported}<span class="badge mp">MP</span>{/if}
     {#if mod.scriptCount > 0}
@@ -315,6 +324,16 @@
   .badge.map {
     color: var(--soil-500);
     border-color: color-mix(in srgb, var(--soil-500) 40%, var(--border));
+  }
+  .badge.verified {
+    color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  }
+  .badge.modded {
+    color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 14%, transparent);
+    border-color: color-mix(in srgb, var(--warn) 40%, var(--border));
   }
   .badge.mp {
     color: var(--info);

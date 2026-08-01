@@ -7,15 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-01
+
 ### Added
 
-- **Mod integrity verification (provenance).** The detail drawer can now check an installed
-  mod against the trusted build SiloAPI hashed from its source: **Verified** (byte-for-byte
-  or content match), **Modified** (with the exact list of changed / added / removed files —
-  the injected-code candidates), or **Unverified** (no hashed build to compare against yet).
-  Byte-exact against the server via a cross-language-ratified manifest format. It's a
-  provenance check, not a virus scan — it confirms origin and integrity, and says so.
-  Coverage is GitHub-source-first and grows as SiloAPI hashes more.
+- **Mod integrity verification (provenance).** The detail drawer can check an installed mod
+  against the trusted build SiloAPI hashed from its source: **Verified** (byte-for-byte or
+  content match), **Modified** (with the exact list of changed / added / removed files — the
+  injected-code candidates), or **Unverified** (no hashed build to compare against yet). The
+  verdict is remembered as you move around, and verified/modified mods carry a badge in the
+  library list. Byte-exact against the server via a cross-language-ratified manifest format.
+  It's a provenance check, not a virus scan — it confirms origin and integrity, and says so.
+  Coverage spans GitHub and ModHub sources, popular-first, and grows every hour.
 - **Organize preview.** The manual **Organize** button now shows a read-only dry run
   first — exactly which zips move into which `archive/<Category>/` folder — before a
   single file is touched. Confirm to apply, Cancel to touch nothing. Dismissible for
@@ -31,8 +34,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Silo only removes files it can prove it created.** Before de-activating or flattening,
   Silo now verifies the file in the mods folder really is its own projection (the hardlink,
   the junction/symlink, or a marked copy). If you swapped in your own build at that name, it
-  is left untouched and reported instead of deleted — closing the last realistic data-loss
-  path (a user replacement being removed because the filename matched).
+  is left untouched **and now says so** instead of silently doing nothing — closing the last
+  realistic data-loss path (a user replacement being removed because the filename matched).
+- **Migrated tokens leave no residue.** When a token from an older build is moved from the
+  database into the OS keychain, Silo now compacts the database afterward so the old
+  plaintext bytes can't be carved back out of it.
 - **The backend owns where it writes.** Installs, organizing, and updates now validate the
   target mods folder against the game folder(s) Silo detected, rather than trusting a path
   handed in by the UI — a defence-in-depth boundary on the Rust side.

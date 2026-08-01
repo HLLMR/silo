@@ -180,6 +180,13 @@ pub fn set_app_setting(conn: &Connection, key: &str, value: Option<&str>) -> Res
     Ok(())
 }
 
+/// Rewrite the database file, reclaiming free pages. SQLite leaves deleted row bytes in
+/// free pages until this runs — so after scrubbing a legacy plaintext secret we VACUUM to
+/// ensure the old token can't be carved out of the file. Best-effort; never fatal.
+pub fn vacuum(conn: &Connection) {
+    let _ = conn.execute_batch("VACUUM");
+}
+
 /// Load all mod→repo links.
 pub fn load_repos(conn: &Connection) -> Vec<RepoRow> {
     let Ok(mut stmt) = conn.prepare("SELECT tech_name, owner, repo FROM mod_repo") else {

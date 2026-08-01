@@ -31,10 +31,13 @@ pub fn get(conn: &Connection, key: &str) -> Option<String> {
         }
     }
     let legacy = db::get_app_setting(conn, key)?;
-    // Best-effort promotion into the keychain, then drop the plaintext copy.
+    // Best-effort promotion into the keychain, then drop the plaintext copy AND VACUUM so the
+    // old token isn't left carve-able in the DB's free pages (SQLite doesn't zero deletes).
+    // This runs at most once per key — after migration the legacy value is gone.
     if let Some(e) = entry(key) {
         if e.set_password(&legacy).is_ok() {
             let _ = db::set_app_setting(conn, key, None);
+            db::vacuum(conn);
         }
     }
     Some(legacy)

@@ -465,7 +465,7 @@
     busy = `Applying loadout “${l.name}”…`;
     activeSet = new Set(l.mods);
     try {
-      await setActive(l.mods);
+      await applyActive(l.mods);
     } catch (e) {
       errorMsg = String(e);
     }
@@ -526,13 +526,22 @@
     return path.split(/[\\/]/).pop() ?? path;
   }
 
+  // Apply an active set and surface any warnings the projection engine reports — e.g. it
+  // refused to remove a file you'd swapped in at a mod's name. These come back in the
+  // report, not as a thrown error, so a plain `await setActive` would drop them silently.
+  async function applyActive(techNames: string[]) {
+    const rep = await setActive(techNames);
+    if (rep.errors.length) errorMsg = rep.errors.slice(0, 3).join("; ");
+    return rep;
+  }
+
   async function toggleActive(techName: string) {
     const next = new Set(activeSet);
     if (next.has(techName)) next.delete(techName);
     else next.add(techName);
     activeSet = next;
     try {
-      await setActive([...next]);
+      await applyActive([...next]);
     } catch (e) {
       errorMsg = String(e);
     }
@@ -565,7 +574,7 @@
       } else if (keepActive) {
         const next = new Set([...activeSet, ...techNames]);
         activeSet = next;
-        await setActive([...next]);
+        await applyActive([...next]);
       }
     } catch (e) {
       errorMsg = String(e);
@@ -928,7 +937,7 @@
     activeSet = next;
     busy = active ? "Activating…" : "Deactivating…";
     try {
-      await setActive([...next]);
+      await applyActive([...next]);
     } catch (e) {
       errorMsg = String(e);
     }
@@ -1018,7 +1027,7 @@
     if (!bisectRecovery) return;
     busy = "Restoring your mod set…";
     try {
-      await setActive(bisectRecovery);
+      await applyActive(bisectRecovery);
       await bisectSnapshotClear();
       bisectRecovery = null;
       await runScan(false);

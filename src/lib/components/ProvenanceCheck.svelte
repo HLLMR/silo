@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ModEntry, VerifyResult } from "../types";
   import { verifyMod } from "../api";
+  import { getVerdict, setVerdict } from "../provenanceCache.svelte";
 
   let { mod }: { mod: ModEntry } = $props();
 
@@ -9,12 +10,19 @@
   let result = $state<VerifyResult | null>(null);
   let err = $state("");
 
-  // Reset when the drawer switches to another mod.
+  // Remember the verdict across drawer switches: if this exact file was verified this
+  // session, show its result instead of resetting to the button.
   $effect(() => {
-    void mod.path;
-    phase = "idle";
-    result = null;
-    err = "";
+    const cached = getVerdict(mod);
+    if (cached) {
+      result = cached;
+      phase = "done";
+      err = "";
+    } else {
+      phase = "idle";
+      result = null;
+      err = "";
+    }
   });
 
   const canVerify = $derived(mod.kind === "zip");
@@ -23,13 +31,19 @@
     phase = "running";
     err = "";
     try {
-      result = await verifyMod(mod.techName, mod.version, mod.path);
+      const r = await verifyMod(mod.techName, mod.version, mod.path);
+      result = r;
+      setVerdict(mod, r);
       phase = "done";
     } catch (e) {
       err = String(e);
       phase = "error";
     }
   }
+
+  // Normalize the version label so we never render a doubled "v" (matchedVersion may or
+  // may not already carry one).
+  const ver = (v: string) => "v" + v.replace(/^v/i, "");
 
   const howLabel = (how: string | null) =>
     how === "exact"
@@ -74,7 +88,7 @@
         <div>
           <div class="v-label">Verified</div>
           <div class="v-sub">
-            {howLabel(r.how)}{#if r.matchedVersion}&nbsp;(v{r.matchedVersion}){/if}
+            {howLabel(r.how)}{#if r.matchedVersion}&nbsp;({ver(r.matchedVersion)}){/if}
           </div>
         </div>
       </div>
@@ -85,7 +99,7 @@
           <div class="v-label">Modified from the published build</div>
           <div class="v-sub">
             {r.changed.length} changed · {r.added.length} added · {r.removed.length} removed{#if r.matchedVersion}
-              &nbsp;(vs v{r.matchedVersion}){/if}
+              &nbsp;(vs {ver(r.matchedVersion)}){/if}
           </div>
         </div>
       </div>

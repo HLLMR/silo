@@ -24,7 +24,13 @@ The loop is:
 
 1. Commit everything; record the exact **SHA**.
 2. Build the packaged RC (installer, not `tauri:dev`).
-3. **Hash the installer and the executable** (SHA-256); write them down.
+3. **Record the identity of the artifact — the right way.** Hash the **installer** (`*-setup.exe`
+   / `*.msi`) — that's the distributable's fingerprint. Do **NOT** compare the installed
+   `Silo.exe` against the raw `target/release/Silo.exe`: the NSIS bundler post-processes the exe,
+   so the *installed* binary's hash legitimately differs from the raw cargo output. To confirm the
+   *installed* app matches the RC, verify the **installer hash** and grep the installed binary for
+   an **RC-specific code string** (e.g. a message added in the RC commit) — a hash-vs-raw-exe check
+   will false-alarm.
 4. Cowork gets **audit-only authority** for the first pass — find and *report*, never fix.
 5. Collect every failure with **screenshots, logs, reproduction steps, and affected files.**
 6. Fixes happen in a **separate pass** (dev, not Cowork mid-run).
