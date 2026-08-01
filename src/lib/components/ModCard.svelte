@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { BrowseMod, ModSourceOption } from "../types";
-  import { label, shortLabel, gatedReason, fmtCount, fmtMB } from "../browse";
+  import { label, shortLabel, gatedReason, fmtCount, fmtMB, loadCatalogImage } from "../browse";
 
   let {
     m,
@@ -23,12 +23,20 @@
     if (!p || !p.total) return null;
     return Math.min(100, Math.round((p.done / p.total) * 100));
   });
+
+  // Thumbnails load through the Rust proxy (data: URL) since the CDN needs a referer.
+  let thumb = $state("");
+  $effect(() => {
+    const url = m.imageUrl;
+    thumb = "";
+    if (url) loadCatalogImage(url).then((u) => { if (m.imageUrl === url) thumb = u; });
+  });
 </script>
 
 <div class="card" class:owned={here}>
   <div class="thumb">
-    {#if m.imageUrl}
-      <img src={m.imageUrl} alt="" loading="lazy" />
+    {#if thumb}
+      <img src={thumb} alt="" loading="lazy" />
     {:else}
       <div class="thumb-fallback">{(m.title || "?").slice(0, 1)}</div>
     {/if}

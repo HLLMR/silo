@@ -4,7 +4,7 @@
   import GithubCard from "./GithubCard.svelte";
   import NexusCard from "./NexusCard.svelte";
   import ModHubCard from "./ModHubCard.svelte";
-  import { label, gatedReason, fmtCount, parseRepo, parseNexusId, canExpand } from "../browse";
+  import { label, gatedReason, fmtCount, parseRepo, parseNexusId, canExpand, loadCatalogImage } from "../browse";
 
   let {
     detail,
@@ -33,6 +33,14 @@
   function hasLocally(d: CatalogModDetail): boolean {
     return d.techName != null && installed.has(d.techName);
   }
+
+  // Cover loads through the Rust proxy (data: URL) — the CDN needs a referer.
+  let cover = $state("");
+  $effect(() => {
+    const url = detail?.imageUrl;
+    cover = "";
+    if (url) loadCatalogImage(url).then((u) => { if (detail?.imageUrl === url) cover = u; });
+  });
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
@@ -47,8 +55,8 @@
       <button class="drawer-x" title="Close" onclick={onClose}>✕</button>
     </div>
     <div class="drawer-body">
-      {#if d.imageUrl}
-        <img class="drawer-img" src={d.imageUrl} alt="" />
+      {#if cover}
+        <img class="drawer-img" src={cover} alt="" />
       {/if}
       <dl class="facts">
         {#if d.author}<dt>Author</dt><dd>{d.author}</dd>{/if}

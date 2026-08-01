@@ -1,6 +1,20 @@
 // Pure helpers shared across the Browse-tab components (card grid + detail drawer).
 
 import type { CatalogModDetail } from "./types";
+import { catalogImage } from "./api";
+
+// Catalog thumbnails are fetched through Rust (the CDN needs a referer a browser <img>
+// can't set) and returned as data: URLs. Dedupe in-session so paging back doesn't refetch;
+// Rust also caches to disk, so each image hits the CDN at most once per machine.
+const imageCache = new Map<string, Promise<string>>();
+export function loadCatalogImage(url: string): Promise<string> {
+  let p = imageCache.get(url);
+  if (!p) {
+    p = catalogImage(url).catch(() => "");
+    imageCache.set(url, p);
+  }
+  return p;
+}
 
 export const SOURCE_LABEL: Record<string, string> = {
   github: "GitHub",

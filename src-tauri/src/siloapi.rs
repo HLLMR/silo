@@ -392,6 +392,48 @@ pub fn download_to<F: Fn(u64, Option<u64>)>(
     Ok(())
 }
 
+/// The only hosts we'll proxy an image from. Also an SSRF guard — a hostile catalog
+/// `imageUrl` can't make us fetch an arbitrary internal URL.
+pub(crate) fn is_catalog_image_host(url: &str) -> bool {
+    let host = url
+        .split_once("://")
+        .and_then(|(_, rest)| rest.split(['/', '?', '#']).next())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    let host = host.split(':').next().unwrap_or("");
+    host.ends_with(".giants-software.com")
+        || host.ends_with(".nexusmods.com")
+        || host.ends_with(".githubusercontent.com")
+}
+
+/// Fetch a catalog mod image in Rust and return it as a `data:` URL the webview can render
+/// directly. Needed because Giants' ModHub CDN now 403s any request without a
+/// giants/farming-simulator `Referer` — a header a browser `<img>` can't forge. Sending
+/// that referer is harmless for the other CDNs. Host-allowlisted and size-capped.
+pub fn fetch_image(url: &str) -> Result<String, String> {
+    if !is_catalog_image_host(url) {
+        return Err("not an allowed image host".to_string());
+    }
+    let resp = ureq::get(url)
+        .set("User-Agent", "Mozilla/5.0 (Silo)")
+        .set("Referer", "https://www.farming-simulator.com/")
+        .call()
+        .map_err(|e| e.to_string())?;
+    let mime = resp
+        .header("Content-Type")
+        .filter(|m| m.starts_with("image/"))
+        .unwrap_or("image/jpeg")
+        .to_string();
+    let mut bytes = Vec::new();
+    resp.into_reader()
+        .take(16 * 1024 * 1024)
+        .read_to_end(&mut bytes)
+        .map_err(|e| e.to_string())?;
+    use base64::Engine;
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+    Ok(format!("data:{mime};base64,{b64}"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

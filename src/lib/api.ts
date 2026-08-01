@@ -296,6 +296,12 @@ export function siloapiModDetail(id: string): Promise<CatalogModDetail> {
   return invoke<CatalogModDetail>("siloapi_mod_detail", { id });
 }
 
+/** Fetch a catalog thumbnail as a data: URL (Rust adds the referer the Giants CDN now
+ *  requires; cached on disk). Returns "" if it can't be fetched. */
+export function catalogImage(url: string): Promise<string> {
+  return invoke<string>("catalog_image", { url });
+}
+
 /** Catalog categories with counts, for the Browse filter. */
 export function siloapiCategories(): Promise<CategoryCount[]> {
   return invoke<CategoryCount[]>("siloapi_categories");

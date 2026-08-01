@@ -519,6 +519,35 @@ async fn siloapi_mod_detail(
         .map_err(|e| e.to_string())?
 }
 
+/// Fetch a catalog mod thumbnail as a `data:` URL (the webview can't set the referer the
+/// Giants CDN now requires). Cached on disk by URL so each image is fetched at most once.
+/// STOPGAP: the polite long-term fix is SiloAPI caching + serving these during its sweeps.
+#[tauri::command]
+async fn catalog_image(app: tauri::AppHandle, url: String) -> Result<String, String> {
+    let cache_dir = app
+        .path()
+        .app_cache_dir()
+        .ok()
+        .map(|d| d.join("catalog_images"));
+    tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
+        if let Some(dir) = &cache_dir {
+            let key = format!("{:x}", md5::compute(url.as_bytes()));
+            let file = dir.join(&key);
+            if let Ok(cached) = std::fs::read_to_string(&file) {
+                return Ok(cached);
+            }
+            let data = siloapi::fetch_image(&url)?;
+            let _ = std::fs::create_dir_all(dir);
+            let _ = std::fs::write(&file, &data);
+            Ok(data)
+        } else {
+            siloapi::fetch_image(&url)
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// Catalog categories with counts, for the Browse filter.
 #[tauri::command]
 async fn siloapi_categories(app: tauri::AppHandle) -> Result<Vec<siloapi::CategoryCount>, String> {
@@ -1078,6 +1107,7 @@ pub fn run() {
             siloapi_stats,
             siloapi_categories,
             siloapi_mod_detail,
+            catalog_image,
             install_remote_mod,
             catalog_check_updates,
             get_overrides,
