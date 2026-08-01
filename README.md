@@ -51,8 +51,8 @@ is the management layer the game left out.
   [SiloAPI](https://silo-api.hllmr.com)).
 - **Integrity check** — hashes an installed mod and compares it to the trusted build its
   source published: a clean match, or the exact files that changed. Provenance, not
-  antivirus — it proves what a mod is, not whether it means well. Nothing else does this
-  across sources.
+  antivirus — it confirms what a mod is, not whether it means well. It works across
+  ModHub, GitHub and Nexus — a cross-source integrity check that's rare among mod tools.
 - **Guided bisection** — when the log can't name the culprit, automates "disable half,
   relaunch" to isolate it, and safely restores your active set afterward.
 - **Loadouts & projection** — curate profiles and project only the active set into the
@@ -82,9 +82,10 @@ npm run tauri:build   # produce an installer in src-tauri/target/release/bundle/
 
 - **Open source** — the desktop app is fully open here; audit, fork, or build it yourself.
   The hosted catalog (SiloAPI) is a separate service.
-- **No telemetry, no account** — Silo hits the network for catalog search, update and
-  integrity checks, cover images, and the source actions you choose. Nothing about you
-  leaves your machine.
+- **No telemetry, no account** — Silo hits the network only for catalog search, update and
+  integrity checks, cover images, and the source actions you choose, sending just what those
+  need (search terms; mod IDs and versions). No telemetry, no analytics; your saves, mod
+  files and notes never leave your machine.
 - **Reversible, and it owns what it touches** — it files your mods into a local archive
   and links the active set into the game; every move is recorded and undoable, it only
   ever removes files it put there itself (your own edits are left alone), and it backs up
@@ -108,9 +109,10 @@ reversible (see [`CLAUDE.md`](CLAUDE.md) for conventions).
 
 Silo was built with heavy use of AI-assisted engineering (Claude Code). The
 architecture, the security and reliability decisions, the testing, and every release are
-human-owned and human-reviewed — including acting on an independent source review before
-promoting the beta. The desktop source is fully open here so you don't have to take that
-on faith: read it, audit it, build it yourself.
+human-owned and human-reviewed — including acting on rounds of external code critique
+(informal outside review, not a formal third-party security audit) before promoting the
+beta. The desktop source is fully open here so you don't have to take that on faith: read
+it, audit it, build it yourself.
 
 ## License
 
