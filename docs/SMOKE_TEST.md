@@ -1,5 +1,12 @@
 # Silo — Smoke-Test Checklist (release gate)
 
+> **For a release candidate, read [`RC_TESTING.md`](RC_TESTING.md) FIRST.** It's the hostile-QA
+> protocol that wraps this checklist: freeze the RC, test the *packaged* binary, capture a
+> forensic baseline, run the abuse batteries (crash mid-op, filesystem failures, download abuse,
+> user-ownership conflicts, degraded network, upgrade/migration), and the hard-stop conditions.
+> This file is the per-feature "does it work" battery; RC_TESTING is the "prove it's safe under
+> abuse before we ship" gate. Cowork works the RC as a hostile QA engineer, not to turn boxes green.
+
 Run top-to-bottom in the built app before tagging a release. Each item: **do → expect**.
 Tags: `[app]` app-only · `[game]` needs FS25 (and often a loaded save) · `[net]` needs the
 SiloAPI catalog reachable. "Auto-verified" = the logic/data path is covered by Rust unit
