@@ -158,15 +158,21 @@
   }
   /* Ambient field furrows converging to a golden-hour horizon. */
   .furrows { position: absolute; left: 0; right: 0; bottom: -2px; height: 240px; z-index: 0; opacity: 0.5; pointer-events: none; }
-  .hero-in { position: relative; z-index: 1; display: grid; grid-template-columns: 1.02fr 1fr; gap: 54px; align-items: center; }
-  .hero-copy { max-width: 33ch; }
-  .hero h1 { font-size: clamp(2.5rem, 4.6vw, 3.9rem); line-height: 1.02; letter-spacing: -0.015em; }
+  .hero-in { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .hero-copy { max-width: 62ch; }
+  .hero h1 { font-size: clamp(2.5rem, 4.6vw, 3.9rem); line-height: 1.04; letter-spacing: -0.015em; }
   .hero h1 em { font-style: italic; color: var(--primary); }
-  .lede { color: var(--muted); font-size: 1.12rem; margin: 22px 0 26px; max-width: 46ch; }
-  .cta-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .lede { color: var(--muted); font-size: 1.12rem; margin: 22px auto 26px; max-width: 58ch; }
+  .cta-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; }
   .trust-line {
-    margin-top: 22px; display: flex; flex-wrap: wrap; gap: 8px 18px;
+    margin-top: 22px; display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: center;
     font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted);
+  }
+  /* Real app screenshot beneath the hero copy. */
+  .hero-shot { margin: 50px 0 0; width: 100%; max-width: 1080px; }
+  .hero-shot img {
+    width: 100%; height: auto; display: block; border-radius: 16px;
+    border: 1px solid var(--border); box-shadow: var(--shadow-2); background: var(--surface);
   }
   .trust-line span { display: inline-flex; align-items: center; gap: 6px; }
   .trust-line .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green-500); }
@@ -177,41 +183,6 @@
   .reveal.d3 { animation-delay: 0.22s; }
   @keyframes rise { to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) { .reveal { animation: none; opacity: 1; transform: none; } }
-
-  /* ── App mock ── */
-  .mock {
-    position: relative; z-index: 1;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 14px; box-shadow: var(--shadow-2); overflow: hidden;
-    font-size: 12px;
-  }
-  .mock-bar { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--border); background: var(--raised); }
-  .mock-dots { display: flex; gap: 5px; }
-  .mock-dots i { width: 9px; height: 9px; border-radius: 50%; display: block; background: var(--border); }
-  .mock-dots i:first-child { background: var(--barn-500); }
-  .mock-title { font-family: var(--font-display); font-weight: 600; font-size: 12.5px; margin-left: 4px; }
-  .mock-tabs { margin-left: auto; display: flex; gap: 4px; }
-  .mock-tab { padding: 3px 10px; border-radius: 6px; color: var(--muted); }
-  .mock-tab.on { background: color-mix(in srgb, var(--primary) 16%, transparent); color: var(--primary); font-weight: 600; }
-  .mock-body { display: grid; grid-template-columns: 1fr 176px; min-height: 316px; }
-  .mock-list { border-right: 1px solid var(--border); padding: 6px; display: flex; flex-direction: column; gap: 2px; }
-  .row { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 7px; }
-  .row.sel { background: color-mix(in srgb, var(--primary) 12%, transparent); }
-  .row .ic { width: 26px; height: 26px; border-radius: 6px; flex: 0 0 auto; background: linear-gradient(135deg, var(--soil-500), var(--soil-700)); }
-  .row .ic.g { background: linear-gradient(135deg, var(--green-500), var(--green-700)); }
-  .row .ic.k { background: linear-gradient(135deg, var(--gold-500), var(--gold-700)); }
-  .row .nm { font-weight: 600; }
-  .row .sub { color: var(--muted); font-size: 10.5px; }
-  .row .flag { margin-left: auto; font-size: 10px; padding: 1px 7px; border-radius: 20px; font-weight: 600; }
-  .flag.warn { background: color-mix(in srgb, var(--barn-500) 16%, transparent); color: var(--barn-500); }
-  .flag.ok { background: color-mix(in srgb, var(--green-500) 16%, transparent); color: var(--green-600); }
-  .mock-draw { padding: 11px; display: flex; flex-direction: column; gap: 9px; background: var(--surface); }
-  .draw-h { font-family: var(--font-display); font-weight: 600; font-size: 13px; }
-  .src { border: 1px solid var(--border); border-radius: 8px; padding: 8px; background: var(--raised); }
-  .src-t { font-weight: 700; font-size: 11px; display: flex; justify-content: space-between; }
-  .src-n { color: var(--muted); font-size: 10.5px; margin: 3px 0 6px; font-variant-numeric: tabular-nums; }
-  .src-b { display: inline-block; font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border); color: var(--primary); }
-  .src-b.gold { color: var(--gold-700); }
 
   /* ── Sections ── */
   section { padding: 68px 0; }
@@ -247,25 +218,35 @@
   .card.wide p { margin: 6px 0 0; }
 
   /* Screenshots */
-  .screens { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  .screens { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
   .shot { margin: 0; }
+  .shot button {
+    display: block; width: 100%; padding: 0; border: none; background: none;
+    cursor: zoom-in; border-radius: var(--radius);
+  }
   .shot img {
     width: 100%; display: block; border-radius: var(--radius);
     border: 1px solid var(--border); box-shadow: var(--shadow-1); background: var(--surface);
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
   }
-  /* Graceful placeholder until real screenshots are dropped in screenshots/. */
-  .shot.missing { position: relative; aspect-ratio: 16 / 10; }
-  .shot.missing img { display: none; }
-  .shot.missing::before {
-    content: "Screenshot coming soon"; position: absolute; inset: 0;
-    display: grid; place-items: center; border-radius: var(--radius);
-    border: 1px dashed var(--border); color: var(--muted);
-    font-family: var(--font-mono); font-size: 0.8rem;
-    background:
-      repeating-linear-gradient(135deg, transparent 0 14px, color-mix(in srgb, var(--primary) 5%, transparent) 14px 15px),
-      var(--surface);
+  .shot button:hover img, .shot button:focus-visible img {
+    transform: translateY(-3px); box-shadow: var(--shadow-2);
+    border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
   }
   .shot figcaption { margin-top: 10px; color: var(--muted); font-size: 0.9rem; }
+
+  /* Lightbox */
+  .lb { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center;
+    background: rgba(8, 12, 8, 0.86); padding: 4vh 4vw; }
+  .lb[hidden] { display: none; }
+  .lb figure { margin: 0; max-width: 1200px; width: 100%; }
+  .lb img { width: 100%; height: auto; display: block; border-radius: 12px;
+    border: 1px solid var(--border); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5); }
+  .lb figcaption { margin-top: 12px; text-align: center; color: #dfe6d6; font-size: 0.95rem; }
+  .lb-x { position: fixed; top: 18px; right: 22px; width: 40px; height: 40px; border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.4); color: #fff;
+    font-size: 1.1rem; cursor: pointer; }
+  .lb-x:hover { background: rgba(0, 0, 0, 0.7); }
 
   /* Ethos band */
   .ethos { background: linear-gradient(135deg, var(--green-700), var(--green-900)); color: #f3f1e6; border-radius: 18px; padding: 44px; }
@@ -320,10 +301,8 @@
   .foot-links a:hover { color: var(--text); }
 
   @media (max-width: 900px) {
-    .hero-in { grid-template-columns: 1fr; gap: 40px; }
     .hero-copy { max-width: none; }
-    .mock { max-width: 520px; }
-    .feat-grid, .steps, .ethos-grid { grid-template-columns: 1fr 1fr; }
+    .feat-grid, .steps, .ethos-grid, .screens { grid-template-columns: 1fr 1fr; }
     .card.wide { grid-column: span 2; }
     .prob-grid { grid-template-columns: 1fr; }
   }
@@ -332,8 +311,6 @@
     .nav-links a:not(.btn) { display: none; }
     .feat-grid, .steps, .ethos-grid, .screens { grid-template-columns: 1fr; }
     .card.wide { grid-column: span 1; grid-template-columns: 1fr; }
-    .mock-body { grid-template-columns: 1fr; }
-    .mock-draw { display: none; }
   }
 </style>
 <script type="application/ld+json">
@@ -408,7 +385,7 @@
     <div class="hero-copy">
       <p class="eyebrow reveal">Farming Simulator 25 · mod manager · free &amp; open source</p>
       <h1 class="reveal d1">The mod manager FS25 <em>should have shipped with.</em></h1>
-      <p class="lede reveal d2">Load up on mods and Silo keeps them straight. It reads the game log to tell you which mod actually crashed you, flags conflicts before you launch, and shows the latest version it can find across ModHub, GitHub and Nexus. Everything it changes on disk is reversible.</p>
+      <p class="lede reveal d2">Organize hundreds of mods, and Silo reads the game log to name the mod that actually crashed you, catches conflicts before you launch, verifies a mod is the real build, and pulls ModHub, GitHub and Nexus into one catalog. Everything it changes on disk is reversible.</p>
       <div class="cta-row reveal d2">
         <a class="btn btn-primary" href="#download">Download the beta</a>
         <a class="btn btn-ghost" href="https://github.com/HLLMR/silo">View the source →</a>
@@ -421,41 +398,10 @@
       </div>
     </div>
 
-    <div class="mock reveal d2" role="img" aria-label="A preview of the Silo app: a mod library with a detail panel showing GitHub, Nexus and ModHub sources.">
-      <div class="mock-bar">
-        <span class="mock-dots"><i></i><i></i><i></i></span>
-        <span class="mock-title">Silo</span>
-        <span class="mock-tabs"><span class="mock-tab on">Library</span><span class="mock-tab">Browse</span></span>
-      </div>
-      <div class="mock-body">
-        <div class="mock-list">
-          <div class="row"><span class="ic g"></span><span><div class="nm">FS25_UniversalAutoload</div><div class="sub">loki79uk · v1.1.1.0</div></span><span class="flag ok">active</span></div>
-          <div class="row sel"><span class="ic"></span><span><div class="nm">Additional Filltypes</div><div class="sub">w33zl · v1.1.2.0</div></span></div>
-          <div class="row"><span class="ic k"></span><span><div class="nm">Precision Farming</div><div class="sub">GIANTS · v1.5.1.0</div></span></div>
-          <div class="row"><span class="ic"></span><span><div class="nm">AdditionalContracts</div><div class="sub">HappyLooser · v1.0.0.6</div></span><span class="flag warn">conflict</span></div>
-          <div class="row"><span class="ic g"></span><span><div class="nm">Enhanced Vehicle</div><div class="sub">ZhooL · v1.1.7.1</div></span></div>
-          <div class="row"><span class="ic"></span><span><div class="nm">Wind Turbine Package</div><div class="sub">Razak · v1.2.0.0</div></span></div>
-        </div>
-        <div class="mock-draw">
-          <div class="draw-h">Additional Filltypes</div>
-          <div class="src">
-            <div class="src-t"><span>GitHub</span><span>★ 680</span></div>
-            <div class="src-n">⑂ 47 · 👁 53 · ◎ 40</div>
-            <span class="src-b">★ Star</span>
-          </div>
-          <div class="src">
-            <div class="src-t"><span>Nexus Mods</span><span>👍 65</span></div>
-            <div class="src-n">⬇ 5,238</div>
-            <span class="src-b">👍 Endorse</span>
-          </div>
-          <div class="src">
-            <div class="src-t"><span>ModHub</span><span>⭐ 4.6</span></div>
-            <div class="src-n">1,726 ratings</div>
-            <span class="src-b gold">Rate ↗</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <figure class="hero-shot reveal d3">
+      <img src="screenshots/library.png" width="1416" height="939"
+           alt="The Silo library — 728 mods sorted by category, with active/parked state, conflict count and update status at a glance." />
+    </figure>
   </div>
 </section>
 
@@ -534,13 +480,23 @@
   <div class="wrap">
     <div class="sec-head">
       <p class="eyebrow">See it</p>
-      <h2>What it looks like.</h2>
+      <h2>One app for the whole job.</h2>
+      <p>Real screens — click any to enlarge.</p>
     </div>
     <div class="screens">
-      <figure class="shot"><img src="screenshots/library.png" alt="The Silo library — hundreds of mods, organized and searchable." loading="lazy" onerror="this.closest('figure').classList.add('missing')"><figcaption>Your library, organized</figcaption></figure>
-      <figure class="shot"><img src="screenshots/triage.png" alt="Crash triage naming the mod at fault from the game log." loading="lazy" onerror="this.closest('figure').classList.add('missing')"><figcaption>Crash triage names the culprit</figcaption></figure>
-      <figure class="shot"><img src="screenshots/browse.png" alt="Browsing the cross-source catalog with the per-source detail drawer." loading="lazy" onerror="this.closest('figure').classList.add('missing')"><figcaption>One catalog, every source</figcaption></figure>
-      <figure class="shot"><img src="screenshots/conflicts.png" alt="Conflict detection flagging colliding mods before launch." loading="lazy" onerror="this.closest('figure').classList.add('missing')"><figcaption>Conflicts caught before launch</figcaption></figure>
+      <figure class="shot"><button type="button" onclick="openShot('screenshots/browse.png','One catalog — ModHub, GitHub and Nexus')"><img src="screenshots/browse.png" alt="Silo's cross-source catalog: thousands of mods with cover art, ratings and per-source versions." loading="lazy"></button><figcaption>One catalog · every source</figcaption></figure>
+      <figure class="shot"><button type="button" onclick="openShot('screenshots/verified.png','Verify a mod is the real, untampered build')"><img src="screenshots/verified.png" alt="Integrity check showing a mod Verified byte-for-byte against the published build." loading="lazy"></button><figcaption>Verify it's the real build</figcaption></figure>
+      <figure class="shot"><button type="button" onclick="openShot('screenshots/conflicts.png','Conflicts caught before you launch')"><img src="screenshots/conflicts.png" alt="Conflict detection naming colliding script mods before launch." loading="lazy"></button><figcaption>Conflicts caught before launch</figcaption></figure>
+      <figure class="shot"><button type="button" onclick="openShot('screenshots/triage.png','Crash triage names the mod at fault')"><img src="screenshots/triage.png" alt="Crash and log triage separating real errors from cosmetic warnings and naming the culprit." loading="lazy"></button><figcaption>Crash triage names the culprit</figcaption></figure>
+      <figure class="shot"><button type="button" onclick="openShot('screenshots/savegames.png','Edit a save without launching the game')"><img src="screenshots/savegames.png" alt="Editing a savegame's difficulty and world settings from within Silo." loading="lazy"></button><figcaption>Edit saves without launching</figcaption></figure>
+      <figure class="shot"><button type="button" onclick="openShot('screenshots/loadouts.png','A loadout for every playthrough')"><img src="screenshots/loadouts.png" alt="Loadouts — save and switch named sets of active mods per playthrough." loading="lazy"></button><figcaption>A loadout per playthrough</figcaption></figure>
+      <figure class="shot"><button type="button" onclick="openShot('screenshots/mp.png','Match mod sets for multiplayer')"><img src="screenshots/mp.png" alt="Multiplayer mod-set sync: export a hashed manifest, joiners verify their set matches." loading="lazy"></button><figcaption>Match sets for multiplayer</figcaption></figure>
+      <figure class="shot"><button type="button" onclick="openShot('screenshots/bindings.png','Your whole control map, searchable')"><img src="screenshots/bindings.png" alt="The full control-binding map with inputs bound to more than one action highlighted." loading="lazy"></button><figcaption>Your whole control map</figcaption></figure>
+      <figure class="shot"><button type="button" onclick="openShot('screenshots/bridge.png','Generate a filltype-compatibility fix')"><img src="screenshots/bridge.png" alt="The filltype-compatibility bridge generating a small companion mod." loading="lazy"></button><figcaption>Generate a filltype fix</figcaption></figure>
+    </div>
+    <div id="lightbox" class="lb" hidden>
+      <button class="lb-x" type="button" aria-label="Close" onclick="closeShot()">✕</button>
+      <figure><img id="lb-img" alt=""><figcaption id="lb-cap"></figcaption></figure>
     </div>
   </div>
 </section>
@@ -668,6 +624,25 @@
     draw(); window.addEventListener("resize", draw);
     var mq = window.matchMedia("(prefers-color-scheme: dark)");
     (mq.addEventListener ? mq.addEventListener("change", draw) : mq.addListener(draw));
+  })();
+
+  // Screenshot lightbox.
+  (function () {
+    var lb = document.getElementById("lightbox");
+    var img = document.getElementById("lb-img");
+    var cap = document.getElementById("lb-cap");
+    if (!lb || !img || !cap) return;
+    window.openShot = function (src, caption) {
+      img.src = src; img.alt = caption || ""; cap.textContent = caption || "";
+      lb.hidden = false; document.body.style.overflow = "hidden";
+    };
+    window.closeShot = function () {
+      lb.hidden = true; img.src = ""; document.body.style.overflow = "";
+    };
+    lb.addEventListener("click", function (e) { if (e.target === lb) window.closeShot(); });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !lb.hidden) window.closeShot();
+    });
   })();
 </script>
 </body>
