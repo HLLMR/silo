@@ -112,6 +112,61 @@ pub fn guarded_xml_write(
     Ok(())
 }
 
+/// Require that `path` has one of `allowed` extensions (case-insensitive). Defence-in-depth
+/// against a compromised webview handing a command a path of an unexpected type.
+pub fn require_ext(path: &Path, allowed: &[&str]) -> Result<(), String> {
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_ascii_lowercase());
+    match ext {
+        Some(e) if allowed.iter().any(|a| a.eq_ignore_ascii_case(&e)) => Ok(()),
+        _ => Err(format!(
+            "refusing a path whose type isn't one of {allowed:?}: {path:?}"
+        )),
+    }
+}
+
+/// Validate a user-chosen destination we're about to WRITE (a Save-dialog result that lives
+/// outside the mods folder — a loadout, mod-set manifest, or diagnostics report). Enforce: no
+/// `..`, an expected extension, and a real existing parent directory — so a compromised webview
+/// can only write a known file type into a real folder, never an arbitrary path. The content
+/// these commands write is app-generated (JSON / a report), not attacker-controlled.
+pub fn safe_outbound(dest: &Path, allowed_ext: &[&str]) -> Result<(), String> {
+    no_traversal(dest)?;
+    require_ext(dest, allowed_ext)?;
+    match dest.parent() {
+        Some(p) if p.is_dir() => Ok(()),
+        _ => Err("destination folder does not exist".to_string()),
+    }
+}
+
+/// Validate a user-chosen file we're about to READ (an Open-dialog result). Enforce: no `..`,
+/// an expected extension, and that it's an existing regular file — turning "read any path the
+/// frontend hands us" into "read an existing file of the expected type".
+pub fn safe_inbound(path: &Path, allowed_ext: &[&str]) -> Result<(), String> {
+    no_traversal(path)?;
+    require_ext(path, allowed_ext)?;
+    if path.is_file() {
+        Ok(())
+    } else {
+        Err("file not found".to_string())
+    }
+}
+
+/// Read an FS25 config/settings XML confined to the game user dir — the read-side mirror of
+/// [`guarded_xml_write`]. The target must be an existing `.xml` whose parent resolves inside one
+/// of `allowed_roots`, so a config-reading command can't be turned into an arbitrary-file read.
+pub fn guarded_xml_read(allowed_roots: &[PathBuf], path: &Path) -> Result<String, String> {
+    no_traversal(path)?;
+    require_ext(path, &["xml"])?;
+    if !path.is_file() {
+        return Err("config file not found".to_string());
+    }
+    ensure_write_under(allowed_roots, path)?;
+    std::fs::read_to_string(path).map_err(|e| e.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,6 +227,62 @@ mod tests {
         let notxml = root.join("notes.txt");
         std::fs::write(&notxml, "hi").unwrap();
         assert!(guarded_xml_write(&roots, &notxml, "<x/>").is_err());
+
+        let _ = std::fs::remove_dir_all(&root);
+        let _ = std::fs::remove_file(&outside);
+    }
+
+    #[test]
+    fn require_ext_matches_case_insensitively() {
+        assert!(require_ext(Path::new("a.silo"), &["silo"]).is_ok());
+        assert!(require_ext(Path::new("a.SILO"), &["silo"]).is_ok());
+        assert!(require_ext(Path::new("a.json"), &["silo", "json"]).is_ok());
+        assert!(require_ext(Path::new("a.exe"), &["silo", "json"]).is_err());
+        assert!(require_ext(Path::new("noext"), &["silo"]).is_err());
+    }
+
+    #[test]
+    fn safe_outbound_and_inbound_confine_type_and_existence() {
+        let root = std::env::temp_dir().join(format!("silo_io_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+
+        // outbound: parent must exist + extension must match; the file itself need not exist yet.
+        assert!(safe_outbound(&root.join("my.silo"), &["silo"]).is_ok());
+        assert!(safe_outbound(&root.join("my.exe"), &["silo"]).is_err());
+        assert!(safe_outbound(&root.join("nope").join("my.silo"), &["silo"]).is_err());
+        assert!(safe_outbound(Path::new("../escape.silo"), &["silo"]).is_err());
+
+        // inbound: must be an existing file of the right type.
+        let f = root.join("in.silomp");
+        std::fs::write(&f, "{}").unwrap();
+        assert!(safe_inbound(&f, &["silomp", "json"]).is_ok());
+        assert!(safe_inbound(&f, &["silo"]).is_err()); // wrong type
+        assert!(safe_inbound(&root.join("missing.silomp"), &["silomp"]).is_err());
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn guarded_xml_read_confines_to_root() {
+        let root = std::env::temp_dir().join(format!("silo_rd_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        let roots = vec![root.clone()];
+
+        let inside = root.join("gameSettings.xml");
+        std::fs::write(&inside, "<x/>").unwrap();
+        assert_eq!(guarded_xml_read(&roots, &inside).unwrap(), "<x/>");
+
+        // outside the allowed root → rejected (no arbitrary-file read)
+        let outside = std::env::temp_dir().join(format!("silo_rd_out_{}.xml", std::process::id()));
+        std::fs::write(&outside, "<secret/>").unwrap();
+        assert!(guarded_xml_read(&roots, &outside).is_err());
+
+        // wrong type inside the root → rejected
+        let txt = root.join("notes.txt");
+        std::fs::write(&txt, "hi").unwrap();
+        assert!(guarded_xml_read(&roots, &txt).is_err());
 
         let _ = std::fs::remove_dir_all(&root);
         let _ = std::fs::remove_file(&outside);

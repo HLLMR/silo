@@ -915,11 +915,13 @@ fn export_loadout(app: tauri::AppHandle, id: i64, path: String) -> Result<(), St
         mods: lo.mods,
     };
     let json = serde_json::to_string_pretty(&file).map_err(|e| e.to_string())?;
+    paths::safe_outbound(std::path::Path::new(&path), &["silo"])?;
     std::fs::write(&path, json).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn import_loadout(app: tauri::AppHandle, path: String) -> Result<i64, String> {
+    paths::safe_inbound(std::path::Path::new(&path), &["silo", "json"])?;
     let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
     let file: LoadoutFile = serde_json::from_str(&content).map_err(|e| e.to_string())?;
     let mut conn = db::open(&db_path(&app)?)?;
@@ -947,9 +949,11 @@ fn launch_game() -> Result<(), String> {
     gamelaunch::launch()
 }
 
-/// Write text to a user-chosen path (used by the diagnostics report export).
+/// Write text to a user-chosen path (used by the diagnostics report export). Confined to a
+/// report file type with no traversal, so it can't be turned into an arbitrary-file write.
 #[tauri::command]
 fn save_text(path: String, content: String) -> Result<(), String> {
+    paths::safe_outbound(std::path::Path::new(&path), &["md", "txt"])?;
     std::fs::write(&path, content).map_err(|e| e.to_string())
 }
 
@@ -994,6 +998,7 @@ async fn mp_export(mods: Vec<mpsync::ModRef>, path: String) -> Result<usize, Str
     tauri::async_runtime::spawn_blocking(move || -> Result<usize, String> {
         let manifest = mpsync::build_manifest(&mods);
         let json = serde_json::to_string_pretty(&manifest).map_err(|e| e.to_string())?;
+        paths::safe_outbound(std::path::Path::new(&path), &["silomp", "json"])?;
         std::fs::write(&path, json).map_err(|e| e.to_string())?;
         Ok(manifest.mods.len())
     })
@@ -1008,6 +1013,7 @@ async fn mp_verify_file(
     local: Vec<mpsync::ModRef>,
 ) -> Result<mpsync::VerifyReport, String> {
     tauri::async_runtime::spawn_blocking(move || -> Result<mpsync::VerifyReport, String> {
+        paths::safe_inbound(std::path::Path::new(&path), &["silomp", "json"])?;
         let text = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
         let manifest: mpsync::Manifest = serde_json::from_str(&text)
             .map_err(|_| "That file isn't a valid Silo mod-set manifest".to_string())?;
@@ -1104,7 +1110,8 @@ fn get_config(
     path: String,
     paths: Vec<String>,
 ) -> Result<std::collections::HashMap<String, String>, String> {
-    let xml = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let user = fsgame::user_dir().ok_or_else(|| "No FS25 user dir".to_string())?;
+    let xml = crate::paths::guarded_xml_read(&[user], std::path::Path::new(&path))?;
     Ok(xmlconfig::get_values(&xml, &paths))
 }
 
@@ -1114,9 +1121,11 @@ fn get_config(
 #[tauri::command]
 fn set_config(path: String, edits: Vec<xmlconfig::Edit>) -> Result<(), String> {
     let user = fsgame::user_dir().ok_or_else(|| "No FS25 user dir".to_string())?;
-    let xml = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let roots = [user];
+    let p = std::path::Path::new(&path);
+    let xml = paths::guarded_xml_read(&roots, p)?;
     let out = xmlconfig::set_values(&xml, &edits)?;
-    paths::guarded_xml_write(&[user], std::path::Path::new(&path), &out)
+    paths::guarded_xml_write(&roots, p, &out)
 }
 
 // ── Mod settings form ──
@@ -1141,9 +1150,11 @@ fn get_mod_settings(mod_name: String) -> Result<Vec<settings_form::SettingsFile>
 #[tauri::command]
 fn save_mod_settings(path: String, edits: Vec<settings_form::Edit>) -> Result<(), String> {
     let user = fsgame::user_dir().ok_or_else(|| "No FS25 user dir".to_string())?;
-    let raw = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let roots = [user];
+    let p = std::path::Path::new(&path);
+    let raw = paths::guarded_xml_read(&roots, p)?;
     let updated = settings_form::apply_edits(&raw, &edits)?;
-    paths::guarded_xml_write(&[user], std::path::Path::new(&path), &updated)
+    paths::guarded_xml_write(&roots, p, &updated)
 }
 
 #[tauri::command]
