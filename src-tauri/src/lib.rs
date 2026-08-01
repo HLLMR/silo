@@ -17,6 +17,7 @@ pub mod mpsync;
 pub mod nexus;
 pub mod organize;
 pub mod paths;
+pub mod provenance;
 pub mod savegame;
 pub mod scan;
 pub mod secrets;
