@@ -122,7 +122,7 @@ The Website and API are hosted services that we may modify, suspend, rate-limit,
 
 ## 14. Governing Law
 
-These Terms are governed by and construed in accordance with the laws of the **[State of formation]**, without regard to its conflict-of-laws principles, except to the extent that mandatory local law applies to you.
+These Terms are governed by and construed in accordance with the laws of the **Texas**, without regard to its conflict-of-laws principles, except to the extent that mandatory local law applies to you.
 
 ## 15. Severability and Entire Agreement
 
@@ -130,7 +130,7 @@ If any provision of these Terms is held to be unenforceable or invalid, that pro
 
 ## 16. Contact
 
-Questions or notices regarding these Terms may be sent to **[legal contact email]**.
+Questions or notices regarding these Terms may be sent to **legal@hllmr.com**.
 
 ---
 

@@ -38,7 +38,7 @@ Ownership of that content stays with the people and platforms it came from:
 - **Silo does not host, mirror, or redistribute mod files.** When you download a mod, the download goes to the original source (ModHub, GitHub, or Nexus). Silo links back to that source rather than serving files itself.
 - Mod integrity and provenance hashing performed by Silo happens locally on your own machine.
 
-If you are a rights holder and believe your content is represented incorrectly in the catalog, please contact us at **[legal contact email]**.
+If you are a rights holder and believe your content is represented incorrectly in the catalog, please contact us at **legal@hllmr.com**.
 
 ## Provided "AS IS" — no warranty
 
@@ -82,11 +82,11 @@ We may update this disclaimer from time to time. When we do, we will revise the 
 
 ## Governing law
 
-This disclaimer is governed by the laws of the **[State of formation]**, without regard to its conflict-of-laws principles.
+This disclaimer is governed by the laws of the **Texas**, without regard to its conflict-of-laws principles.
 
 ## Contact
 
-Questions about this disclaimer, or trademark and catalog-content concerns, can be sent to **[legal contact email]**.
+Questions about this disclaimer, or trademark and catalog-content concerns, can be sent to **legal@hllmr.com**.
 
 ---
 
