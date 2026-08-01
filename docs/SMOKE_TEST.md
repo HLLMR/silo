@@ -101,6 +101,64 @@ closes the app). A packaged build is `npm run tauri:build`.
 - [ ] `[app]` **Organize is non-destructive.** After an Organize + Flatten round-trip, no mod files are missing (count returns to baseline). If Silo reports "kept an unrecognized file in archive/", it did NOT delete it — that's the safety guard working.
 - [ ] `[app]` **Scans stay fast + safe.** A full rescan of the large library completes without error (zip-read caps don't reject normal mods).
 
+## 15. Full UI coverage sweep — open every panel, drawer, toggle, modal
+
+The frontend was split into ~20 new components, so this section exists to **touch every
+interactive surface at least once** and catch a wiring regression that compiles fine.
+For each item: it **opens/toggles without error, renders its content, and closes cleanly**
+(via its ✕, the backdrop, or Esc), and re-opening works. **Keep the devtools console open
+(if available) and confirm no red errors appear** as you open/close each — a broken prop
+or `$effect` in an extracted component shows up there first. None of these should cover the
+top header bar (the drawer/backdrop must start below it).
+
+**Top bar (always visible):**
+- [ ] `[app]` Library ↔ Browse tabs switch; switching **closes an open detail drawer** (no overlap).
+- [ ] `[app]` **Savegames** button opens the Savegames panel; closes.
+- [ ] `[app]` **Loadouts** button opens the Loadouts panel; closes.
+- [ ] `[app]` **Multiplayer** button opens the MP-sync panel; closes.
+- [ ] `[net]` **Updates** (⟳) opens the Updates panel; closes.
+- [ ] `[app]` **Rescan** runs a scan (spinner → counts refresh).
+- [ ] `[app]` **Settings** (gear) opens; closes.
+- [ ] `[game]` **Launch** is present (don't have to run it here).
+
+**Library stat/filter bar:**
+- [ ] `[app]` **mods** tile opens the library **Stats** panel; closes.
+- [ ] `[app]` **conflicts** tile opens the **Conflicts** panel; closes.
+- [ ] `[app]` **need attention** tile opens the **Health** panel; closes.
+- [ ] `[app]` **◆ diagnose** opens Crash/Log triage; **⌨ bindings** opens the bindings map; **⛓ bridge** opens the bridge tool. Each closes.
+- [ ] `[app]` Filter toggles each flip and re-filter the list: **Favorites**, **Hidden**, **⚑ Flagged**, **⚠ In conflict** (disabled when 0). Combine two, then clear.
+- [ ] `[app]` **Search** box filters live; clearing restores the list.
+
+**Library toolbar + rail:**
+- [ ] `[app]` **Category rail**: click a category and a subcategory → list narrows; "All mods" resets.
+- [ ] `[app]` **Right-click a category** → context menu appears and dismisses.
+- [ ] `[app]` **Sort** dropdown cycles Name / Category / Size / Recently added / Version / **My rating**; the **↑/↓** direction button flips order.
+- [ ] `[app]` **Select-all** checkbox activates/deactivates the filtered set (indeterminate state renders when partial).
+
+**Library detail drawer (click a mod row) — every sub-section:**
+- [ ] `[app]` Header (icon/title/author/version/tech name) + **✕ closes**; **drag the left edge to resize** (persists); backdrop click closes.
+- [ ] `[app]` Action buttons all respond: **Active/Parked**, **Favorite**, **Broken**, **Hidden**, **Reveal**, and **Settings** (only when the mod has settings).
+- [ ] `[app]` **Category editor**: change the dropdown/subcategory → **Save** enables; **Reset to auto** shows for an overridden mod.
+- [ ] `[app]` **Last run** + **Catalog** status render (the `ModStatus` component).
+- [ ] `[app]` **Rating / tags / notes** (the `ModCuration` component): set a star, add + remove a tag, type a note (saves on blur).
+- [ ] `[net]` **GitHub link** (`ModRepoLink`): the owner/repo field, Check, and Install controls render.
+- [ ] `[app]` **Dependencies**, **uniqueType**, and **Conflicts** sub-sections render when present.
+
+**Settings panel — every control:**
+- [ ] `[app]` **Theme** System/Light/Dark switch (both themes legible).
+- [ ] `[app]` **GitHub account**: Connect / **Enable actions** / **Use a Personal Access Token** / Disconnect all render (see §14 for the real connect).
+- [ ] `[app]` **Nexus account**: Connect (API key) / Disconnect render.
+- [ ] `[app]` **Library layout**: **Organize**, **Rebuild categories**, **Restore vanilla**, and the **auto-file toggle** are present. Confirm auto-file is **OFF by default** on a fresh profile.
+
+**Browse tab — every surface:**
+- [ ] `[net]` **Sort** dropdown (Popular / Most downloaded / Top rated / Newest / Name) and **category** dropdown both re-query.
+- [ ] `[net]` A **card** shows title/author/rating/downloads badges + per-source chips; **Details** opens the Browse drawer.
+- [ ] `[net]` **Browse drawer**: facts, the full **Available from** source list, and the **Interact** cards render — **GitHub** (★/⑂/👁/◎ + Star/Watch), **Nexus** (👍 + Endorse), **ModHub** (⭐ + Rate ↗).
+- [ ] `[net]` **Read more** opens the **description modal** (full body + "Open full mod page"); closes.
+
+**Every remaining modal opens + closes cleanly:**
+- [ ] `[app]` Crash triage · Guided bisection intro · Bindings map · Multiplayer sync · Filltype bridge · Savegame config editor · Per-mod settings form · Updates · Diagnostics "Export report".
+
 ## Sign-off
 - [ ] All `[app]` items pass.
 - [ ] All `[game]`/`[net]` items pass (or known-limitations noted below).
