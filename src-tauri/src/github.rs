@@ -199,9 +199,6 @@ pub fn device_poll(client_id: &str, device_code: &str) -> Result<PollResult, Str
     })
 }
 
-/// Download a release .zip asset and install it in place at `dest`, backing up the
-/// current file to `<dest>.bak` first. Overwrites the existing file (same inode) so
-/// any active hardlink projection reflects the update automatically.
 /// True only for GitHub-owned hosts. The token is attached ONLY to these — never to an
 /// arbitrary URL handed in from the webview/catalog, so a hostile `downloadUrl` can't
 /// harvest the user's credential.
@@ -222,6 +219,12 @@ pub fn is_github_host(url: &str) -> bool {
         || host.ends_with(".githubusercontent.com")
 }
 
+/// Download a release .zip asset and install it at `dest`. Streams to a sibling `.part`
+/// file (bounded memory — so a multi-GB map mod that an in-RAM buffer would reject still
+/// installs), validates the complete archive opens, backs up the current file (aborting
+/// if that fails), then writes the bytes over the existing file IN PLACE — the same inode,
+/// truncated and re-filled — so an active hardlink projection reflects the update
+/// automatically. The `.part` temp file is always cleaned up.
 pub fn download_zip(url: &str, token: Option<&str>, dest: &std::path::Path) -> Result<(), String> {
     let mut req = ureq::get(url).set("User-Agent", UA);
     // Attach the token ONLY to GitHub hosts. Public release assets don't need it anyway;
@@ -231,28 +234,61 @@ pub fn download_zip(url: &str, token: Option<&str>, dest: &std::path::Path) -> R
     }
     let resp = req.call().map_err(|e| e.to_string())?;
 
-    let mut bytes: Vec<u8> = Vec::new();
-    resp.into_reader()
-        .take(500 * 1024 * 1024) // 500 MB safety cap
-        .read_to_end(&mut bytes)
-        .map_err(|e| e.to_string())?;
+    let part = dest.with_extension("zip.part");
+    let _ = std::fs::remove_file(&part); // clear any stale temp from a prior run
+    let result = stream_install(resp, &part, dest);
+    let _ = std::fs::remove_file(&part); // always clean up, success or failure
+    result
+}
 
-    if bytes.len() < 4 || &bytes[..2] != b"PK" {
-        return Err("Downloaded file is not a valid .zip".to_string());
+/// Stream `resp` to `part`, validate it's a real zip, back up `dest`, then overwrite
+/// `dest` in place (inode preserved). The caller removes `part` afterward.
+fn stream_install(
+    resp: ureq::Response,
+    part: &std::path::Path,
+    dest: &std::path::Path,
+) -> Result<(), String> {
+    // 4 GB bounds a runaway/hostile stream without rejecting a legitimately large map mod
+    // the way the old in-memory buffer's 500 MB cap did.
+    const MAX: u64 = 4 * 1024 * 1024 * 1024;
+
+    // 1. Stream the response to the .part file (bounded memory).
+    {
+        let mut out = std::fs::File::create(part).map_err(|e| e.to_string())?;
+        let mut reader = resp.into_reader().take(MAX + 1);
+        let n = std::io::copy(&mut reader, &mut out).map_err(|e| e.to_string())?;
+        if n > MAX {
+            return Err(format!("update exceeds the {MAX}-byte size limit"));
+        }
+        out.sync_all().map_err(|e| e.to_string())?;
     }
-    // Validate the WHOLE archive opens (central directory intact), not just the PK magic,
-    // so a truncated or corrupt download can't overwrite a working mod with garbage.
-    zip::ZipArchive::new(std::io::Cursor::new(&bytes)).map_err(|_| {
+
+    // 2. Validate the completed archive opens (central directory intact) — a truncated or
+    //    corrupt download must not reach the install step.
+    let f = std::fs::File::open(part).map_err(|e| e.to_string())?;
+    zip::ZipArchive::new(f).map_err(|_| {
         "Downloaded file is not a valid .zip archive (corrupt or truncated)".to_string()
     })?;
-    // Back up the existing file FIRST, and abort if that fails — never overwrite a mod we
-    // couldn't preserve a copy of. (Previously the backup error was ignored.)
+
+    // 3. Back up the current file FIRST; abort if we can't preserve a copy.
     if dest.exists() {
         std::fs::copy(dest, dest.with_extension("zip.bak")).map_err(|e| {
             format!("aborted before overwriting — couldn't back up the current file: {e}")
         })?;
     }
-    std::fs::write(dest, &bytes).map_err(|e| e.to_string())
+
+    // 4. Write the validated bytes over dest IN PLACE: truncate the existing inode and
+    //    stream the .part into it, so any active hardlink projection stays valid.
+    let mut src = std::fs::File::open(part).map_err(|e| e.to_string())?;
+    let mut dst = std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(dest)
+        .map_err(|e| e.to_string())?;
+    std::io::copy(&mut src, &mut dst).map_err(|e| e.to_string())?;
+    dst.sync_all().map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 /// The authenticated user's login name (verifies a token).
