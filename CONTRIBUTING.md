@@ -93,7 +93,9 @@ production Vite build, catching type errors and a broken bundle in one step.
 ```bash
 cd src-tauri
 cargo fmt --all --check   # CI fails on unformatted code — run `cargo fmt` to fix
-cargo test                # the module unit tests (42+ and counting)
+cargo clippy --all-targets -- -D warnings   # CI fails on any warning
+cargo test                # the module unit tests (60+ and counting)
+cargo audit               # blocking: CI fails on a vulnerable dependency
 ```
 
 Please add or update tests when you change core logic — the modules are designed
@@ -118,19 +120,53 @@ the body if it isn't obvious, and reference an issue (`#123`) when there is one.
 
 ## Branch & PR flow
 
-1. Fork the repo (or branch, if you have push access). Work off `main`.
-2. Use a short descriptive branch name, e.g. `fix/duplicate-map-crash` or
-   `feat/loadout-export`.
-3. Make focused commits; keep unrelated changes out of the PR.
-4. Run the checks above locally — they must pass.
-5. Open a PR against `HLLMR/silo` `main`. Fill in the
-   [pull request template](.github/pull_request_template.md): what and why, tests
-   passing, off-thread/reversible where relevant, docs updated.
-6. CI runs the frontend and Rust jobs on every PR; a maintainer reviews against
-   the working principles above.
+Everything lands through an issue → branch → PR. We don't commit fixes or features
+straight to `main`.
 
-Small PRs get reviewed faster. If you're planning something large, open an issue
-first so we can agree on the approach before you write it.
+1. **Open an issue first** (use the [bug](.github/ISSUE_TEMPLATE/bug_report.md) or
+   [feature](.github/ISSUE_TEMPLATE/feature_request.md) template). For anything more
+   than a trivial change, agree on the approach in the issue before writing code.
+2. **Branch off `main`** with a short descriptive name: `fix/…`, `feat/…`, or
+   `docs/…` — e.g. `fix/duplicate-map-crash`, `feat/loadout-export`.
+3. Make focused commits; keep unrelated changes out of the PR.
+4. **Update the changelog** — add a line under `## [Unreleased]` in
+   [`CHANGELOG.md`](CHANGELOG.md) for any user-facing change (see below).
+5. Run the checks above locally — they must pass.
+6. **Open a PR** against `HLLMR/silo` `main`. Reference the issue (`Fixes #123`) and
+   fill in the [pull request template](.github/pull_request_template.md): what and
+   why, tests passing, off-thread/reversible where relevant, docs updated.
+7. CI runs the frontend and Rust jobs on every PR; a maintainer reviews against the
+   working principles above, then squash-or-merges. Delete the branch after merge.
+
+Small PRs get reviewed faster.
+
+## Changelog
+
+We keep a human-readable [`CHANGELOG.md`](CHANGELOG.md) in the
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. Every user-facing
+change belongs under the top **`## [Unreleased]`** heading, in the right group —
+`Added`, `Changed`, `Fixed`, `Security`, `Removed`, or `Deprecated`. Write for a
+*player*, not a compiler: say what changed on their machine and why it matters, not
+which function moved. Internal-only refactors don't need an entry.
+
+## Releases & versioning
+
+Silo follows [Semantic Versioning](https://semver.org). Releases are cut by
+maintainers and are gated on the hostile-QA protocol in
+[`docs/RC_TESTING.md`](docs/RC_TESTING.md) — read it before proposing a release. In short:
+
+1. **Freeze** a release candidate (record the commit + installer hash) and run the
+   RC battery on the packaged build against a *sacrificial* library — never the real one.
+2. When it survives (no hard-stop; see the doc's stop-list), **bump the version in
+   every source together**: `package.json`, `package-lock.json`, `src-tauri/Cargo.toml`,
+   `src-tauri/Cargo.lock`, `src-tauri/tauri.conf.json`, and cut `## [Unreleased]` to
+   `## [x.y.z] - <date>` in the changelog (leaving a fresh empty `[Unreleased]`).
+3. **Tag `vX.Y.Z`** on a green-CI commit → the release workflow
+   (`.github/workflows/release.yml`) builds the platform installers and opens a draft
+   prerelease.
+4. **Verify the draft** (embedded version, checksums of the *CI-built* artifacts, a
+   clean-machine install, release notes state beta/unsigned/known limitations/upgrade
+   guidance), mark the previous version superseded, and publish.
 
 ## Questions
 
