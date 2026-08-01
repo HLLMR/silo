@@ -11,6 +11,8 @@
     "dialog:default",
     "opener:default",
     "opener:allow-reveal-item-in-dir",
-    "opener:allow-open-url"
+    "opener:allow-open-url",
+    "updater:default",
+    "process:default"
   ]
 }

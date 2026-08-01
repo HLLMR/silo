@@ -28,6 +28,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -35,5 +36,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU4NzhDQzg2QTc3M0JGMjUKUldRbHYzT25oc3g0Nk9tR2RCZ3dmSStPZ05MSnpJbm9NQS81dVUyUmVHTWlpZ0lObTN0QXZ0QkcK",
+      "endpoints": [
+        "https://github.com/HLLMR/silo/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

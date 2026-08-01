@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **In-app auto-update.** Silo checks GitHub Releases on launch for a newer signed build and,
+  when one is available, shows an **Update to vX** button in the top bar — one click downloads,
+  verifies the signature, installs, and relaunches. Update artifacts are cryptographically
+  signed in CI (minisign); the check fails closed and silently if there's no release, no
+  network, or you're on a dev build. Auto-update takes effect from this build forward.
+
 ## [0.2.1] - 2026-08-01
 
 ### Added

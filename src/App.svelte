@@ -36,6 +36,7 @@
     bisectSnapshotClear,
     appVersion,
   } from "./lib/api";
+  import { checkUpdate, installUpdate, type AvailableUpdate } from "./lib/updater";
   import {
     GAME_GRAPHICS_FIELDS,
     GAME_GRAPHICS_PRESETS,
@@ -199,6 +200,22 @@
   }
   let userDir = $state<string | null>(null);
   let appVer = $state<string | null>(null);
+  let update = $state<AvailableUpdate | null>(null);
+  let updating = $state(false);
+  let updatePct = $state<number | null>(null);
+
+  async function applyUpdate() {
+    if (updating) return;
+    updating = true;
+    try {
+      await installUpdate((p) => (updatePct = p));
+      // installUpdate relaunches on success; if we're still here, it was a no-op.
+    } catch (e) {
+      errorMsg = `Update failed: ${String(e)}`;
+      updating = false;
+      updatePct = null;
+    }
+  }
   let configEditor = $state<{
     title: string;
     path: string;
@@ -1006,6 +1023,8 @@
         gameInfo = await detectGame();
         userDir = await userDirPath();
         appVer = await appVersion();
+        // Fire-and-forget: never let a slow/absent update endpoint delay startup.
+        checkUpdate().then((u) => (update = u));
         settingsModsSet = new Set(await modsWithSettings());
       } catch (e) {
         errorMsg = String(e);
@@ -1046,6 +1065,10 @@
     bind:topbarH
     {view}
     {appVer}
+    {update}
+    {updating}
+    {updatePct}
+    onApplyUpdate={applyUpdate}
     hasSavegames={savegames.length > 0}
     {savesOpen}
     {loadoutsOpen}
