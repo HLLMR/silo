@@ -258,20 +258,9 @@ pub fn load_file(path: &Path) -> Result<SettingsFile, String> {
         raw,
     })
 }
-
-/// Write edits back, backing up the original to `<file>.bak` first.
-pub fn save(path: &Path, edits: &[Edit]) -> Result<(), String> {
-    let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-    let updated = apply_edits(&raw, edits)?;
-    let _ = std::fs::copy(path, path.with_extension("xml.bak"));
-    std::fs::write(path, updated).map_err(|e| e.to_string())
-}
-
-/// Overwrite a settings file with raw content (the escape hatch), backing up first.
-pub fn save_raw(path: &Path, content: &str) -> Result<(), String> {
-    let _ = std::fs::copy(path, path.with_extension("xml.bak"));
-    std::fs::write(path, content).map_err(|e| e.to_string())
-}
+// NOTE: writing settings back is done via `paths::guarded_xml_write` at the command layer
+// (containment under the FS25 user dir + required backup + atomic swap). `apply_edits` above
+// stays the pure edit-rendering step.
 
 #[cfg(test)]
 mod tests {

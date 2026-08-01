@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security & reliability (hardening pass)
 
+- **Config & mod-settings edits are confined and atomic.** Editing a game config or a mod's
+  settings now writes only inside the FS25 user folder, always succeeds a backup first (it
+  won't overwrite if it can't back up), and swaps the new file in atomically — so a
+  disk/permission failure can never leave a half-written or unbacked config.
 - **Silo only removes files it can prove it created.** Before de-activating or flattening,
   Silo now verifies the file in the mods folder really is its own projection (the hardlink,
   the junction/symlink, or a marked copy). If you swapped in your own build at that name, it

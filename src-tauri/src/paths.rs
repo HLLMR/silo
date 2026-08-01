@@ -4,7 +4,8 @@
 //! it can drive a filesystem write. Cheap, and it turns "write anywhere" into "write only
 //! where we intend".
 
-use std::path::{Component, Path};
+use std::io::Write;
+use std::path::{Component, Path, PathBuf};
 
 /// Accept a value only as a plain file name: exactly one normal path component, no
 /// separators, no `.`/`..`, not absolute, no NUL. Rejects `../escape`, `a/b`, `C:\x`, etc.
@@ -61,9 +62,59 @@ pub fn ensure_write_under(allowed_roots: &[std::path::PathBuf], dest: &Path) -> 
     }
 }
 
+/// Safely overwrite a config / mod-settings XML file. Same authority model as the organizer:
+/// the target must be a plain `.xml` file that already exists and whose parent resolves inside
+/// one of `allowed_roots` (the FS25 user dir). The current file is backed up to `<name>.bak`
+/// and that backup MUST succeed — Silo never overwrites without a recoverable copy. The new
+/// bytes go to a temp sibling, are flushed, then atomically renamed into place; if the swap
+/// fails the original is restored from the backup, so a disk/permission error can't leave a
+/// half-written config. Closes the "wrote outside the intended folder" and "overwrote despite a
+/// failed backup" gaps a frontend-supplied path otherwise allowed.
+pub fn guarded_xml_write(
+    allowed_roots: &[PathBuf],
+    dest: &Path,
+    contents: &str,
+) -> Result<(), String> {
+    no_traversal(dest)?;
+    let is_xml = dest
+        .extension()
+        .map(|e| e.eq_ignore_ascii_case("xml"))
+        .unwrap_or(false);
+    if !is_xml {
+        return Err("refusing to write a config file that isn't .xml".to_string());
+    }
+    // These commands edit an existing file; require it so a backup is always possible.
+    if !dest.is_file() {
+        return Err("config file not found".to_string());
+    }
+    ensure_write_under(allowed_roots, dest)?;
+
+    // Backup REQUIRED — abort before touching the original if we can't preserve a copy.
+    let bak = dest.with_extension("xml.bak");
+    std::fs::copy(dest, &bak)
+        .map_err(|e| format!("aborted — couldn't back up the file first: {e}"))?;
+
+    // Write to a temp sibling, flush, then atomically replace (rename replaces on all OSes).
+    let tmp = dest.with_extension("xml.silo-tmp");
+    let write = (|| -> Result<(), String> {
+        let mut f = std::fs::File::create(&tmp).map_err(|e| e.to_string())?;
+        f.write_all(contents.as_bytes())
+            .map_err(|e| e.to_string())?;
+        f.sync_all().map_err(|e| e.to_string())?;
+        std::fs::rename(&tmp, dest).map_err(|e| e.to_string())
+    })();
+    if let Err(e) = write {
+        let _ = std::fs::remove_file(&tmp);
+        // Restore the original from the backup so a failed swap can't corrupt it.
+        let _ = std::fs::copy(&bak, dest);
+        return Err(format!("config write failed and was rolled back: {e}"));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::safe_file_name;
+    use super::*;
 
     #[test]
     fn accepts_plain_names_rejects_traversal() {
@@ -83,5 +134,46 @@ mod tests {
         ] {
             assert!(safe_file_name(bad).is_err(), "should reject {bad:?}");
         }
+    }
+
+    #[test]
+    fn guarded_xml_write_backs_up_and_confines() {
+        let root = std::env::temp_dir().join(format!("silo_cfg_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        let roots = vec![root.clone()];
+
+        // Happy path: existing .xml under the root is backed up, then replaced atomically.
+        let dest = root.join("gameSettings.xml");
+        std::fs::write(&dest, "<old/>").unwrap();
+        guarded_xml_write(&roots, &dest, "<new/>").unwrap();
+        assert_eq!(std::fs::read_to_string(&dest).unwrap(), "<new/>");
+        assert_eq!(
+            std::fs::read_to_string(dest.with_extension("xml.bak")).unwrap(),
+            "<old/>",
+            "the previous contents must be backed up"
+        );
+        assert!(
+            !root.join("gameSettings.xml.silo-tmp").exists(),
+            "no temp left behind"
+        );
+
+        // Outside the allowed root → rejected (a sibling temp dir, definitely not under root).
+        let outside = std::env::temp_dir().join(format!("silo_cfg_out_{}.xml", std::process::id()));
+        std::fs::write(&outside, "<x/>").unwrap();
+        assert!(guarded_xml_write(&roots, &outside, "<hacked/>").is_err());
+        assert_eq!(
+            std::fs::read_to_string(&outside).unwrap(),
+            "<x/>",
+            "untouched"
+        );
+
+        // Non-.xml under the root → rejected.
+        let notxml = root.join("notes.txt");
+        std::fs::write(&notxml, "hi").unwrap();
+        assert!(guarded_xml_write(&roots, &notxml, "<x/>").is_err());
+
+        let _ = std::fs::remove_dir_all(&root);
+        let _ = std::fs::remove_file(&outside);
     }
 }

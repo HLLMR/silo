@@ -1103,13 +1103,15 @@ fn get_config(
     Ok(xmlconfig::get_values(&xml, &paths))
 }
 
-/// Apply value edits to a config XML, backing up the original to `<file>.bak`.
+/// Apply value edits to a config XML. The write is confined to the FS25 user dir, backs up
+/// the original first (required), and swaps the new file in atomically (see
+/// `paths::guarded_xml_write`).
 #[tauri::command]
 fn set_config(path: String, edits: Vec<xmlconfig::Edit>) -> Result<(), String> {
+    let user = fsgame::user_dir().ok_or_else(|| "No FS25 user dir".to_string())?;
     let xml = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
     let out = xmlconfig::set_values(&xml, &edits)?;
-    let _ = std::fs::copy(&path, format!("{path}.bak"));
-    std::fs::write(&path, out).map_err(|e| e.to_string())
+    paths::guarded_xml_write(&[user], std::path::Path::new(&path), &out)
 }
 
 // ── Mod settings form ──
@@ -1133,12 +1135,16 @@ fn get_mod_settings(mod_name: String) -> Result<Vec<settings_form::SettingsFile>
 
 #[tauri::command]
 fn save_mod_settings(path: String, edits: Vec<settings_form::Edit>) -> Result<(), String> {
-    settings_form::save(std::path::Path::new(&path), &edits)
+    let user = fsgame::user_dir().ok_or_else(|| "No FS25 user dir".to_string())?;
+    let raw = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let updated = settings_form::apply_edits(&raw, &edits)?;
+    paths::guarded_xml_write(&[user], std::path::Path::new(&path), &updated)
 }
 
 #[tauri::command]
 fn save_mod_settings_raw(path: String, content: String) -> Result<(), String> {
-    settings_form::save_raw(std::path::Path::new(&path), &content)
+    let user = fsgame::user_dir().ok_or_else(|| "No FS25 user dir".to_string())?;
+    paths::guarded_xml_write(&[user], std::path::Path::new(&path), &content)
 }
 
 // ── Savegames ──
