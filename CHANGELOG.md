@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **SSRF guard on native requests.** A custom SiloAPI base URL and every mod download are now
+  validated before the native layer fetches them: HTTPS only (plain `http` allowed only to
+  localhost, for a self-hosted/dev endpoint), and never a loopback/link-local/private/CGNAT
+  address. Blocks a compromised webview or catalog from steering a request at cloud metadata
+  (169.254.169.254) or an internal service. Catalog images were already host-allowlisted. (#20)
+
 - **Hardened the native command boundary against a compromised webview.** File-path commands
   that took a raw path from the frontend now validate it: loadout/mod-set/report export and
   import enforce the expected file type and reject `..` traversal, and config/mod-settings reads

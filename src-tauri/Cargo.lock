@@ -3874,6 +3874,7 @@ dependencies = [
  "tauri-plugin-updater",
  "unicode-normalization",
  "ureq",
+ "url",
  "walkdir",
  "zip 2.4.2",
 ]
