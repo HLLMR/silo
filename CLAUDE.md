@@ -39,6 +39,13 @@ Beyond the MVP management layer above:
 - **Filltype bridge** (`⛓ bridge`) — GENERATES a companion mod that adds a stubborn map
   filltype into the categories your equipment accepts (the "sugar beet" fix), no vehicle
   edits. Generator lives in Silo; output is per-user, no separate repo.
+- **Mod integrity / provenance** (detail drawer) — hashes an installed mod and verifies
+  it against the canonical build SiloAPI hashed from source: **Verified** / **Modified**
+  (with the exact changed files) / **Unverified**. Byte-exact via a cross-language-ratified
+  manifest format (`provenance.rs`, `docs/PROVENANCE.md` + SiloAPI `PROVENANCE-CANONICALIZATION.md`).
+  Provenance, not antivirus — the moat, since no competitor holds a cross-source canonical-hash DB.
+- **Organize preview** — the manual Organize shows a read-only dry run (what moves where)
+  before touching a file; dismissible for power users.
 
 Backend: **SiloAPI** (separate repo `HLLMR/silo-api`, live at `https://silo-api.hllmr.com`).
 
@@ -48,8 +55,9 @@ Rust core modules (`src-tauri/src/`): `scan` `moddesc` `category` `icons` `db` `
 `fsgame` `organize` `savegame` `conflicts` `settings_form` `xmlconfig` `gamelaunch`
 `github` `siloapi` (catalog client) · `logscan` (crash triage) · `bisect` (guided
 bisection) · `bindings` (input map) · `mpsync` (MP manifest) · `bridge` (filltype
-companion generator). Each is pure logic behind thin `#[tauri::command]` wrappers with
-unit tests (42+ Rust tests). Frontend panels in `src/lib/components/`.
+companion generator) · `provenance` (integrity/manifest hashing) · `paths` `secrets`
+`xmltext` (safety/util). Each is pure logic behind thin `#[tauri::command]` wrappers with
+unit tests (63 Rust tests). Frontend panels in `src/lib/components/`.
 
 - **Tauri v2**: Rust core in `src-tauri/`, web frontend in `src/`.
 - **Frontend: Svelte 5 (runes) + Vite + TypeScript**, hand-authored CSS design

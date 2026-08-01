@@ -15,10 +15,10 @@
   <a href="https://silo.hllmr.com"><img alt="Website" src="https://img.shields.io/badge/web-silo.hllmr.com-4a90c2"></a>
 </p>
 
-A fast, native desktop app for your FS25 mod library. Silo reads the game log to name
-the mod that crashed you, flags conflicts before you launch, and shows the latest
-version it can find across ModHub, GitHub and Nexus. Everything it changes on disk is
-reversible. **Free and open source. Windows · macOS · Linux.**
+A desktop app for your FS25 mod library that stays quick at 700+ mods. Silo reads the
+game log to name the mod that crashed you, flags conflicts before you launch, and shows
+the latest version it can find across ModHub, GitHub and Nexus. Everything it changes on
+disk is reversible. **Free and open source. Windows (tested) · macOS & Linux (experimental).**
 
 <p align="center">
   <b><a href="https://github.com/HLLMR/silo/releases/latest">⬇ Download the beta</a></b>
@@ -28,12 +28,16 @@ reversible. **Free and open source. Windows · macOS · Linux.**
 
 > **Status: public beta.** Builds are unsigned (open source), so Windows SmartScreen /
 > macOS Gatekeeper may warn on first launch.
+>
+> **Platforms: Windows is the tested, supported platform.** macOS (Intel & Apple Silicon)
+> and Linux builds are **experimental and largely untested** — we'd love testers on those
+> platforms, but expect rough edges (e.g. Linux/Proton game-path discovery isn't complete yet).
 
 ## Why
 
 FS25 reads one flat `mods/` folder, so everything you own is always active at once. When
 something breaks, the game won't tell you what. There's no conflict detection, no
-organization, no honest update tracking, no way to define a loadout per savegame. Silo
+organization, no update tracking, no way to bind a loadout to a savegame. Silo
 is the management layer the game left out.
 
 ## What it does
@@ -45,10 +49,15 @@ is the management layer the game left out.
 - **Cross-source catalog** — one record per mod aggregating ModHub + GitHub + Nexus,
   with the latest version found across all of them (backed by
   [SiloAPI](https://silo-api.hllmr.com)).
+- **Integrity check** — hashes an installed mod and compares it to the trusted build its
+  source published: a clean match, or the exact files that changed. Provenance, not
+  antivirus — it proves what a mod is, not whether it means well. Nothing else does this
+  across sources.
 - **Guided bisection** — when the log can't name the culprit, automates "disable half,
   relaunch" to isolate it, and safely restores your active set afterward.
 - **Loadouts & projection** — curate profiles and project only the active set into the
-  game's flat folder at launch, via symlink/junction — never by moving your files.
+  game's flat folder at launch, via symlink/junction. Organizing files your zips into a
+  reversible local archive; Flatten puts everything back.
 - **Per-source actions** — star a repo on GitHub, endorse on Nexus, rate on ModHub, all
   through *your own* accounts. Silo just opens the door; your credentials stay yours.
 - **Multiplayer sync**, a **filltype-compatibility bridge generator**, **savegame backup**,
@@ -72,11 +81,16 @@ npm run tauri:build   # produce an installer in src-tauri/target/release/bundle/
 ## Trust
 
 - **Open source** — the desktop app is fully open here; audit, fork, or build it yourself.
-- **No telemetry, no account** — Silo uses the network only for catalog search, update
-  checks, and the source actions you choose.
-- **Reversible by design** — it files your mods into a local archive and links the active
-  set into the game; every move is recorded and undoable, and it backs up before any
-  overwrite.
+  The hosted catalog (SiloAPI) is a separate service.
+- **No telemetry, no account** — Silo hits the network for catalog search, update and
+  integrity checks, cover images, and the source actions you choose. Nothing about you
+  leaves your machine.
+- **Reversible, and it owns what it touches** — it files your mods into a local archive
+  and links the active set into the game; every move is recorded and undoable, it only
+  ever removes files it put there itself (your own edits are left alone), and it backs up
+  before any overwrite.
+- **Verifiable** — the integrity check proves an installed mod matches the build its
+  source published, byte for byte.
 
 ## Stack
 
