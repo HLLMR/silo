@@ -214,16 +214,36 @@ struct GhStatus {
     can_gist: bool,
 }
 
+/// Does a stored scope string grant `want`? Handles GitHub's two formats (the device
+/// response is space-separated, `X-OAuth-Scopes` is comma-separated). The `"*"` sentinel
+/// means "scopes unknown — assume yes", used for fine-grained PATs that report none.
+fn scope_grants(scopes: &str, want: &str) -> bool {
+    scopes == "*" || scopes.split([',', ' ']).map(str::trim).any(|s| s == want)
+}
+
 #[tauri::command]
 #[allow(clippy::const_is_empty)]
 fn gh_status(app: tauri::AppHandle) -> Result<GhStatus, String> {
     let conn = db::open(&db_path(&app)?)?;
+    // Capability comes from the scopes GitHub actually granted. Older connections predate
+    // scope capture and only carry the coarse booleans — honour those until the next
+    // reconnect writes `gh_scopes`.
+    let (can_write, can_gist) = match db::get_app_setting(&conn, "gh_scopes") {
+        Some(s) => (
+            scope_grants(&s, "public_repo") || scope_grants(&s, "repo"),
+            scope_grants(&s, "gist"),
+        ),
+        None => (
+            db::get_app_setting(&conn, "gh_write").as_deref() == Some("1"),
+            db::get_app_setting(&conn, "gh_gist").as_deref() == Some("1"),
+        ),
+    };
     Ok(GhStatus {
         client_id: effective_client_id(&conn),
         user: db::get_app_setting(&conn, "gh_user"),
         builtin: !SILO_GH_CLIENT_ID.is_empty(),
-        can_write: db::get_app_setting(&conn, "gh_write").as_deref() == Some("1"),
-        can_gist: db::get_app_setting(&conn, "gh_gist").as_deref() == Some("1"),
+        can_write,
+        can_gist,
     })
 }
 
@@ -277,12 +297,8 @@ fn build_gh_scope(write: bool, gist: bool) -> String {
 async fn gh_device_poll(
     app: tauri::AppHandle,
     device_code: String,
-    write: Option<bool>,
-    gist: Option<bool>,
 ) -> Result<github::PollResult, String> {
     let db = db_path(&app)?;
-    let write = write.unwrap_or(false);
-    let gist = gist.unwrap_or(false);
     tauri::async_runtime::spawn_blocking(move || -> Result<github::PollResult, String> {
         let conn = db::open(&db)?;
         let cid =
@@ -293,10 +309,9 @@ async fn gh_device_poll(
                 let user = github::whoami(tok).unwrap_or_default();
                 secrets::set(&conn, "gh_token", Some(tok))?;
                 db::set_app_setting(&conn, "gh_user", Some(&user))?;
-                // The caller requests the union of held + new capability, so each flag
-                // reflects this grant directly (a plain sign-in clears both to read-only).
-                db::set_app_setting(&conn, "gh_write", if write { Some("1") } else { None })?;
-                db::set_app_setting(&conn, "gh_gist", if gist { Some("1") } else { None })?;
+                // Store the scopes GitHub actually granted — capability is derived from
+                // these, not from what we asked for. Accumulates across re-auth.
+                db::set_app_setting(&conn, "gh_scopes", Some(res.scope.as_deref().unwrap_or("")))?;
             }
         }
         // Never expose the raw token to the frontend.
@@ -306,10 +321,11 @@ async fn gh_device_poll(
     .map_err(|e| e.to_string())?
 }
 
-/// PAT fallback for users who'd rather mint a token than OAuth. A fine-grained PAT
-/// scoped to only "Starring" (+ optionally "Watching") is the most minimal-permission
-/// path — narrower than the OAuth `public_repo` scope. We verify it, then treat it as
-/// action-capable.
+/// PAT fallback for users who'd rather mint a token than OAuth. A classic PAT reports its
+/// scopes (`X-OAuth-Scopes`), so we store exactly what it can do. A fine-grained PAT uses
+/// a different permission model and reports no scopes — we can't introspect it, so we
+/// record the `"*"` sentinel ("assume capable", since the user minted it deliberately) and
+/// let a 403 surface a reconnect hint if a specific permission is missing.
 #[tauri::command]
 async fn gh_set_pat(app: tauri::AppHandle, pat: String) -> Result<String, String> {
     let db = db_path(&app)?;
@@ -318,14 +334,19 @@ async fn gh_set_pat(app: tauri::AppHandle, pat: String) -> Result<String, String
         if pat.is_empty() {
             return Err("Empty token".into());
         }
-        let user = github::whoami(&pat)?;
+        let (user, scopes) = github::whoami_scoped(&pat)?;
         if user.is_empty() {
             return Err("GitHub did not recognize that token".into());
         }
         let conn = db::open(&db)?;
         secrets::set(&conn, "gh_token", Some(&pat))?;
         db::set_app_setting(&conn, "gh_user", Some(&user))?;
-        db::set_app_setting(&conn, "gh_write", Some("1"))?;
+        let stored = if scopes.trim().is_empty() {
+            "*".to_string()
+        } else {
+            scopes
+        };
+        db::set_app_setting(&conn, "gh_scopes", Some(&stored))?;
         Ok(user)
     })
     .await
@@ -771,6 +792,8 @@ fn gh_logout(app: tauri::AppHandle) -> Result<(), String> {
     let conn = db::open(&db_path(&app)?)?;
     secrets::set(&conn, "gh_token", None)?;
     db::set_app_setting(&conn, "gh_user", None)?;
+    db::set_app_setting(&conn, "gh_scopes", None)?;
+    // Legacy flags from before scope capture — clear them too so nothing lingers.
     db::set_app_setting(&conn, "gh_write", None)?;
     db::set_app_setting(&conn, "gh_gist", None)?;
     Ok(())
@@ -1763,7 +1786,7 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::build_gh_scope;
+    use super::{build_gh_scope, scope_grants};
 
     #[test]
     fn scope_is_read_only_by_default() {
@@ -1776,5 +1799,24 @@ mod tests {
         assert_eq!(build_gh_scope(false, true), "read:user gist");
         // The union — enabling one capability while holding the other keeps both.
         assert_eq!(build_gh_scope(true, true), "read:user public_repo gist");
+    }
+
+    #[test]
+    fn scope_grants_reads_both_github_formats() {
+        // Device-flow response: space-separated.
+        assert!(scope_grants("read:user public_repo gist", "gist"));
+        assert!(scope_grants("read:user public_repo gist", "public_repo"));
+        assert!(!scope_grants("read:user", "gist"));
+        // X-OAuth-Scopes header: comma-separated (with spaces).
+        assert!(scope_grants("gist, public_repo, read:user", "public_repo"));
+        // No partial matches.
+        assert!(!scope_grants("read:user public", "public_repo"));
+    }
+
+    #[test]
+    fn scope_star_sentinel_grants_everything() {
+        // Fine-grained PATs report no scopes; "*" means assume capable.
+        assert!(scope_grants("*", "gist"));
+        assert!(scope_grants("*", "public_repo"));
     }
 }

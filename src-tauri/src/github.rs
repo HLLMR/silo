@@ -130,6 +130,8 @@ pub struct PollResult {
     /// "ok" | "pending" | "slow_down" | "expired" | "denied" | "error"
     pub status: String,
     pub token: Option<String>,
+    /// The scopes GitHub actually granted (space-separated), from the token response.
+    pub scope: Option<String>,
     pub error: Option<String>,
 }
 
@@ -181,6 +183,9 @@ pub fn device_poll(client_id: &str, device_code: &str) -> Result<PollResult, Str
         return Ok(PollResult {
             status: "ok".into(),
             token: Some(tok.to_string()),
+            // GitHub echoes the scopes it actually granted — the source of truth for
+            // what this token can do (vs. what we asked for).
+            scope: v["scope"].as_str().map(str::to_string),
             error: None,
         });
     }
@@ -195,6 +200,7 @@ pub fn device_poll(client_id: &str, device_code: &str) -> Result<PollResult, Str
     Ok(PollResult {
         status: status.into(),
         token: None,
+        scope: None,
         error: Some(err.to_string()),
     })
 }
@@ -397,14 +403,23 @@ fn stream_install(
 
 /// The authenticated user's login name (verifies a token).
 pub fn whoami(token: &str) -> Result<String, String> {
+    Ok(whoami_scoped(token)?.0)
+}
+
+/// The authenticated user's login plus the token's granted scopes (the `X-OAuth-Scopes`
+/// response header, comma-separated). OAuth tokens and classic PATs populate it; a
+/// fine-grained PAT uses a different permission model and reports an empty header — the
+/// caller decides how to treat "unknown" scopes.
+pub fn whoami_scoped(token: &str) -> Result<(String, String), String> {
     let resp = ureq::get("https://api.github.com/user")
         .set("Accept", "application/vnd.github+json")
         .set("User-Agent", UA)
         .set("Authorization", &format!("Bearer {token}"))
         .call()
-        .map_err(|e| e.to_string())?;
+        .map_err(gh_err)?;
+    let scopes = resp.header("X-OAuth-Scopes").unwrap_or("").to_string();
     let v: serde_json::Value = resp.into_json().map_err(|e| e.to_string())?;
-    Ok(v["login"].as_str().unwrap_or("").to_string())
+    Ok((v["login"].as_str().unwrap_or("").to_string(), scopes))
 }
 
 // ── GitHub source card: live public reads + user-owned actions ──
