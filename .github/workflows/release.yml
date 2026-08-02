@@ -34,9 +34,9 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: npm
@@ -54,11 +54,11 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev patchelf
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
         with:
           targets: ${{ matrix.rust-target }}
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           workspaces: src-tauri
 
@@ -66,7 +66,7 @@ jobs:
       # (`npm run build`), but the deps must be installed first.
       - run: npm ci
 
-      - uses: tauri-apps/tauri-action@v0
+      - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Updater signing — signs the bundles and emits latest.json so the in-app
@@ -87,3 +87,44 @@ jobs:
           # draft for review; publishing it makes it Latest.
           prerelease: false
           args: ${{ matrix.args }}
+
+  # Attach a SHA256SUMS.txt so users can verify their download. Runs after all platforms have
+  # uploaded to the (draft) release, hashes every asset, and adds the checksums file.
+  checksums:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Generate and attach SHA256SUMS.txt
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ github.ref_name }}"
+          repo="${{ github.repository }}"
+          # The build matrix uploads to a DRAFT release; drafts aren't returned by
+          # /releases/tags/:tag, so find it by scanning the releases list for this tag.
+          rel=$(gh api "repos/$repo/releases" --paginate \
+                --jq "map(select(.tag_name==\"$tag\")) | .[0].id")
+          [ -n "$rel" ] && [ "$rel" != "null" ] || { echo "no release found for $tag"; exit 1; }
+          mkdir -p dist && cd dist
+          # Download each asset (except any prior checksums file) to hash it.
+          gh api "repos/$repo/releases/$rel/assets" --paginate \
+            --jq '.[] | select(.name != "SHA256SUMS.txt") | "\(.id)\t\(.name)"' \
+          | while IFS=$'\t' read -r id name; do
+              gh api "repos/$repo/releases/$rel/assets/$id" \
+                -H "Accept: application/octet-stream" > "$name"
+            done
+          sha256sum * | sort -k2 > SHA256SUMS.txt
+          echo "---- SHA256SUMS.txt ----"; cat SHA256SUMS.txt
+          # Replace any prior checksums asset, then upload straight to the release id (works
+          # on a draft, which `gh release upload <tag>` can't reliably resolve).
+          old=$(gh api "repos/$repo/releases/$rel/assets" \
+                --jq '.[] | select(.name=="SHA256SUMS.txt") | .id' | head -1)
+          [ -n "$old" ] && gh api -X DELETE "repos/$repo/releases/$rel/assets/$old" || true
+          curl -sSf -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Content-Type: text/plain" \
+            --data-binary @SHA256SUMS.txt \
+            "https://uploads.github.com/repos/$repo/releases/$rel/assets?name=SHA256SUMS.txt"
