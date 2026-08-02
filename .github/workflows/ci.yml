@@ -16,7 +16,7 @@ jobs:
     name: Frontend (svelte-check + build)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
@@ -30,7 +30,7 @@ jobs:
     name: Rust (fmt + test)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Tauri v2 links webkit2gtk-4.1 at build time, so the deps are needed even to
       # compile the crate for `cargo test`.
       # Tauri v2's official Linux deps. On Ubuntu 24.04 (noble) the old
@@ -72,7 +72,7 @@ jobs:
     # them in the log for visibility but they do not affect the exit code, so they don't
     # block. Reviewed 2026-07; revisit when Tauri moves off GTK3.
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
