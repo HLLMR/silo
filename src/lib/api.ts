@@ -44,6 +44,8 @@ import type {
   MpVerifyReport,
   CollectionExportResult,
   ImportPlan,
+  ApplyReport,
+  CollectionProgress,
   BridgeSpec,
 } from "./types";
 
@@ -435,6 +437,24 @@ export function collectionImportPreview(
   installed: { techName: string; version: string | null }[],
 ): Promise<ImportPlan> {
   return invoke<ImportPlan>("collection_import_preview", { urlOrId, installed });
+}
+
+/**
+ * Import a shared collection: download the installable mods, verify each against the
+ * pinned build, and save the whole set as a loadout. Returns a per-mod report.
+ */
+export function collectionApply(
+  urlOrId: string,
+  installed: { techName: string; version: string | null }[],
+): Promise<ApplyReport> {
+  return invoke<ApplyReport>("collection_apply", { urlOrId, installed, root: null });
+}
+
+/** Per-mod progress during a collection import. */
+export function onCollectionProgress(
+  handler: (p: CollectionProgress) => void,
+): Promise<UnlistenFn> {
+  return listen<CollectionProgress>("collection:progress", (e) => handler(e.payload));
 }
 
 // ── Guided bisection ──

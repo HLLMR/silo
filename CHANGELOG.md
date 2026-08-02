@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Collections — share a mod set as a link.** From Multiplayer sync, "Share as a link" publishes
+  your set to your own GitHub as a secret gist and hands you a URL (no mod files are uploaded, only
+  the list — each mod pinned to a version and a content hash). Anyone you send it to can paste it
+  into "Open a shared link" to preview exactly what they already have, what's a different version,
+  what Silo can install for them, and what they'll need to grab from ModHub/Nexus — then import it:
+  Silo downloads the installable mods, verifies each against the shared build (verified / modified),
+  and saves the whole set as a loadout to apply. Sharing needs a one-time "Enable collection sharing"
+  (the GitHub `gist` permission) in Settings; a secret gist is unlisted, not password-protected.
+  (#61)
+
 - **Library health flags foreign files in your mods folder.** If a file sits in the flat `mods/`
   root at a name Silo manages but isn't the projection Silo created (a build you swapped in, a
   leftover from another tool), Library health now surfaces it — so you know the mod that loads

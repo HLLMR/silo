@@ -6,6 +6,8 @@
     mpVerify,
     collectionExport,
     collectionImportPreview,
+    collectionApply,
+    onCollectionProgress,
     ghStatus,
     openExternal,
   } from "../api";
@@ -14,17 +16,23 @@
     MpVerifyReport,
     CollectionExportResult,
     ImportPlan,
+    ApplyReport,
+    CollectionProgress,
     GhStatus,
   } from "../types";
+  import type { UnlistenFn } from "@tauri-apps/api/event";
+  import { onDestroy } from "svelte";
 
   interface Props {
     /** The active set as (techName, path, kind, version) refs. */
     active: MpModRef[];
     /** The whole installed library as (techName, version) — for import bucketing. */
     installed: { techName: string; version: string | null }[];
+    /** Called after a successful import so the parent can rescan the library. */
+    onImported?: () => void;
     onClose: () => void;
   }
-  let { active, installed, onClose }: Props = $props();
+  let { active, installed, onImported, onClose }: Props = $props();
 
   let busy = $state<string | null>(null);
   let note = $state<string | null>(null);
@@ -88,6 +96,7 @@
     importBusy = true;
     importErr = null;
     plan = null;
+    applyReport = null;
     try {
       plan = await collectionImportPreview(importUrl.trim(), installed);
     } catch (e) {
@@ -96,6 +105,32 @@
       importBusy = false;
     }
   }
+
+  let applyBusy = $state(false);
+  let applyProgress = $state<CollectionProgress | null>(null);
+  let applyReport = $state<ApplyReport | null>(null);
+  let unlisten: UnlistenFn | undefined;
+
+  async function doApply() {
+    if (!importUrl.trim() || applyBusy) return;
+    applyBusy = true;
+    importErr = null;
+    applyProgress = null;
+    unlisten = await onCollectionProgress((p) => (applyProgress = p));
+    try {
+      applyReport = await collectionApply(importUrl.trim(), installed);
+      onImported?.();
+    } catch (e) {
+      importErr = String(e);
+    } finally {
+      applyBusy = false;
+      applyProgress = null;
+      unlisten?.();
+      unlisten = undefined;
+    }
+  }
+
+  onDestroy(() => unlisten?.());
 
   async function doExport() {
     busy = "Hashing & saving…";
@@ -273,10 +308,45 @@
       {@render bucket("Not in the catalog — find these manually", p.unresolved)}
       {@render bucket("Already in your library", p.alreadyPresent)}
 
-      <p class="caveat">
-        Installing collections in-app is coming next — for now this shows you exactly what a
-        shared set needs.
-      </p>
+      {#if !applyReport}
+        <div class="apply-bar">
+          <p class="caveat" style="margin:0">
+            Import saves the whole set as a loadout and downloads the
+            {p.willInstall.length} installable mod{p.willInstall.length === 1 ? "" : "s"}. The
+            rest are listed in the loadout, ready once you fetch them.
+          </p>
+          <button class="btn primary" onclick={doApply} disabled={applyBusy}>
+            {applyBusy ? "Importing…" : "Import collection →"}
+          </button>
+        </div>
+        {#if applyBusy && applyProgress}
+          <div class="busy">
+            Installing {applyProgress.done}/{applyProgress.total}
+            {applyProgress.current ? `— ${applyProgress.current}` : ""}
+          </div>
+        {/if}
+      {:else}
+        {@const a = applyReport}
+        <div class="ok-note">
+          Saved “{p.name}” as a loadout.
+          {a.installed} installed{a.failed > 0 ? `, ${a.failed} failed` : ""}. Rescanning your
+          library…
+        </div>
+        {#each a.rows.filter((r) => r.status === "installed" || r.status === "failed") as r (r.techName)}
+          <div class="row">
+            <span class="mn">{r.techName}</span>
+            <span class="rt">
+              {#if r.status === "failed"}⚠ {r.detail ?? "failed"}
+              {:else if r.verdict === "verified"}✓ verified
+              {:else if r.verdict === "modified"}⚠ modified — differs from the shared build
+              {:else}installed (unverified){/if}
+            </span>
+          </div>
+        {/each}
+        <p class="caveat">
+          Apply the “{p.name}” loadout from the Loadouts panel to activate it.
+        </p>
+      {/if}
     {/if}
   </div>
 
@@ -452,6 +522,15 @@
     align-items: center;
     gap: 10px;
     margin: 4px 0 4px;
+  }
+  .apply-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .apply-bar .btn {
+    flex: 0 0 auto;
   }
   .link {
     flex: 1;
