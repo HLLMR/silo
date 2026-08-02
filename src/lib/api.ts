@@ -240,11 +240,15 @@ export function ghStatus(): Promise<GhStatus> {
 export function ghSetClientId(clientId: string): Promise<void> {
   return invoke("gh_set_client_id", { clientId });
 }
-export function ghDeviceStart(write = false): Promise<DeviceCode> {
-  return invoke<DeviceCode>("gh_device_start", { write });
+export function ghDeviceStart(write = false, gist = false): Promise<DeviceCode> {
+  return invoke<DeviceCode>("gh_device_start", { write, gist });
 }
-export function ghDevicePoll(deviceCode: string, write = false): Promise<PollResult> {
-  return invoke<PollResult>("gh_device_poll", { deviceCode, write });
+export function ghDevicePoll(
+  deviceCode: string,
+  write = false,
+  gist = false,
+): Promise<PollResult> {
+  return invoke<PollResult>("gh_device_poll", { deviceCode, write, gist });
 }
 export function ghLogout(): Promise<void> {
   return invoke("gh_logout");

@@ -15,6 +15,7 @@
     user: null,
     builtin: false,
     canWrite: false,
+    canGist: false,
   });
   let clientIdInput = $state("");
   let flow = $state<{ userCode: string; verificationUri: string } | null>(null);
@@ -44,16 +45,18 @@
     }
   }
 
-  async function connect(write = false) {
+  // Callers request the UNION of held + newly-wanted capabilities, so enabling one
+  // (e.g. gist) never drops another the token already carries.
+  async function connect(write = false, gist = false) {
     message = null;
     try {
-      const dc = await ghDeviceStart(write);
+      const dc = await ghDeviceStart(write, gist);
       flow = { userCode: dc.userCode, verificationUri: dc.verificationUri };
       openExternal(dc.verificationUri).catch(() => {});
       let interval = Math.max(dc.interval, 3);
       const tick = async () => {
         try {
-          const r = await ghDevicePoll(dc.deviceCode, write);
+          const r = await ghDevicePoll(dc.deviceCode, write, gist);
           if (r.status === "ok") {
             flow = null;
             await refresh();
@@ -127,22 +130,41 @@
           {:else}
             Read-only (update checks · 5,000 req/hr).
           {/if}
+          {#if status.canGist}
+            · Collection sharing on.
+          {/if}
         </div>
       </div>
       <button class="gha-btn" onclick={disconnect}>Disconnect</button>
     </div>
     {#if flow}
-      <!-- Escalating scope (read-only → actions) while already connected: the code MUST
-           show here, since the connected branch owns the render when status.user is set. -->
+      <!-- Escalating scope (e.g. read-only → actions, or enabling collection sharing)
+           while already connected: the code MUST show here, since the connected branch
+           owns the render when status.user is set. -->
       {@render flowDisplay()}
-    {:else if !status.canWrite}
-      <div class="gha-row">
-        <div class="gha-hint">
-          Enable ⭐ Star / 👁 Watch on mod pages — grants the <code>public_repo</code>
-          scope so actions land on your GitHub account.
+    {:else}
+      {#if !status.canWrite}
+        <div class="gha-row">
+          <div class="gha-hint">
+            Enable ⭐ Star / 👁 Watch on mod pages — grants the <code>public_repo</code>
+            scope so actions land on your GitHub account.
+          </div>
+          <button class="gha-btn primary" onclick={() => connect(true, status.canGist)}>
+            Enable actions
+          </button>
         </div>
-        <button class="gha-btn primary" onclick={() => connect(true)}>Enable actions</button>
-      </div>
+      {/if}
+      {#if !status.canGist}
+        <div class="gha-row">
+          <div class="gha-hint">
+            Enable sharing Collections — grants the <code>gist</code> scope so a shared
+            mod set is saved to your own GitHub as a secret (unlisted) gist.
+          </div>
+          <button class="gha-btn primary" onclick={() => connect(status.canWrite, true)}>
+            Enable collection sharing
+          </button>
+        </div>
+      {/if}
     {/if}
   {:else if flow}
     {@render flowDisplay()}
