@@ -415,12 +415,14 @@ export async function mpVerify(local: MpModRef[]): Promise<MpVerifyReport | null
 export function collectionExport(
   name: string,
   description: string | null,
+  isPublic: boolean,
   mods: MpModRef[],
 ): Promise<CollectionExportResult> {
   return invoke<CollectionExportResult>("collection_export", {
     name,
     description,
     createdAt: new Date().toISOString(),
+    public: isPublic,
     mods,
   });
 }

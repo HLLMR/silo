@@ -48,18 +48,25 @@
 
   // ── Share as a link (Collection) ──
   let canGist = $state(false);
+  let canWrite = $state(false);
+  let sharePublic = $state(false);
   let collName = $state("");
   let shareBusy = $state(false);
   let shareErr = $state<string | null>(null);
   let shareResult = $state<CollectionExportResult | null>(null);
   let copied = $state(false);
 
+  // Private (secret gist) needs the gist scope; public (repo) needs public_repo.
+  const missingScope = $derived(sharePublic ? !canWrite : !canGist);
+
   async function refreshGh() {
     try {
       const s: GhStatus = await ghStatus();
       canGist = s.canGist;
+      canWrite = s.canWrite;
     } catch {
       canGist = false;
+      canWrite = false;
     }
   }
   refreshGh();
@@ -71,7 +78,7 @@
     shareResult = null;
     copied = false;
     try {
-      shareResult = await collectionExport(collName.trim(), null, active);
+      shareResult = await collectionExport(collName.trim(), null, sharePublic, active);
     } catch (e) {
       shareErr = String(e);
     } finally {
@@ -265,42 +272,56 @@
     <div class="card-title">Share as a link</div>
     <p class="card-body">
       Publishes a Collection — the list of your {zipCount} packaged mods, each pinned to a
-      version and a content hash — to your own GitHub as a secret gist, and gives you a link.
-      Whoever opens it in Silo can install and verify the exact set. No mod files are uploaded,
-      only the list.
+      version and a content hash — to your own GitHub, and gives you a link. Whoever opens it
+      in Silo can install and verify the exact set. No mod files are uploaded, only the list.
     </p>
 
-    {#if !canGist}
-      <p class="caveat">
-        Turn on <b>Enable collection sharing</b> in Settings → GitHub first — it grants the
-        <code>gist</code> permission so the link is saved to your account.
-      </p>
-    {:else if shareResult}
+    {#if shareResult}
+      {@const r = shareResult}
       <div class="ok-note">
-        Collection created with {shareResult.count} mod{shareResult.count === 1 ? "" : "s"}.
-        {#if shareResult.omitted.length > 0}
-          {shareResult.omitted.length} dev-mod folder{shareResult.omitted.length === 1 ? " was" : "s were"}
+        Collection created with {r.count} mod{r.count === 1 ? "" : "s"}.
+        {#if r.omitted.length > 0}
+          {r.omitted.length} dev-mod folder{r.omitted.length === 1 ? " was" : "s were"}
           left out (no fixed bytes to pin).
         {/if}
       </div>
       <div class="share-link">
-        <a class="mn link" href={shareResult.url} onclick={(e) => { e.preventDefault(); openExternal(shareResult!.url); }}>
-          {shareResult.url}
+        <a class="mn link" href={r.url} onclick={(e) => { e.preventDefault(); openExternal(r.url); }}>
+          {r.url}
         </a>
         <button class="btn" onclick={copyLink}>{copied ? "Copied ✓" : "Copy link"}</button>
       </div>
       <p class="caveat">
-        This is a <b>secret</b> gist: unlisted, but <b>not</b> password-protected — anyone with the
-        link can see the list. Share it only with your group.
+        {#if sharePublic}
+          <b>Public</b>: anyone with the link can view, install, and fork it — good for sharing
+          widely. It's a normal repo on your GitHub; delete it there to unpublish.
+        {:else}
+          <b>Secret</b> gist: unlisted, but <b>not</b> password-protected — anyone with the link
+          can see the list. Share it only with your group.
+        {/if}
       </p>
     {:else}
-      <div class="share-form">
-        <input
-          class="share-input"
-          placeholder="Collection name (e.g. Weekend Co-op Pack)"
-          bind:value={collName}
-          maxlength="80"
-        />
+      <input
+        class="share-input"
+        placeholder="Collection name (e.g. Weekend Co-op Pack)"
+        bind:value={collName}
+        maxlength="80"
+      />
+      <div class="vis-row">
+        <label><input type="radio" bind:group={sharePublic} value={false} /> Private — secret gist</label>
+        <label><input type="radio" bind:group={sharePublic} value={true} /> Public — forkable repo</label>
+      </div>
+      {#if missingScope}
+        <p class="caveat">
+          {#if sharePublic}
+            Public collections need <b>Enable actions</b> in Settings → GitHub (the
+            <code>public_repo</code> permission).
+          {:else}
+            Private collections need <b>Enable collection sharing</b> in Settings → GitHub (the
+            <code>gist</code> permission).
+          {/if}
+        </p>
+      {:else}
         <button
           class="btn primary"
           onclick={doShare}
@@ -308,7 +329,7 @@
         >
           {shareBusy ? "Publishing…" : "Create share link →"}
         </button>
-      </div>
+      {/if}
       {#if shareErr}<div class="err">{shareErr}</div>{/if}
     {/if}
   </div>
@@ -591,6 +612,19 @@
     color: var(--text);
     font: inherit;
     font-size: 0.85rem;
+  }
+  .vis-row {
+    display: flex;
+    gap: 16px;
+    margin: 8px 0;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+  .vis-row label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
   }
   .share-link {
     display: flex;

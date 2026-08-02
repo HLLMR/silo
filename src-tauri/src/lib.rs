@@ -1090,18 +1090,21 @@ struct ExportResult {
 }
 
 /// Export a mod set as a shareable Collection: pin each mod's identity (version +
-/// canonical provenance hash of the curator's own build), enrich with a catalog source
-/// so an importer can fetch it, and write it to the user's GitHub as a secret gist.
+/// canonical provenance hash of the curator's own build), enrich with a catalog source so
+/// an importer can fetch it, and publish it to the user's GitHub — a secret gist (private,
+/// `gist` scope) or, when `public`, a public repo with a generated README (`public_repo`
+/// scope, forkable/discoverable — the P2 transport).
 ///
 /// The trust field is the LOCAL provenance `manifestHash` — content-addressed, so an
 /// importer can verify they got the exact build the curator shared even from a re-zipped
-/// source. Requires the `gist` scope (see `collection sharing` in Settings → GitHub).
+/// source.
 #[tauri::command]
 async fn collection_export(
     app: tauri::AppHandle,
     name: String,
     description: Option<String>,
     created_at: Option<String>,
+    public: Option<bool>,
     mods: Vec<mpsync::ModRef>,
 ) -> Result<ExportResult, String> {
     let base = siloapi_base(&app)?;
@@ -1113,7 +1116,7 @@ async fn collection_export(
         }
         let conn = db::open(&db)?;
         let token = secrets::get(&conn, "gh_token")
-            .ok_or_else(|| "Connect GitHub with collection sharing enabled first".to_string())?;
+            .ok_or_else(|| "Connect your GitHub account first".to_string())?;
         let author = db::get_app_setting(&conn, "gh_user");
 
         // Directory (dev/unpacked) mods can't be pinned by bytes — leave them out and say so.
@@ -1166,14 +1169,48 @@ async fn collection_export(
             mods: entries,
         };
         let json = collection::to_json(&coll)?;
-        let gist = github::create_secret_gist(
-            &token,
-            &format!("{name} — a Silo mod collection"),
-            collection::FILE_NAME,
-            &json,
-        )?;
+        let url = if public.unwrap_or(false) {
+            // P2: a public, forkable repo holding the collection + a human-readable README.
+            let repo = github::create_public_repo(
+                &token,
+                &collection::repo_slug(&name),
+                &format!("A Silo FS25 mod collection ({} mods)", coll.mods.len()),
+            )?;
+            let readme = collection::readme(&coll, &repo.html_url);
+            let (owner, rname) = repo
+                .full_name
+                .split_once('/')
+                .map(|(o, r)| (o.to_string(), r.to_string()))
+                .unwrap_or_default();
+            github::put_repo_file(
+                &token,
+                &owner,
+                &rname,
+                collection::FILE_NAME,
+                &json,
+                "Add collection (via Silo)",
+            )?;
+            github::put_repo_file(
+                &token,
+                &owner,
+                &rname,
+                "README.md",
+                &readme,
+                "Add README (via Silo)",
+            )?;
+            repo.html_url
+        } else {
+            // P1: a secret (unlisted) gist for private / group sharing.
+            github::create_secret_gist(
+                &token,
+                &format!("{name} — a Silo mod collection"),
+                collection::FILE_NAME,
+                &json,
+            )?
+            .html_url
+        };
         Ok(ExportResult {
-            url: gist.html_url,
+            url,
             count: coll.mods.len(),
             omitted,
         })
