@@ -247,12 +247,9 @@ export function ghSetClientId(clientId: string): Promise<void> {
 export function ghDeviceStart(write = false, gist = false): Promise<DeviceCode> {
   return invoke<DeviceCode>("gh_device_start", { write, gist });
 }
-export function ghDevicePoll(
-  deviceCode: string,
-  write = false,
-  gist = false,
-): Promise<PollResult> {
-  return invoke<PollResult>("gh_device_poll", { deviceCode, write, gist });
+// Poll takes no intent — capability is read from the scopes GitHub grants on the token.
+export function ghDevicePoll(deviceCode: string): Promise<PollResult> {
+  return invoke<PollResult>("gh_device_poll", { deviceCode });
 }
 export function ghLogout(): Promise<void> {
   return invoke("gh_logout");

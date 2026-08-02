@@ -56,7 +56,7 @@
       let interval = Math.max(dc.interval, 3);
       const tick = async () => {
         try {
-          const r = await ghDevicePoll(dc.deviceCode, write, gist);
+          const r = await ghDevicePoll(dc.deviceCode);
           if (r.status === "ok") {
             flow = null;
             await refresh();
