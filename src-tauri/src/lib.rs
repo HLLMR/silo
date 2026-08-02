@@ -1159,6 +1159,122 @@ async fn collection_export(
     .map_err(|e| e.to_string())?
 }
 
+/// One mod in an import plan, tagged with what the importer would do about it.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PlanRow {
+    tech_name: String,
+    /// Version pinned by the collection.
+    version: Option<String>,
+    /// The source the importer would use / send the user to.
+    source: Option<String>,
+    /// For `version_drift`: the version already in the library.
+    installed_version: Option<String>,
+}
+
+/// A read-only preview of importing a shared collection: what you already have, what's a
+/// different version, what Silo can install for you (a directly-downloadable source), and
+/// what you'll need to fetch yourself (ModHub/Nexus gate downloads) or that isn't catalogued.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ImportPlan {
+    name: String,
+    description: Option<String>,
+    author: Option<String>,
+    will_install: Vec<PlanRow>,
+    open_page: Vec<PlanRow>,
+    already_present: Vec<PlanRow>,
+    version_drift: Vec<PlanRow>,
+    unresolved: Vec<PlanRow>,
+}
+
+/// Fetch a shared collection by gist link/id, parse it, and bucket every mod against the
+/// caller's installed set + the catalog — WITHOUT touching a single file. One batch catalog
+/// lookup covers the whole list. The apply step (which does install) is a separate command.
+#[tauri::command]
+async fn collection_import_preview(
+    app: tauri::AppHandle,
+    url_or_id: String,
+    installed: Vec<LocalMod>,
+) -> Result<ImportPlan, String> {
+    let base = siloapi_base(&app)?;
+    let db = db_path(&app)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<ImportPlan, String> {
+        let id = collection::parse_gist_ref(&url_or_id)
+            .ok_or_else(|| "That doesn't look like a GitHub gist link".to_string())?;
+        let conn = db::open(&db)?;
+        let token = secrets::get(&conn, "gh_token");
+        let json = github::read_gist_file(&id, collection::FILE_NAME, token.as_deref())?;
+        let coll = collection::parse(&json)?;
+
+        let installed_by: std::collections::HashMap<&str, Option<&str>> = installed
+            .iter()
+            .map(|m| (m.tech_name.as_str(), m.version.as_deref()))
+            .collect();
+
+        // One lookup resolves catalog presence + best installable source for every mod.
+        let names: Vec<String> = coll.mods.iter().map(|m| m.tech_name.clone()).collect();
+        let hits = siloapi::lookup(&base, &names).unwrap_or_default();
+        let by_tech: std::collections::HashMap<&str, &siloapi::LookupResult> = hits
+            .iter()
+            .filter_map(|r| r.tech_name.as_deref().map(|t| (t, r)))
+            .collect();
+
+        let mut plan = ImportPlan {
+            name: coll.name.clone(),
+            description: coll.description.clone(),
+            author: coll.author.clone(),
+            will_install: Vec::new(),
+            open_page: Vec::new(),
+            already_present: Vec::new(),
+            version_drift: Vec::new(),
+            unresolved: Vec::new(),
+        };
+
+        for m in &coll.mods {
+            let hit = by_tech.get(m.tech_name.as_str());
+            let installable_source = hit
+                .and_then(|r| r.download.as_ref())
+                .map(|d| d.source.clone())
+                .or_else(|| m.source.clone());
+            let row = |installed_version: Option<String>| PlanRow {
+                tech_name: m.tech_name.clone(),
+                version: m.version.clone(),
+                source: installable_source.clone(),
+                installed_version,
+            };
+
+            match installed_by.get(m.tech_name.as_str()) {
+                Some(have) => {
+                    let have = have.map(|s| s.to_string());
+                    // A pinned version that differs from what's installed is a drift row;
+                    // no pin (or an equal pin) counts as satisfied.
+                    let drift = matches!((&m.version, &have), (Some(w), Some(h)) if w != h);
+                    if drift {
+                        plan.version_drift.push(row(have));
+                    } else {
+                        plan.already_present.push(row(have));
+                    }
+                }
+                None => {
+                    let installable = hit.is_some_and(|r| r.download.is_some());
+                    if installable {
+                        plan.will_install.push(row(None));
+                    } else if hit.is_some() {
+                        // In the catalog, but no direct download (ModHub/Nexus gate it).
+                        plan.open_page.push(row(None));
+                    } else {
+                        plan.unresolved.push(row(None));
+                    }
+                }
+            }
+        }
+        Ok(plan)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// Parse the FS25 log.txt and report which mods are throwing errors/warnings, whether
 /// the last run crashed, and the culprit ranking. Read-only; touches nothing.
 #[tauri::command]
@@ -1406,6 +1522,7 @@ pub fn run() {
             mp_export,
             mp_verify_file,
             collection_export,
+            collection_import_preview,
             generate_bridge,
             bisect_plan,
             bisect_narrow,

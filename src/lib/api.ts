@@ -43,6 +43,7 @@ import type {
   MpModRef,
   MpVerifyReport,
   CollectionExportResult,
+  ImportPlan,
   BridgeSpec,
 } from "./types";
 
@@ -423,6 +424,17 @@ export function collectionExport(
     createdAt: new Date().toISOString(),
     mods,
   });
+}
+
+/**
+ * Preview importing a shared collection from a gist link/id, bucketed against the
+ * installed library + catalog. Read-only — touches no files.
+ */
+export function collectionImportPreview(
+  urlOrId: string,
+  installed: { techName: string; version: string | null }[],
+): Promise<ImportPlan> {
+  return invoke<ImportPlan>("collection_import_preview", { urlOrId, installed });
 }
 
 // ── Guided bisection ──
