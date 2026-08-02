@@ -685,6 +685,79 @@ pub fn read_repo_file(
         .map_err(|e| e.to_string())
 }
 
+/// A repo we created — the fields Collections needs.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RepoRef {
+    pub full_name: String,
+    pub html_url: String,
+}
+
+/// POST /user/repos — create a public repo for a shared collection (P2). `auto_init` is
+/// off so we own the first commit and can create both files cleanly via the Contents API;
+/// needs the `public_repo` scope Silo already requests for star/watch.
+pub fn create_public_repo(token: &str, name: &str, description: &str) -> Result<RepoRef, String> {
+    let body = ureq::json!({
+        "name": name,
+        "description": description,
+        "private": false,
+        "auto_init": false,
+    });
+    let v = ureq::post("https://api.github.com/user/repos")
+        .set("Accept", "application/vnd.github+json")
+        .set("User-Agent", UA)
+        .set("Authorization", &format!("Bearer {token}"))
+        .send_json(body)
+        .map_err(|e| match e {
+            ureq::Error::Status(422, _) => {
+                "You already have a repository with that name — rename the collection or \
+                 delete the old repo"
+                    .to_string()
+            }
+            other => gh_err(other),
+        })?
+        .into_json::<serde_json::Value>()
+        .map_err(|e| e.to_string())?;
+    let full_name = v["full_name"].as_str().unwrap_or_default().to_string();
+    let html_url = v["html_url"].as_str().unwrap_or_default().to_string();
+    if full_name.is_empty() {
+        return Err("GitHub did not return the created repository".into());
+    }
+    Ok(RepoRef {
+        full_name,
+        html_url,
+    })
+}
+
+/// PUT /repos/{owner}/{repo}/contents/{path} — create a file on the `main` branch. The
+/// Contents API requires base64-encoded content; on an auto_init:false repo the first PUT
+/// bootstraps the branch. Needs `public_repo` scope.
+pub fn put_repo_file(
+    token: &str,
+    owner: &str,
+    repo: &str,
+    path: &str,
+    content: &str,
+    message: &str,
+) -> Result<(), String> {
+    use base64::Engine;
+    let encoded = base64::engine::general_purpose::STANDARD.encode(content.as_bytes());
+    let body = ureq::json!({
+        "message": message,
+        "content": encoded,
+        "branch": "main",
+    });
+    ureq::put(&format!(
+        "https://api.github.com/repos/{owner}/{repo}/contents/{path}"
+    ))
+    .set("Accept", "application/vnd.github+json")
+    .set("User-Agent", UA)
+    .set("Authorization", &format!("Bearer {token}"))
+    .send_json(body)
+    .map_err(gh_err)?;
+    Ok(())
+}
+
 /// Best-effort scan of arbitrary text (a modDesc.xml) for the first
 /// `github.com/owner/repo` reference. Skips non-repo GitHub paths.
 pub fn find_repo_in_text(text: &str) -> Option<(String, String)> {
