@@ -42,6 +42,7 @@ import type {
   BindingReport,
   MpModRef,
   MpVerifyReport,
+  CollectionExportResult,
   BridgeSpec,
 } from "./types";
 
@@ -403,6 +404,25 @@ export async function mpVerify(local: MpModRef[]): Promise<MpVerifyReport | null
   });
   if (!path || Array.isArray(path)) return null;
   return await invoke<MpVerifyReport>("mp_verify_file", { path, local });
+}
+
+// ── Collections (share a mod set as a link) ──
+/**
+ * Export a mod set as a Collection and publish it to the user's GitHub as a secret gist.
+ * Returns the shareable URL + how many mods went in + any dev-mod folders left out.
+ * Requires the `gist` scope (Settings → GitHub → Enable collection sharing).
+ */
+export function collectionExport(
+  name: string,
+  description: string | null,
+  mods: MpModRef[],
+): Promise<CollectionExportResult> {
+  return invoke<CollectionExportResult>("collection_export", {
+    name,
+    description,
+    createdAt: new Date().toISOString(),
+    mods,
+  });
 }
 
 // ── Guided bisection ──

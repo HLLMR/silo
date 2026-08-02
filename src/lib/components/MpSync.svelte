@@ -1,8 +1,8 @@
 <script lang="ts">
   // Multiplayer mod-set sync: export a manifest of your active set to share, or verify
   // your set against a friend's — turning FS's "mod mismatch" join error into a fix-list.
-  import { mpExport, mpVerify } from "../api";
-  import type { MpModRef, MpVerifyReport } from "../types";
+  import { mpExport, mpVerify, collectionExport, ghStatus, openExternal } from "../api";
+  import type { MpModRef, MpVerifyReport, CollectionExportResult, GhStatus } from "../types";
 
   interface Props {
     /** The active set as (techName, path, kind, version) refs. */
@@ -18,6 +18,49 @@
 
   const zipCount = $derived(active.filter((m) => m.kind === "zip").length);
   const dirCount = $derived(active.length - zipCount);
+
+  // ── Share as a link (Collection) ──
+  let canGist = $state(false);
+  let collName = $state("");
+  let shareBusy = $state(false);
+  let shareErr = $state<string | null>(null);
+  let shareResult = $state<CollectionExportResult | null>(null);
+  let copied = $state(false);
+
+  async function refreshGh() {
+    try {
+      const s: GhStatus = await ghStatus();
+      canGist = s.canGist;
+    } catch {
+      canGist = false;
+    }
+  }
+  refreshGh();
+
+  async function doShare() {
+    if (!collName.trim()) return;
+    shareBusy = true;
+    shareErr = null;
+    shareResult = null;
+    copied = false;
+    try {
+      shareResult = await collectionExport(collName.trim(), null, active);
+    } catch (e) {
+      shareErr = String(e);
+    } finally {
+      shareBusy = false;
+    }
+  }
+
+  async function copyLink() {
+    if (!shareResult) return;
+    try {
+      await navigator.clipboard.writeText(shareResult.url);
+      copied = true;
+    } catch {
+      copied = false;
+    }
+  }
 
   async function doExport() {
     busy = "Hashing & saving…";
@@ -94,6 +137,58 @@
       (dev mods) — those can't be byte-verified and are marked unmatched in a manifest.
     </p>
   {/if}
+
+  <div class="share">
+    <div class="card-title">Share as a link</div>
+    <p class="card-body">
+      Publishes a Collection — the list of your {zipCount} packaged mods, each pinned to a
+      version and a content hash — to your own GitHub as a secret gist, and gives you a link.
+      Whoever opens it in Silo can install and verify the exact set. No mod files are uploaded,
+      only the list.
+    </p>
+
+    {#if !canGist}
+      <p class="caveat">
+        Turn on <b>Enable collection sharing</b> in Settings → GitHub first — it grants the
+        <code>gist</code> permission so the link is saved to your account.
+      </p>
+    {:else if shareResult}
+      <div class="ok-note">
+        Collection created with {shareResult.count} mod{shareResult.count === 1 ? "" : "s"}.
+        {#if shareResult.omitted.length > 0}
+          {shareResult.omitted.length} dev-mod folder{shareResult.omitted.length === 1 ? " was" : "s were"}
+          left out (no fixed bytes to pin).
+        {/if}
+      </div>
+      <div class="share-link">
+        <a class="mn link" href={shareResult.url} onclick={(e) => { e.preventDefault(); openExternal(shareResult!.url); }}>
+          {shareResult.url}
+        </a>
+        <button class="btn" onclick={copyLink}>{copied ? "Copied ✓" : "Copy link"}</button>
+      </div>
+      <p class="caveat">
+        This is a <b>secret</b> gist: unlisted, but <b>not</b> password-protected — anyone with the
+        link can see the list. Share it only with your group.
+      </p>
+    {:else}
+      <div class="share-form">
+        <input
+          class="share-input"
+          placeholder="Collection name (e.g. Weekend Co-op Pack)"
+          bind:value={collName}
+          maxlength="80"
+        />
+        <button
+          class="btn primary"
+          onclick={doShare}
+          disabled={shareBusy || !collName.trim() || zipCount === 0}
+        >
+          {shareBusy ? "Publishing…" : "Create share link →"}
+        </button>
+      </div>
+      {#if shareErr}<div class="err">{shareErr}</div>{/if}
+    {/if}
+  </div>
 
   {#if report}
     {@const r = report}
@@ -237,6 +332,47 @@
     margin: 12px 0 0;
     font-size: 0.78rem;
     color: var(--text-muted);
+  }
+  .share {
+    margin-top: 18px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+  }
+  .share .card-body {
+    margin: 6px 0 10px;
+  }
+  .share-form {
+    display: flex;
+    gap: 10px;
+  }
+  .share-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.85rem;
+  }
+  .share-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0 4px;
+  }
+  .link {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--info);
+    text-decoration: none;
+  }
+  .link:hover {
+    text-decoration: underline;
   }
   .verdict {
     margin-top: 14px;
