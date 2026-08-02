@@ -35,6 +35,8 @@
     bisectSnapshotGet,
     bisectSnapshotClear,
     appVersion,
+    detectForeignFiles,
+    type ForeignFile,
   } from "./lib/api";
   import { checkUpdate, installUpdate, type AvailableUpdate } from "./lib/updater";
   import {
@@ -102,6 +104,7 @@
 
   let roots = $state<string[]>([]);
   let mods = $state<ModEntry[]>([]);
+  let foreignFiles = $state<ForeignFile[]>([]);
   let scanning = $state(false);
   let progress = $state({ done: 0, total: 0 });
   let result = $state<ScanResult | null>(null);
@@ -313,10 +316,13 @@
       const miss = m.dependencies.filter((d) => !lib.has(d));
       if (miss.length > 0) missingDeps.push({ mod: m, missing: miss });
     }
-    return { missingDeps, corrupt, ignored };
+    return { missingDeps, corrupt, ignored, foreign: foreignFiles };
   });
   const healthCount = $derived(
-    health.missingDeps.length + health.corrupt.length + health.ignored.length,
+    health.missingDeps.length +
+      health.corrupt.length +
+      health.ignored.length +
+      health.foreign.length,
   );
 
   const criticalCount = $derived(
@@ -409,6 +415,8 @@
     }
     for (const m of health.ignored) L.push(`- Ignored (digit prefix): ${m.techName}`);
     for (const m of health.corrupt) L.push(`- Corrupt: ${m.techName} — ${m.error}`);
+    for (const f of health.foreign)
+      L.push(`- Foreign file at a managed name: ${f.fileName} (isn't Silo's — left untouched)`);
     return L.join("\n");
   }
 
@@ -991,6 +999,10 @@
       result = r;
       mods = r.mods;
       activeSet = new Set(r.mods.filter((m) => m.active).map((m) => m.techName));
+      // Filesystem-level check (Rust): files at a managed name that aren't Silo's projection.
+      detectForeignFiles(roots[0])
+        .then((f) => (foreignFiles = f))
+        .catch(() => (foreignFiles = []));
     } catch (e) {
       errorMsg = String(e);
     } finally {

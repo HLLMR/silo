@@ -1198,6 +1198,15 @@ fn secret_storage_secure() -> bool {
     secrets::keychain_available()
 }
 
+/// Files in the flat mods root that occupy an organized mod's name but aren't Silo's projection
+/// (a build the user swapped in, a leftover, etc.). Silo never deletes them, but surfaces them
+/// so the user knows their intended mod isn't what will load from that name.
+#[tauri::command]
+fn detect_foreign_files(root: Option<String>) -> Result<Vec<organize::ForeignFile>, String> {
+    let root = primary_root(root)?;
+    Ok(organize::detect_foreign_projections(&root))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1280,7 +1289,8 @@ pub fn run() {
             save_mod_settings,
             save_mod_settings_raw,
             app_version,
-            secret_storage_secure
+            secret_storage_secure,
+            detect_foreign_files
         ])
         .run(tauri::generate_context!())
         .expect("error while running Silo");

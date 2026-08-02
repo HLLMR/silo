@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Library health flags foreign files in your mods folder.** If a file sits in the flat `mods/`
+  root at a name Silo manages but isn't the projection Silo created (a build you swapped in, a
+  leftover from another tool), Library health now surfaces it — so you know the mod that loads
+  from that name may not be the one you expect. Silo still never touches it. Detected by
+  identity (hardlink / symlink / marker / content), reusing the same check that guards deletions.
+  (#34)
+
 ## [0.2.4] - 2026-08-01
 
 ### Security

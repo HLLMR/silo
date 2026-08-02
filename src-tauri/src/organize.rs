@@ -451,6 +451,73 @@ fn is_silo_projection(link: &Path, src: &Path, kind: &str) -> bool {
     )
 }
 
+/// A file in the flat root occupying an organized mod's managed name that ISN'T Silo's
+/// projection — something the user (or another tool) placed there. Silo never deletes it, but
+/// the user should know their intended mod isn't what the game will load from that name.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ForeignFile {
+    pub tech_name: String,
+    pub file_name: String,
+    pub kind: String, // "zip" | "dir"
+}
+
+/// Scan the flat root for foreign/mismatched files sitting at organized mods' names. Cheap:
+/// parked mods leave the flat root empty, so it only identity-checks the handful of entries
+/// actually present against their archived source. Reuses [`is_silo_projection`], so a real
+/// hardlink/symlink/copy projection is never flagged — only a file Silo can't prove it created.
+pub fn detect_foreign_projections(root: &Path) -> Vec<ForeignFile> {
+    let archive = root.join(ARCHIVE);
+    if !archive.is_dir() {
+        return Vec::new();
+    }
+    // Map each organized mod's file name → its archived path (archive/<Category>/<name>).
+    let mut archived: std::collections::HashMap<std::ffi::OsString, PathBuf> =
+        std::collections::HashMap::new();
+    if let Ok(cats) = std::fs::read_dir(&archive) {
+        for cat in cats.flatten() {
+            if cat.path().is_dir() {
+                if let Ok(entries) = std::fs::read_dir(cat.path()) {
+                    for m in entries.flatten() {
+                        archived.insert(m.file_name(), m.path());
+                    }
+                }
+            }
+        }
+    }
+
+    let mut out = Vec::new();
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return out;
+    };
+    for e in entries.flatten() {
+        let name = e.file_name();
+        if name == ARCHIVE || name == "backups" {
+            continue;
+        }
+        // Only a name that maps to an organized mod counts — a plain loose zip with no archived
+        // counterpart is an ordinary "unorganized" mod (Organize handles it), not a mismatch.
+        let Some(src) = archived.get(&name) else {
+            continue;
+        };
+        let link = e.path();
+        let kind = if src.is_dir() { "dir" } else { "zip" };
+        if !is_silo_projection(&link, src, kind) {
+            let file_name = name.to_string_lossy().into_owned();
+            let tech_name = file_name
+                .strip_suffix(".zip")
+                .unwrap_or(&file_name)
+                .to_string();
+            out.push(ForeignFile {
+                tech_name,
+                file_name,
+                kind: kind.to_string(),
+            });
+        }
+    }
+    out
+}
+
 /// Remove a projected entry (hardlink, symlink, junction, or copy) without
 /// touching the archived original.
 fn remove_link(link: &Path) -> std::io::Result<()> {
@@ -621,5 +688,40 @@ mod tests {
         assert!(!archive.exists(), "a fully-empty archive tree is removed");
 
         let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn detect_foreign_flags_only_non_projections() {
+        let root = std::env::temp_dir().join(format!("silo_foreign_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let cat = root.join("archive").join("Vehicles");
+        std::fs::create_dir_all(&cat).unwrap();
+        let src = cat.join("FS25_Foo.zip");
+        std::fs::write(&src, b"the real archived mod bytes").unwrap();
+
+        // Nothing in the flat root → nothing flagged.
+        assert!(detect_foreign_projections(&root).is_empty());
+
+        // A genuine hardlink projection → NOT flagged (it's provably ours).
+        let link = root.join("FS25_Foo.zip");
+        std::fs::hard_link(&src, &link).unwrap();
+        assert!(
+            detect_foreign_projections(&root).is_empty(),
+            "a real hardlink projection must not be flagged"
+        );
+        std::fs::remove_file(&link).unwrap();
+
+        // A DIFFERENT file at that managed name → flagged as foreign.
+        std::fs::write(&link, b"the user's own, different build").unwrap();
+        let found = detect_foreign_projections(&root);
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].tech_name, "FS25_Foo");
+        assert_eq!(found[0].file_name, "FS25_Foo.zip");
+
+        // A loose zip with NO archived counterpart is an ordinary unorganized mod, not foreign.
+        std::fs::write(root.join("FS25_Unrelated.zip"), b"loose").unwrap();
+        assert_eq!(detect_foreign_projections(&root).len(), 1);
+
+        let _ = std::fs::remove_dir_all(&root);
     }
 }
