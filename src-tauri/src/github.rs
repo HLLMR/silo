@@ -562,6 +562,90 @@ pub fn set_watch(owner: &str, repo: &str, token: &str, on: bool) -> Result<bool,
     Ok(on)
 }
 
+// ── Gists (Collections transport) ─────────────────────────────────────────────
+// A shared Collection is written to the user's own GitHub as a *secret* gist. Secret
+// here means unlisted (not indexed/discoverable) — NOT access-controlled: anyone with
+// the link can read it. The UI is responsible for saying so. Creating/reading a gist
+// the user owns needs the `gist` OAuth scope (see `build_gh_scope`).
+
+/// A gist we created or read — just the fields Collections needs.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GistRef {
+    pub id: String,
+    /// The shareable web URL the user copies.
+    pub html_url: String,
+}
+
+/// POST /gists — create a secret gist holding a single named file. Needs `gist` scope.
+pub fn create_secret_gist(
+    token: &str,
+    description: &str,
+    filename: &str,
+    content: &str,
+) -> Result<GistRef, String> {
+    let body = ureq::json!({
+        "description": description,
+        "public": false,
+        "files": { filename: { "content": content } },
+    });
+    let v = ureq::post("https://api.github.com/gists")
+        .set("Accept", "application/vnd.github+json")
+        .set("User-Agent", UA)
+        .set("Authorization", &format!("Bearer {token}"))
+        .send_json(body)
+        .map_err(gh_err)?
+        .into_json::<serde_json::Value>()
+        .map_err(|e| e.to_string())?;
+    let id = v["id"].as_str().unwrap_or_default().to_string();
+    let html_url = v["html_url"].as_str().unwrap_or_default().to_string();
+    if id.is_empty() {
+        return Err("GitHub did not return a gist id".into());
+    }
+    Ok(GistRef { id, html_url })
+}
+
+/// GET /gists/{id} and return the named file's content. Reads are unauthenticated-capable,
+/// but pass the owner token when available (higher rate limit; required for a secret gist
+/// the anonymous API won't return). Errors if the file is absent from the gist.
+pub fn read_gist_file(id: &str, filename: &str, token: Option<&str>) -> Result<String, String> {
+    let v = gh_get(&format!("https://api.github.com/gists/{id}"), token)?;
+    let file = &v["files"][filename];
+    if file.is_null() {
+        return Err(format!(
+            "That gist has no {filename} — it may not be a Silo collection"
+        ));
+    }
+    // GitHub inlines file content, but truncates very large files and gives a raw_url.
+    // Our collection JSON is tiny, so this is defensive; follow raw_url if it happens.
+    if file["truncated"].as_bool().unwrap_or(false) {
+        if let Some(raw) = file["raw_url"].as_str() {
+            return fetch_gist_raw(raw, token);
+        }
+    }
+    file["content"]
+        .as_str()
+        .map(str::to_string)
+        .ok_or_else(|| "Gist file had no readable content".to_string())
+}
+
+/// Fetch a gist file's raw content (the `raw_url` GitHub returns for a truncated file).
+/// Guarded by `is_github_host` — the URL comes from GitHub's own response, but we never
+/// attach a bearer token to a non-GitHub host regardless.
+fn fetch_gist_raw(url: &str, token: Option<&str>) -> Result<String, String> {
+    if !is_github_host(url) {
+        return Err("Refusing to fetch gist content from a non-GitHub host".into());
+    }
+    let mut req = ureq::get(url).set("User-Agent", UA);
+    if let Some(t) = token {
+        req = req.set("Authorization", &format!("Bearer {t}"));
+    }
+    req.call()
+        .map_err(gh_err)?
+        .into_string()
+        .map_err(|e| e.to_string())
+}
+
 /// Best-effort scan of arbitrary text (a modDesc.xml) for the first
 /// `github.com/owner/repo` reference. Skips non-repo GitHub paths.
 pub fn find_repo_in_text(text: &str) -> Option<(String, String)> {
