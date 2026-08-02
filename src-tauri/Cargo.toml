@@ -39,7 +39,7 @@ same-file = "1"
 # Provenance manifest hashing (src/provenance.rs) — sha256 of entry/manifest bytes, NFC
 # path normalization. Byte-exact parity with SiloAPI is contract-critical, so these back
 # the ratified canonicalization (docs: PROVENANCE-CANONICALIZATION.md §7 test vectors).
-sha2 = "0.10"
+sha2 = "0.11"
 unicode-normalization = "0.1"
 dirs = "5"
 # Icon decoding: FS25 mod icons are usually .dds (BC1/BC3/BC7); some are .png/.jpg.
