@@ -31,7 +31,7 @@ walkdir = "2"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 quick-xml = "0.41"
 rayon = "1"
-md5 = "0.7"
+md5 = "0.8"
 # Cross-platform "are these the same underlying file?" (file id / inode) — used to prove a
 # flat-root entry really is Silo's hardlink projection before removing it. Already in the
 # tree via walkdir; taken as a direct dep here.
