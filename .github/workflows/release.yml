@@ -109,11 +109,13 @@ jobs:
                 --jq "map(select(.tag_name==\"$tag\")) | .[0].id")
           [ -n "$rel" ] && [ "$rel" != "null" ] || { echo "no release found for $tag"; exit 1; }
           mkdir -p dist && cd dist
-          # Download each asset (except any prior checksums file) to hash it.
+          # Download each asset (except any prior checksums file) to hash it. NOTE: listing
+          # is /releases/:rel/assets, but a single asset GET is /releases/assets/:id — NOT
+          # nested under the release id. The nested form 404s (this job never worked before).
           gh api "repos/$repo/releases/$rel/assets" --paginate \
             --jq '.[] | select(.name != "SHA256SUMS.txt") | "\(.id)\t\(.name)"' \
           | while IFS=$'\t' read -r id name; do
-              gh api "repos/$repo/releases/$rel/assets/$id" \
+              gh api "repos/$repo/releases/assets/$id" \
                 -H "Accept: application/octet-stream" > "$name"
             done
           sha256sum * | sort -k2 > SHA256SUMS.txt
@@ -122,7 +124,7 @@ jobs:
           # on a draft, which `gh release upload <tag>` can't reliably resolve).
           old=$(gh api "repos/$repo/releases/$rel/assets" \
                 --jq '.[] | select(.name=="SHA256SUMS.txt") | .id' | head -1)
-          [ -n "$old" ] && gh api -X DELETE "repos/$repo/releases/$rel/assets/$old" || true
+          [ -n "$old" ] && gh api -X DELETE "repos/$repo/releases/assets/$old" || true
           curl -sSf -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Content-Type: text/plain" \
