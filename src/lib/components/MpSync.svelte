@@ -323,7 +323,7 @@
     <div class="share-form">
       <input
         class="share-input"
-        placeholder="https://gist.github.com/…"
+        placeholder="Paste a gist or github.com/owner/repo link…"
         bind:value={importUrl}
       />
       <button class="btn primary" onclick={doPreview} disabled={importBusy || !importUrl.trim()}>
