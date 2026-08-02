@@ -66,7 +66,7 @@ jobs:
       # (`npm run build`), but the deps must be installed first.
       - run: npm ci
 
-      - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
+      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Updater signing — signs the bundles and emits latest.json so the in-app
