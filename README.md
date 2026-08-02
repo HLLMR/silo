@@ -48,7 +48,7 @@ is the management layer the game left out.
   filltypes, vehicle types and scripts across your active set.
 - **Cross-source catalog** — one record per mod aggregating ModHub + GitHub + Nexus,
   with the latest version found across all of them. See the
-  [catalog & provenance page](https://silo.hllmr.com/catalog/) or
+  [verified catalog page](https://silo.hllmr.com/trust/) or
   [browse it live](https://silo.hllmr.com/browse/); it's served by the public
   [SiloAPI](https://silo-api.hllmr.com) read API.
 - **Integrity check** — hashes an installed mod and compares it to the trusted build its
