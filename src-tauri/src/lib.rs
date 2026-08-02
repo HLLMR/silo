@@ -5,6 +5,7 @@ pub mod bindings;
 pub mod bisect;
 pub mod bridge;
 pub mod category;
+pub mod collection;
 pub mod conflicts;
 pub mod db;
 pub mod fsgame;
