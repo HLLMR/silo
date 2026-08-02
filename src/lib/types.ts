@@ -192,6 +192,8 @@ export interface GhStatus {
   builtin: boolean;
   /** True when the stored token can star/watch (public_repo OAuth grant or a PAT). */
   canWrite: boolean;
+  /** True when the stored token can create/read gists (the `gist` grant) — needed to share a Collection. */
+  canGist: boolean;
 }
 
 /** Nexus connection state (personal API key). */

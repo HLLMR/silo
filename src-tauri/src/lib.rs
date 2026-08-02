@@ -209,6 +209,9 @@ struct GhStatus {
     /// True when the stored token can act (star/watch): a `public_repo` OAuth grant
     /// or a PAT. Read-only (`read:user`) connections report false.
     can_write: bool,
+    /// True when the stored token can create/read the user's gists (the `gist` OAuth
+    /// grant) — needed to share a Collection. Independent of `can_write`.
+    can_gist: bool,
 }
 
 #[tauri::command]
@@ -220,6 +223,7 @@ fn gh_status(app: tauri::AppHandle) -> Result<GhStatus, String> {
         user: db::get_app_setting(&conn, "gh_user"),
         builtin: !SILO_GH_CLIENT_ID.is_empty(),
         can_write: db::get_app_setting(&conn, "gh_write").as_deref() == Some("1"),
+        can_gist: db::get_app_setting(&conn, "gh_gist").as_deref() == Some("1"),
     })
 }
 
@@ -238,23 +242,35 @@ fn gh_set_client_id(app: tauri::AppHandle, client_id: String) -> Result<(), Stri
 async fn gh_device_start(
     app: tauri::AppHandle,
     write: Option<bool>,
+    gist: Option<bool>,
 ) -> Result<github::DeviceCode, String> {
     let db = db_path(&app)?;
-    // Only ask for `public_repo` when the user is enabling actions — a plain sign-in
-    // for update-checks stays read-only.
-    let scope = if write.unwrap_or(false) {
-        "read:user public_repo"
-    } else {
-        "read:user"
-    };
+    // Ask only for what the user is enabling — a plain sign-in for update-checks stays
+    // read-only. `public_repo` is added for star/watch actions, `gist` for Collection
+    // sharing. GitHub accumulates scopes across authorizations, so the caller requests
+    // the union of what it already holds plus the new capability.
+    let scope = build_gh_scope(write.unwrap_or(false), gist.unwrap_or(false));
     tauri::async_runtime::spawn_blocking(move || -> Result<github::DeviceCode, String> {
         let conn = db::open(&db)?;
         let cid = effective_client_id(&conn)
             .ok_or_else(|| "No GitHub OAuth App Client ID configured".to_string())?;
-        github::device_start(&cid, scope)
+        github::device_start(&cid, &scope)
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+/// Build the OAuth scope string for a device-flow request. `read:user` is always
+/// present (identity + higher rate limit); `public_repo`/`gist` are added per capability.
+fn build_gh_scope(write: bool, gist: bool) -> String {
+    let mut scopes = vec!["read:user"];
+    if write {
+        scopes.push("public_repo");
+    }
+    if gist {
+        scopes.push("gist");
+    }
+    scopes.join(" ")
 }
 
 #[tauri::command]
@@ -262,9 +278,11 @@ async fn gh_device_poll(
     app: tauri::AppHandle,
     device_code: String,
     write: Option<bool>,
+    gist: Option<bool>,
 ) -> Result<github::PollResult, String> {
     let db = db_path(&app)?;
     let write = write.unwrap_or(false);
+    let gist = gist.unwrap_or(false);
     tauri::async_runtime::spawn_blocking(move || -> Result<github::PollResult, String> {
         let conn = db::open(&db)?;
         let cid =
@@ -275,7 +293,10 @@ async fn gh_device_poll(
                 let user = github::whoami(tok).unwrap_or_default();
                 secrets::set(&conn, "gh_token", Some(tok))?;
                 db::set_app_setting(&conn, "gh_user", Some(&user))?;
+                // The caller requests the union of held + new capability, so each flag
+                // reflects this grant directly (a plain sign-in clears both to read-only).
                 db::set_app_setting(&conn, "gh_write", if write { Some("1") } else { None })?;
+                db::set_app_setting(&conn, "gh_gist", if gist { Some("1") } else { None })?;
             }
         }
         // Never expose the raw token to the frontend.
@@ -751,6 +772,7 @@ fn gh_logout(app: tauri::AppHandle) -> Result<(), String> {
     secrets::set(&conn, "gh_token", None)?;
     db::set_app_setting(&conn, "gh_user", None)?;
     db::set_app_setting(&conn, "gh_write", None)?;
+    db::set_app_setting(&conn, "gh_gist", None)?;
     Ok(())
 }
 
@@ -1295,4 +1317,22 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running Silo");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_gh_scope;
+
+    #[test]
+    fn scope_is_read_only_by_default() {
+        assert_eq!(build_gh_scope(false, false), "read:user");
+    }
+
+    #[test]
+    fn scope_adds_capabilities_additively() {
+        assert_eq!(build_gh_scope(true, false), "read:user public_repo");
+        assert_eq!(build_gh_scope(false, true), "read:user gist");
+        // The union — enabling one capability while holding the other keeps both.
+        assert_eq!(build_gh_scope(true, true), "read:user public_repo gist");
+    }
 }
