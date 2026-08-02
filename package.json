@@ -23,7 +23,7 @@
     "@tauri-apps/plugin-updater": "^2"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^5",
+    "@sveltejs/vite-plugin-svelte": "^7",
     "@tauri-apps/cli": "^2",
     "@tsconfig/svelte": "^5",
     "svelte": "^5",
