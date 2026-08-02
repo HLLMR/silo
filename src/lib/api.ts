@@ -59,6 +59,18 @@ export function secretStorageSecure(): Promise<boolean> {
   return invoke<boolean>("secret_storage_secure");
 }
 
+/** A file in the flat mods root at a managed name that isn't Silo's projection. */
+export interface ForeignFile {
+  techName: string;
+  fileName: string;
+  kind: string;
+}
+
+/** Detect files squatting at an organized mod's name that Silo didn't create. */
+export function detectForeignFiles(root?: string): Promise<ForeignFile[]> {
+  return invoke<ForeignFile[]>("detect_foreign_files", { root: root ?? null });
+}
+
 export function scanMods(roots?: string[]): Promise<ScanResult> {
   return invoke<ScanResult>("scan_mods", { roots: roots ?? null });
 }

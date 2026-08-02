@@ -10,6 +10,7 @@
       missingDeps: { mod: ModEntry; missing: string[] }[];
       corrupt: ModEntry[];
       ignored: ModEntry[];
+      foreign: { techName: string; fileName: string; kind: string }[];
     };
     healthCount: number;
     onClose: () => void;
@@ -59,6 +60,19 @@
       <div class="hz-row">
         <div class="hz-name">{m.title ?? m.techName}</div>
         <div class="hz-detail">{m.error}</div>
+      </div>
+    {/each}
+  {/if}
+
+  {#if health.foreign.length > 0}
+    <div class="hz-group">Foreign files in your mods folder ({health.foreign.length})</div>
+    {#each health.foreign as f (f.fileName)}
+      <div class="hz-row">
+        <div class="hz-name tnum">{f.fileName}</div>
+        <div class="hz-detail">
+          A file sits at this managed name that Silo didn't create — a build you swapped in, or a
+          leftover. Silo won't touch it, but the mod that loads here may not be the one you expect.
+        </div>
       </div>
     {/each}
   {/if}
