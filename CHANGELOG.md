@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Release downloads now include a `SHA256SUMS.txt`** so you can verify your installer. The job
+  that generates it used the wrong GitHub API endpoint and had silently never produced the file;
+  it now attaches on each release. (#82)
+
 ## [0.3.0] - 2026-08-02
 
 ### Added
