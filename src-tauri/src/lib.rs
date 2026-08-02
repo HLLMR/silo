@@ -1053,6 +1053,112 @@ async fn mp_verify_file(
     .map_err(|e| e.to_string())?
 }
 
+// ── Collections (share a mod set) ──
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportResult {
+    /// The shareable gist URL the user copies.
+    url: String,
+    /// How many mods went into the collection.
+    count: usize,
+    /// Dev/unpacked (directory) mods left out — they have no stable bytes to pin.
+    omitted: Vec<String>,
+}
+
+/// Export a mod set as a shareable Collection: pin each mod's identity (version +
+/// canonical provenance hash of the curator's own build), enrich with a catalog source
+/// so an importer can fetch it, and write it to the user's GitHub as a secret gist.
+///
+/// The trust field is the LOCAL provenance `manifestHash` — content-addressed, so an
+/// importer can verify they got the exact build the curator shared even from a re-zipped
+/// source. Requires the `gist` scope (see `collection sharing` in Settings → GitHub).
+#[tauri::command]
+async fn collection_export(
+    app: tauri::AppHandle,
+    name: String,
+    description: Option<String>,
+    created_at: Option<String>,
+    mods: Vec<mpsync::ModRef>,
+) -> Result<ExportResult, String> {
+    let base = siloapi_base(&app)?;
+    let db = db_path(&app)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<ExportResult, String> {
+        let name = name.trim().to_string();
+        if name.is_empty() {
+            return Err("Give the collection a name".into());
+        }
+        let conn = db::open(&db)?;
+        let token = secrets::get(&conn, "gh_token")
+            .ok_or_else(|| "Connect GitHub with collection sharing enabled first".to_string())?;
+        let author = db::get_app_setting(&conn, "gh_user");
+
+        // Directory (dev/unpacked) mods can't be pinned by bytes — leave them out and say so.
+        let (zips, dirs): (Vec<_>, Vec<_>) = mods.into_iter().partition(|m| m.kind == "zip");
+        let omitted: Vec<String> = dirs.into_iter().map(|m| m.tech_name).collect();
+        if zips.is_empty() {
+            return Err(
+                "Nothing to share — a collection needs at least one packaged (.zip) mod".into(),
+            );
+        }
+
+        // Catalog enrichment: one batch lookup gives each mod a source + catalog id so an
+        // importer can resolve it. Best-effort — an uncataloged mod still pins by identity.
+        let names: Vec<String> = zips.iter().map(|m| m.tech_name.clone()).collect();
+        let hits = siloapi::lookup(&base, &names).unwrap_or_default();
+        let by_tech: std::collections::HashMap<&str, &siloapi::LookupResult> = hits
+            .iter()
+            .filter_map(|r| r.tech_name.as_deref().map(|t| (t, r)))
+            .collect();
+
+        let mut entries: Vec<collection::CollectionMod> = zips
+            .iter()
+            .map(|m| {
+                // The curator's own build hash — the trust anchor. Best-effort per mod.
+                let manifest_hash = provenance::manifest_from_zip(std::path::Path::new(&m.path))
+                    .ok()
+                    .map(|lm| lm.manifest_hash);
+                let hit = by_tech.get(m.tech_name.as_str());
+                let dl = hit.and_then(|r| r.download.as_ref());
+                collection::CollectionMod {
+                    tech_name: m.tech_name.clone(),
+                    version: m.version.clone(),
+                    source: dl.map(|d| d.source.clone()),
+                    source_url: None,
+                    manifest_hash,
+                    installable: hit.map(|_| dl.is_some()),
+                    catalog_id: hit.map(|r| r.id.clone()),
+                }
+            })
+            .collect();
+        entries.sort_by(|a, b| a.tech_name.cmp(&b.tech_name));
+
+        let coll = collection::Collection {
+            schema: collection::SCHEMA.to_string(),
+            name: name.clone(),
+            description: description.filter(|s| !s.trim().is_empty()),
+            author,
+            created_at,
+            savegame: None,
+            mods: entries,
+        };
+        let json = collection::to_json(&coll)?;
+        let gist = github::create_secret_gist(
+            &token,
+            &format!("{name} — a Silo mod collection"),
+            collection::FILE_NAME,
+            &json,
+        )?;
+        Ok(ExportResult {
+            url: gist.html_url,
+            count: coll.mods.len(),
+            omitted,
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// Parse the FS25 log.txt and report which mods are throwing errors/warnings, whether
 /// the last run crashed, and the culprit ranking. Read-only; touches nothing.
 #[tauri::command]
@@ -1299,6 +1405,7 @@ pub fn run() {
             scan_bindings,
             mp_export,
             mp_verify_file,
+            collection_export,
             generate_bridge,
             bisect_plan,
             bisect_narrow,

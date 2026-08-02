@@ -22,6 +22,9 @@ use serde::{Deserialize, Serialize};
 pub const SCHEMA: &str = "silo.collection/1";
 const SCHEMA_PREFIX: &str = "silo.collection/";
 
+/// The canonical file name a collection is stored under inside a gist (or, later, a repo).
+pub const FILE_NAME: &str = "silo-collection.json";
+
 /// A shareable collection. Distinct from `LoadoutFile` (which stays the local,
 /// bare-tech-name `.silo` interchange) — a collection down-imports to a loadout by
 /// dropping everything but the tech-names.

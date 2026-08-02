@@ -362,6 +362,16 @@ export interface MpVerifyReport {
   extra: string[];
 }
 
+// ── Collections ──
+export interface CollectionExportResult {
+  /** The shareable gist URL. */
+  url: string;
+  /** How many mods went into the collection. */
+  count: number;
+  /** Dev/unpacked (directory) mods left out — no stable bytes to pin. */
+  omitted: string[];
+}
+
 // ── Filltype bridge ──
 export interface BridgeSpec {
   techName: string;
