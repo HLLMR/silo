@@ -29,6 +29,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   identity (hardlink / symlink / marker / content), reusing the same check that guards deletions.
   (#34)
 
+### Fixed
+
+- **Activating an archived mod now works even if Silo's database drifted from disk.** If a mod
+  sat in `mods/archive/` but wasn't in Silo's internal manifest (e.g. after the database was
+  reset while the archive folder persisted), selecting it as active did nothing and it never
+  loaded — with no error shown. Silo now reconciles the manifest from what's physically in
+  `archive/` on every scan, so every archived mod is activatable. (#75)
+
 ## [0.2.4] - 2026-08-01
 
 ### Security

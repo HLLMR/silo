@@ -371,6 +371,25 @@ pub fn delete_organized(conn: &Connection, tech_name: &str) -> Result<(), String
     Ok(())
 }
 
+/// Make the `organized` manifest match what's physically in `archive/`. Upserts a row for
+/// every archived mod (so `set_active` can project it) and drops rows for mods that are no
+/// longer archived. This heals a manifest that has drifted from disk — e.g. a fresh DB with
+/// a populated `archive/` — which otherwise leaves archived mods visible but un-activatable.
+pub fn reconcile_organized(conn: &mut Connection, desired: &[OrganizedRow]) -> Result<(), String> {
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    let keep: std::collections::HashSet<&str> =
+        desired.iter().map(|r| r.tech_name.as_str()).collect();
+    for existing in load_organized(&tx) {
+        if !keep.contains(existing.tech_name.as_str()) {
+            delete_organized(&tx, &existing.tech_name)?;
+        }
+    }
+    for row in desired {
+        upsert_organized(&tx, row)?;
+    }
+    tx.commit().map_err(|e| e.to_string())
+}
+
 /// Load all curation rows.
 pub fn load_curation(conn: &Connection) -> Vec<CurationRow> {
     let Ok(mut stmt) =
@@ -557,4 +576,52 @@ pub fn prune_missing(conn: &mut Connection, present: &HashSet<String>) -> Result
     }
     tx.commit().map_err(|e| e.to_string())?;
     Ok(stale.len())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reconcile_adopts_disk_and_prunes_gone() {
+        let base = std::env::temp_dir().join(format!("silo_reconcile_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).unwrap();
+        let mut conn = open(&base.join("silo.db")).unwrap();
+
+        // A stale manifest row for a mod no longer archived on disk.
+        upsert_organized(
+            &conn,
+            &OrganizedRow {
+                tech_name: "FS25_Gone".into(),
+                file_name: "FS25_Gone.zip".into(),
+                kind: "zip".into(),
+                category: "Old".into(),
+                subcategory: None,
+                active: true,
+            },
+        )
+        .unwrap();
+
+        // Disk truth: one archived mod, not yet in the manifest.
+        let desired = vec![OrganizedRow {
+            tech_name: "FS25_New".into(),
+            file_name: "FS25_New.zip".into(),
+            kind: "zip".into(),
+            category: "Objects".into(),
+            subcategory: None,
+            active: false,
+        }];
+        reconcile_organized(&mut conn, &desired).unwrap();
+
+        let rows = load_organized(&conn);
+        assert_eq!(rows.len(), 1, "manifest should match disk exactly");
+        assert_eq!(rows[0].tech_name, "FS25_New", "archived mod adopted");
+        assert!(
+            !rows.iter().any(|r| r.tech_name == "FS25_Gone"),
+            "vanished mod pruned"
+        );
+
+        let _ = std::fs::remove_dir_all(&base);
+    }
 }
