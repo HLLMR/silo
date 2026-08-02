@@ -114,6 +114,31 @@ async fn scan_mods(
         let present: HashSet<String> = out.result.mods.iter().map(|m| m.path.clone()).collect();
         let _ = db::prune_missing(&mut conn, &present);
 
+        // Keep the `organized` manifest in step with what's physically in `archive/`, so an
+        // archived mod is always activatable even if the DB drifted from disk (e.g. a fresh
+        // DB behind a populated archive). The archive layout is `archive/<Category>/<file>`,
+        // so the category is the file's parent directory name.
+        let organized_rows: Vec<db::OrganizedRow> = out
+            .result
+            .mods
+            .iter()
+            .filter(|m| m.organized)
+            .filter_map(|m| {
+                let p = std::path::Path::new(&m.path);
+                let file_name = p.file_name()?.to_string_lossy().into_owned();
+                let category = p.parent()?.file_name()?.to_string_lossy().into_owned();
+                Some(db::OrganizedRow {
+                    tech_name: m.tech_name.clone(),
+                    file_name,
+                    kind: m.kind.clone(),
+                    category,
+                    subcategory: None,
+                    active: m.active,
+                })
+            })
+            .collect();
+        let _ = db::reconcile_organized(&mut conn, &organized_rows);
+
         Ok::<_, String>(out.result)
     })
     .await
