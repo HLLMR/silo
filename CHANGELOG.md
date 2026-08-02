@@ -37,6 +37,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   loaded — with no error shown. Silo now reconciles the manifest from what's physically in
   `archive/` on every scan, so every archived mod is activatable. (#75)
 
+- **Dev mods symlinked into your mods folder now show up.** A mod added as a symlink — a common
+  developer setup, e.g. linking a mod's source folder into `mods/` — was skipped by the library
+  scan, because a symlink's own file type is neither a plain file nor a folder. Silo now follows
+  the link to see what it points at, so symlinked dev mods (and Silo's own folder-mod projections)
+  are scanned like any other. (#76)
+
 ## [0.2.4] - 2026-08-01
 
 ### Security

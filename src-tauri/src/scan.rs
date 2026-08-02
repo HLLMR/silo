@@ -84,7 +84,19 @@ struct Candidate {
 /// Build a Candidate from a directory entry (a `.zip` file or an unpacked mod dir),
 /// or None if it isn't a mod.
 fn candidate_from(path: PathBuf, name: &str, ft: std::fs::FileType) -> Option<Candidate> {
-    if ft.is_dir() {
+    // A symlink's own `file_type` is neither dir nor file, so resolve the target — otherwise
+    // symlinked dev mods (a common workflow, e.g. `mods/FS25_Foo -> <dev repo>`) and Silo's
+    // own dir-mod junction projections would be silently skipped. `fs::metadata` follows links.
+    let (is_dir, is_file) = if ft.is_symlink() {
+        match fs::metadata(&path) {
+            Ok(m) => (m.is_dir(), m.is_file()),
+            Err(_) => (false, false), // dangling link — ignore
+        }
+    } else {
+        (ft.is_dir(), ft.is_file())
+    };
+
+    if is_dir {
         if path.join("modDesc.xml").is_file() {
             return Some(Candidate {
                 tech_name: name.to_string(),
@@ -92,7 +104,7 @@ fn candidate_from(path: PathBuf, name: &str, ft: std::fs::FileType) -> Option<Ca
                 kind: "dir",
             });
         }
-    } else if ft.is_file() && name.to_lowercase().ends_with(".zip") {
+    } else if is_file && name.to_lowercase().ends_with(".zip") {
         let tech_name = name[..name.len() - 4].to_string();
         return Some(Candidate {
             tech_name,
@@ -427,5 +439,49 @@ mod cap_tests {
         assert_eq!(read_capped(&b"hello"[..], 100, "x").unwrap(), b"hello");
         assert!(read_capped(&b"hello"[..], 5, "x").is_ok()); // exactly at cap
         assert!(read_capped(&vec![0u8; 200][..], 100, "big").is_err()); // over cap
+    }
+}
+
+#[cfg(test)]
+mod symlink_tests {
+    use super::collect_root_candidates;
+
+    #[cfg(windows)]
+    fn symlink_dir(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+        std::os::windows::fs::symlink_dir(src, dst)
+    }
+    #[cfg(unix)]
+    fn symlink_dir(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+        std::os::unix::fs::symlink(src, dst)
+    }
+
+    #[test]
+    fn follows_a_symlinked_dir_mod() {
+        let base = std::env::temp_dir().join(format!("silo_symlink_scan_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        let root = base.join("root");
+        let target = base.join("devmod");
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::create_dir_all(&target).unwrap();
+        std::fs::write(target.join("modDesc.xml"), b"<modDesc/>").unwrap();
+
+        let link = root.join("FS25_DevLink");
+        if symlink_dir(&target, &link).is_err() {
+            // Creating a symlink needs privilege on Windows (Developer Mode/admin) — if it's
+            // unavailable in this environment, skip rather than fail.
+            let _ = std::fs::remove_dir_all(&base);
+            return;
+        }
+
+        let cands = collect_root_candidates(&root);
+        assert!(
+            cands
+                .iter()
+                .any(|c| c.tech_name == "FS25_DevLink" && c.kind == "dir"),
+            "a symlinked dir mod should be scanned, got: {:?}",
+            cands.iter().map(|c| &c.tech_name).collect::<Vec<_>>()
+        );
+
+        let _ = std::fs::remove_dir_all(&base);
     }
 }
