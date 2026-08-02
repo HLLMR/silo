@@ -8,6 +8,7 @@
     collectionImportPreview,
     collectionApply,
     onCollectionProgress,
+    detectConflicts,
     ghStatus,
     openExternal,
   } from "../api";
@@ -19,6 +20,8 @@
     ApplyReport,
     CollectionProgress,
     GhStatus,
+    ModEntry,
+    Conflict,
   } from "../types";
   import type { UnlistenFn } from "@tauri-apps/api/event";
   import { onDestroy } from "svelte";
@@ -26,13 +29,14 @@
   interface Props {
     /** The active set as (techName, path, kind, version) refs. */
     active: MpModRef[];
-    /** The whole installed library as (techName, version) — for import bucketing. */
-    installed: { techName: string; version: string | null }[];
+    /** The whole installed library — for import bucketing + dependency/conflict pre-flight. */
+    library: ModEntry[];
     /** Called after a successful import so the parent can rescan the library. */
     onImported?: () => void;
     onClose: () => void;
   }
-  let { active, installed, onImported, onClose }: Props = $props();
+  let { active, library, onImported, onClose }: Props = $props();
+  const installed = $derived(library.map((m) => ({ techName: m.techName, version: m.version })));
 
   let busy = $state<string | null>(null);
   let note = $state<string | null>(null);
@@ -91,14 +95,63 @@
   let importErr = $state<string | null>(null);
   let plan = $state<ImportPlan | null>(null);
 
+  // Pre-flight (advisory): dependency gaps + conflicts, checkable only against the
+  // collection's mods you ALREADY have — the rest get the full check after import + rescan.
+  let preflightDeps = $state<{ mod: string; missing: string[] }[]>([]);
+  let preflightConflicts = $state<Conflict[]>([]);
+
+  async function computePreflight(p: ImportPlan) {
+    const collTechs = new Set<string>();
+    for (const bucket of [
+      p.willInstall,
+      p.openPage,
+      p.alreadyPresent,
+      p.versionDrift,
+      p.unresolved,
+    ]) {
+      for (const r of bucket) collTechs.add(r.techName);
+    }
+    const libByTech = new Map(library.map((m) => [m.techName, m]));
+    const libTechs = new Set(library.map((m) => m.techName));
+    // The collection's mods we can actually inspect (on disk).
+    const have = [...collTechs]
+      .map((t) => libByTech.get(t))
+      .filter((m): m is ModEntry => m != null);
+
+    // A dependency is satisfied if it's in your library OR elsewhere in the collection.
+    preflightDeps = have
+      .map((m) => ({
+        mod: m.techName,
+        missing: m.dependencies.filter((d) => !libTechs.has(d) && !collTechs.has(d)),
+      }))
+      .filter((d) => d.missing.length > 0);
+
+    // Conflicts among the collection's mods you have (they'd be active together).
+    if (have.length >= 2) {
+      try {
+        const cs = await detectConflicts(
+          have.map((m) => ({ techName: m.techName, title: m.title, path: m.path, kind: m.kind })),
+        );
+        preflightConflicts = cs.filter((c) => c.severity !== "info");
+      } catch {
+        preflightConflicts = [];
+      }
+    } else {
+      preflightConflicts = [];
+    }
+  }
+
   async function doPreview() {
     if (!importUrl.trim()) return;
     importBusy = true;
     importErr = null;
     plan = null;
     applyReport = null;
+    preflightDeps = [];
+    preflightConflicts = [];
     try {
       plan = await collectionImportPreview(importUrl.trim(), installed);
+      await computePreflight(plan);
     } catch (e) {
       importErr = String(e);
     } finally {
@@ -307,6 +360,28 @@
       {@render bucket("Different version — update to match", p.versionDrift, true)}
       {@render bucket("Not in the catalog — find these manually", p.unresolved)}
       {@render bucket("Already in your library", p.alreadyPresent)}
+
+      {#if preflightDeps.length > 0 || preflightConflicts.length > 0}
+        <div class="heads-up">
+          <div class="sec" style="margin-top:0">Heads-up (from the mods you already have)</div>
+          {#each preflightConflicts as c (c.kind + c.mods.join())}
+            <div class="row">
+              <span class="mn">⚠ {c.name}</span>
+              <span class="rt">{c.mods.join(" ↔ ")}</span>
+            </div>
+          {/each}
+          {#each preflightDeps as d (d.mod)}
+            <div class="row">
+              <span class="mn">{d.mod}</span>
+              <span class="rt">needs {d.missing.join(", ")} — not in the collection or your library</span>
+            </div>
+          {/each}
+          <p class="caveat" style="margin-top:6px">
+            Checked against the mods already on disk. Silo re-runs the full conflict &amp;
+            dependency check after import.
+          </p>
+        </div>
+      {/if}
 
       {#if !applyReport}
         <div class="apply-bar">
@@ -522,6 +597,13 @@
     align-items: center;
     gap: 10px;
     margin: 4px 0 4px;
+  }
+  .heads-up {
+    margin-top: 12px;
+    padding: 8px 10px;
+    border: 1px solid color-mix(in srgb, var(--warn, orange) 35%, var(--border));
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--warn, orange) 7%, transparent);
   }
   .apply-bar {
     display: flex;

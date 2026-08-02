@@ -13,7 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   your set to your own GitHub as a secret gist and hands you a URL (no mod files are uploaded, only
   the list — each mod pinned to a version and a content hash). Anyone you send it to can paste it
   into "Open a shared link" to preview exactly what they already have, what's a different version,
-  what Silo can install for them, and what they'll need to grab from ModHub/Nexus — then import it:
+  what Silo can install for them, and what they'll need to grab from ModHub/Nexus — plus a heads-up
+  for any dependency gaps or mod conflicts among the mods they already have — then import it:
   Silo downloads the installable mods, verifies each against the shared build (verified / modified),
   and saves the whole set as a loadout to apply. Sharing needs a one-time "Enable collection sharing"
   (the GitHub `gist` permission) in Settings; a secret gist is unlisted, not password-protected.

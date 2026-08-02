@@ -1299,7 +1299,7 @@
     <div class="log-panel">
       <MpSync
         active={activeModRefs}
-        installed={mods.map((m) => ({ techName: m.techName, version: m.version }))}
+        library={mods}
         onImported={() => runScan(false)}
         onClose={() => (mpOpen = false)}
       />
