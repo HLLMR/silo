@@ -1275,6 +1275,223 @@ async fn collection_import_preview(
     .map_err(|e| e.to_string())?
 }
 
+/// The outcome for one mod in an apply run.
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ApplyRow {
+    tech_name: String,
+    /// The installed filename, when Silo downloaded it this run.
+    filename: Option<String>,
+    /// "installed" (downloaded now) · "present" (already had it) · "skipped" (get it
+    /// yourself / not catalogued) · "failed".
+    status: String,
+    /// Provenance verdict for what landed: "verified" / "modified" / "unverified".
+    verdict: Option<String>,
+    /// A failure or open-page reason.
+    detail: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ApplyReport {
+    /// The loadout created from the collection's full mod list.
+    loadout_id: i64,
+    installed: usize,
+    failed: usize,
+    rows: Vec<ApplyRow>,
+}
+
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ApplyProgress {
+    done: usize,
+    total: usize,
+    current: String,
+}
+
+/// Import a shared collection: download every directly-installable mod that's missing,
+/// verify each against the version the collection pinned, and save the whole set as a
+/// loadout. Mods that must be fetched from ModHub/Nexus (or aren't catalogued) are recorded
+/// but never faked — the loadout still lists them so it completes once the user grabs them.
+///
+/// Every download reuses the same guarded path as a Browse install (basename check, stream
+/// to `.part`, archive + identity validation, skip-if-present) — no new file-write surface.
+#[tauri::command]
+async fn collection_apply(
+    app: tauri::AppHandle,
+    url_or_id: String,
+    installed: Vec<LocalMod>,
+    root: Option<String>,
+) -> Result<ApplyReport, String> {
+    let base = siloapi_base(&app)?;
+    let db = db_path(&app)?;
+    let root = primary_root(root)?;
+    let emitter = app.clone();
+    tauri::async_runtime::spawn_blocking(move || -> Result<ApplyReport, String> {
+        let id = collection::parse_gist_ref(&url_or_id)
+            .ok_or_else(|| "That doesn't look like a GitHub gist link".to_string())?;
+        let mut conn = db::open(&db)?;
+        let token = secrets::get(&conn, "gh_token");
+        let json = github::read_gist_file(&id, collection::FILE_NAME, token.as_deref())?;
+        let coll = collection::parse(&json)?;
+
+        let have: std::collections::HashSet<&str> =
+            installed.iter().map(|m| m.tech_name.as_str()).collect();
+
+        // Fill catalog ids for anything the collection didn't carry one for.
+        let names: Vec<String> = coll.mods.iter().map(|m| m.tech_name.clone()).collect();
+        let hits = siloapi::lookup(&base, &names).unwrap_or_default();
+        let id_by_tech: std::collections::HashMap<&str, &str> = hits
+            .iter()
+            .filter_map(|r| r.tech_name.as_deref().map(|t| (t, r.id.as_str())))
+            .collect();
+
+        let total = coll.mods.len();
+        let mut rows: Vec<ApplyRow> = Vec::with_capacity(total);
+        let mut installed_count = 0usize;
+        let mut failed_count = 0usize;
+
+        for (i, m) in coll.mods.iter().enumerate() {
+            let _ = emitter.emit(
+                "collection:progress",
+                ApplyProgress {
+                    done: i,
+                    total,
+                    current: m.tech_name.clone(),
+                },
+            );
+
+            // Already in the library — don't re-download; still verify if we can.
+            if have.contains(m.tech_name.as_str()) {
+                rows.push(ApplyRow {
+                    tech_name: m.tech_name.clone(),
+                    filename: None,
+                    status: "present".into(),
+                    verdict: None,
+                    detail: None,
+                });
+                continue;
+            }
+
+            let catalog_id = m
+                .catalog_id
+                .as_deref()
+                .or_else(|| id_by_tech.get(m.tech_name.as_str()).copied());
+            let Some(cid) = catalog_id else {
+                rows.push(ApplyRow {
+                    tech_name: m.tech_name.clone(),
+                    filename: None,
+                    status: "skipped".into(),
+                    verdict: None,
+                    detail: Some("Not in the catalog — find it manually.".into()),
+                });
+                continue;
+            };
+
+            match siloapi::resolve_download(&base, cid, m.source.as_deref()) {
+                Ok(resolved) => {
+                    if let Err(e) = paths::safe_file_name(&resolved.filename) {
+                        rows.push(fail_row(&m.tech_name, e));
+                        failed_count += 1;
+                        continue;
+                    }
+                    let dest = root.join(&resolved.filename);
+                    if dest.exists() {
+                        rows.push(ApplyRow {
+                            tech_name: m.tech_name.clone(),
+                            filename: Some(resolved.filename.clone()),
+                            status: "present".into(),
+                            verdict: None,
+                            detail: None,
+                        });
+                        continue;
+                    }
+                    match siloapi::download_to(
+                        &resolved.url,
+                        &dest,
+                        resolved.expected_sha256.as_deref(),
+                        |_done, _total| {},
+                    ) {
+                        Ok(()) => {
+                            installed_count += 1;
+                            rows.push(ApplyRow {
+                                tech_name: m.tech_name.clone(),
+                                filename: Some(resolved.filename.clone()),
+                                status: "installed".into(),
+                                verdict: Some(verdict_against_pin(
+                                    &dest,
+                                    m.manifest_hash.as_deref(),
+                                )),
+                                detail: None,
+                            });
+                        }
+                        Err(e) => {
+                            rows.push(fail_row(&m.tech_name, e));
+                            failed_count += 1;
+                        }
+                    }
+                }
+                // No direct download (ModHub/Nexus gate it) — leave it for the user.
+                Err(_) => {
+                    rows.push(ApplyRow {
+                        tech_name: m.tech_name.clone(),
+                        filename: None,
+                        status: "skipped".into(),
+                        verdict: None,
+                        detail: Some("Download-gated — get it from its page.".into()),
+                    });
+                }
+            }
+        }
+
+        // The loadout lists the whole collection; applying it activates the ones you have,
+        // and it completes automatically once you fetch the rest and rescan.
+        let tech_names = coll.tech_names();
+        let loadout_id = db::save_loadout(&mut conn, None, &coll.name, &tech_names)?;
+
+        let _ = emitter.emit(
+            "collection:progress",
+            ApplyProgress {
+                done: total,
+                total,
+                current: String::new(),
+            },
+        );
+        Ok(ApplyReport {
+            loadout_id,
+            installed: installed_count,
+            failed: failed_count,
+            rows,
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+fn fail_row(tech_name: &str, detail: String) -> ApplyRow {
+    ApplyRow {
+        tech_name: tech_name.to_string(),
+        filename: None,
+        status: "failed".into(),
+        verdict: None,
+        detail: Some(detail),
+    }
+}
+
+/// Hash a freshly-installed zip and compare it to the hash the collection pinned:
+/// "verified" (content match), "modified" (differs — not what the curator shared), or
+/// "unverified" (the collection carried no hash to check against).
+fn verdict_against_pin(zip: &std::path::Path, pinned: Option<&str>) -> String {
+    let Some(pinned) = pinned else {
+        return "unverified".into();
+    };
+    match provenance::manifest_from_zip(zip) {
+        Ok(local) if local.manifest_hash.eq_ignore_ascii_case(pinned) => "verified".into(),
+        Ok(_) => "modified".into(),
+        Err(_) => "unverified".into(),
+    }
+}
+
 /// Parse the FS25 log.txt and report which mods are throwing errors/warnings, whether
 /// the last run crashed, and the culprit ranking. Read-only; touches nothing.
 #[tauri::command]
@@ -1523,6 +1740,7 @@ pub fn run() {
             mp_verify_file,
             collection_export,
             collection_import_preview,
+            collection_apply,
             generate_bridge,
             bisect_plan,
             bisect_narrow,

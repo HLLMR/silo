@@ -1300,6 +1300,7 @@
       <MpSync
         active={activeModRefs}
         installed={mods.map((m) => ({ techName: m.techName, version: m.version }))}
+        onImported={() => runScan(false)}
         onClose={() => (mpOpen = false)}
       />
     </div>

@@ -393,6 +393,26 @@ export interface ImportPlan {
   /** Not found in the catalog — can't be resolved automatically. */
   unresolved: ImportPlanRow[];
 }
+export interface ApplyRow {
+  techName: string;
+  filename: string | null;
+  /** "installed" | "present" | "skipped" | "failed". */
+  status: string;
+  /** Provenance verdict for what landed: "verified" | "modified" | "unverified". */
+  verdict: string | null;
+  detail: string | null;
+}
+export interface ApplyReport {
+  loadoutId: number;
+  installed: number;
+  failed: number;
+  rows: ApplyRow[];
+}
+export interface CollectionProgress {
+  done: number;
+  total: number;
+  current: string;
+}
 
 // ── Filltype bridge ──
 export interface BridgeSpec {
