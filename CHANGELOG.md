@@ -43,6 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the link to see what it points at, so symlinked dev mods (and Silo's own folder-mod projections)
   are scanned like any other. (#76)
 
+- **A savegame created while playing now appears on Rescan** instead of only after restarting
+  Silo. The savegame list was read once at startup; Rescan now refreshes it alongside the mod
+  library. (#77)
+
 ## [0.2.4] - 2026-08-01
 
 ### Security

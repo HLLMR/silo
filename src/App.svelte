@@ -1003,6 +1003,9 @@
       detectForeignFiles(roots[0])
         .then((f) => (foreignFiles = f))
         .catch(() => (foreignFiles = []));
+      // Re-read savegames too, so a Rescan picks up a save created since launch (they're
+      // otherwise only loaded once on startup). Fire-and-forget; it handles its own errors.
+      void loadSavegames();
     } catch (e) {
       errorMsg = String(e);
     } finally {
