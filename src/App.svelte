@@ -1297,7 +1297,11 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="backdrop" onclick={() => (mpOpen = false)}></div>
     <div class="log-panel">
-      <MpSync active={activeModRefs} onClose={() => (mpOpen = false)} />
+      <MpSync
+        active={activeModRefs}
+        installed={mods.map((m) => ({ techName: m.techName, version: m.version }))}
+        onClose={() => (mpOpen = false)}
+      />
     </div>
   {/if}
 

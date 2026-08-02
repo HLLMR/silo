@@ -1,15 +1,30 @@
 <script lang="ts">
   // Multiplayer mod-set sync: export a manifest of your active set to share, or verify
   // your set against a friend's — turning FS's "mod mismatch" join error into a fix-list.
-  import { mpExport, mpVerify, collectionExport, ghStatus, openExternal } from "../api";
-  import type { MpModRef, MpVerifyReport, CollectionExportResult, GhStatus } from "../types";
+  import {
+    mpExport,
+    mpVerify,
+    collectionExport,
+    collectionImportPreview,
+    ghStatus,
+    openExternal,
+  } from "../api";
+  import type {
+    MpModRef,
+    MpVerifyReport,
+    CollectionExportResult,
+    ImportPlan,
+    GhStatus,
+  } from "../types";
 
   interface Props {
     /** The active set as (techName, path, kind, version) refs. */
     active: MpModRef[];
+    /** The whole installed library as (techName, version) — for import bucketing. */
+    installed: { techName: string; version: string | null }[];
     onClose: () => void;
   }
-  let { active, onClose }: Props = $props();
+  let { active, installed, onClose }: Props = $props();
 
   let busy = $state<string | null>(null);
   let note = $state<string | null>(null);
@@ -59,6 +74,26 @@
       copied = true;
     } catch {
       copied = false;
+    }
+  }
+
+  // ── Open a shared link (import preview) ──
+  let importUrl = $state("");
+  let importBusy = $state(false);
+  let importErr = $state<string | null>(null);
+  let plan = $state<ImportPlan | null>(null);
+
+  async function doPreview() {
+    if (!importUrl.trim()) return;
+    importBusy = true;
+    importErr = null;
+    plan = null;
+    try {
+      plan = await collectionImportPreview(importUrl.trim(), installed);
+    } catch (e) {
+      importErr = String(e);
+    } finally {
+      importBusy = false;
     }
   }
 
@@ -187,6 +222,61 @@
         </button>
       </div>
       {#if shareErr}<div class="err">{shareErr}</div>{/if}
+    {/if}
+  </div>
+
+  <div class="share">
+    <div class="card-title">Open a shared link</div>
+    <p class="card-body">
+      Paste a Silo collection link someone sent you. Silo shows what you already have, what's
+      a different version, what it can install for you, and what you'll need to grab yourself —
+      before anything is downloaded.
+    </p>
+    <div class="share-form">
+      <input
+        class="share-input"
+        placeholder="https://gist.github.com/…"
+        bind:value={importUrl}
+      />
+      <button class="btn primary" onclick={doPreview} disabled={importBusy || !importUrl.trim()}>
+        {importBusy ? "Reading…" : "Preview →"}
+      </button>
+    </div>
+    {#if importErr}<div class="err" style="margin-top:10px">{importErr}</div>{/if}
+
+    {#if plan}
+      {@const p = plan}
+      <div class="plan-head">
+        <strong>{p.name}</strong>
+        {#if p.author}<span class="rt">by {p.author}</span>{/if}
+      </div>
+      {#if p.description}<p class="caveat" style="margin-top:4px">{p.description}</p>{/if}
+
+      {#snippet bucket(title: string, rows: typeof p.willInstall, drift = false)}
+        {#if rows.length > 0}
+          <div class="sec">{title} ({rows.length})</div>
+          {#each rows as m (m.techName)}
+            <div class="row">
+              <span class="mn">{m.techName}</span>
+              <span class="rt">
+                {#if drift}yours {m.installedVersion || "?"} → collection {m.version || "?"}
+                {:else}{m.version || ""}{m.source ? ` · ${m.source}` : ""}{/if}
+              </span>
+            </div>
+          {/each}
+        {/if}
+      {/snippet}
+
+      {@render bucket("Silo can install these", p.willInstall)}
+      {@render bucket("Get these yourself — ModHub/Nexus gate downloads", p.openPage)}
+      {@render bucket("Different version — update to match", p.versionDrift, true)}
+      {@render bucket("Not in the catalog — find these manually", p.unresolved)}
+      {@render bucket("Already in your library", p.alreadyPresent)}
+
+      <p class="caveat">
+        Installing collections in-app is coming next — for now this shows you exactly what a
+        shared set needs.
+      </p>
     {/if}
   </div>
 

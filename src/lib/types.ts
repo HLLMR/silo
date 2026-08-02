@@ -371,6 +371,28 @@ export interface CollectionExportResult {
   /** Dev/unpacked (directory) mods left out — no stable bytes to pin. */
   omitted: string[];
 }
+export interface ImportPlanRow {
+  techName: string;
+  version: string | null;
+  source: string | null;
+  /** For versionDrift rows: the version already in the library. */
+  installedVersion: string | null;
+}
+export interface ImportPlan {
+  name: string;
+  description: string | null;
+  author: string | null;
+  /** Silo can download these directly (a GitHub-style installable source). */
+  willInstall: ImportPlanRow[];
+  /** In the catalog but download-gated (ModHub/Nexus) — get them from their page. */
+  openPage: ImportPlanRow[];
+  /** Already in your library at a matching (or unpinned) version. */
+  alreadyPresent: ImportPlanRow[];
+  /** Installed, but a different version than the collection pins. */
+  versionDrift: ImportPlanRow[];
+  /** Not found in the catalog — can't be resolved automatically. */
+  unresolved: ImportPlanRow[];
+}
 
 // ── Filltype bridge ──
 export interface BridgeSpec {
