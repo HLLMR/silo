@@ -1182,6 +1182,25 @@ async fn collection_export(
     .map_err(|e| e.to_string())?
 }
 
+/// Resolve a pasted collection link — a gist (P1) or a public repo (P2) — and read +
+/// parse its `silo-collection.json`. Token optional (public sources read anonymously).
+fn read_collection_json(
+    url_or_id: &str,
+    token: Option<&str>,
+) -> Result<collection::Collection, String> {
+    let reference = collection::parse_collection_ref(url_or_id)
+        .ok_or_else(|| "That doesn't look like a GitHub gist or repo link".to_string())?;
+    let json = match &reference {
+        collection::CollectionRef::Gist(id) => {
+            github::read_gist_file(id, collection::FILE_NAME, token)
+        }
+        collection::CollectionRef::Repo { owner, repo } => {
+            github::read_repo_file(owner, repo, collection::FILE_NAME, token)
+        }
+    }?;
+    collection::parse(&json)
+}
+
 /// One mod in an import plan, tagged with what the importer would do about it.
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -1223,12 +1242,9 @@ async fn collection_import_preview(
     let base = siloapi_base(&app)?;
     let db = db_path(&app)?;
     tauri::async_runtime::spawn_blocking(move || -> Result<ImportPlan, String> {
-        let id = collection::parse_gist_ref(&url_or_id)
-            .ok_or_else(|| "That doesn't look like a GitHub gist link".to_string())?;
         let conn = db::open(&db)?;
         let token = secrets::get(&conn, "gh_token");
-        let json = github::read_gist_file(&id, collection::FILE_NAME, token.as_deref())?;
-        let coll = collection::parse(&json)?;
+        let coll = read_collection_json(&url_or_id, token.as_deref())?;
 
         let installed_by: std::collections::HashMap<&str, Option<&str>> = installed
             .iter()
@@ -1351,12 +1367,9 @@ async fn collection_apply(
     let root = primary_root(root)?;
     let emitter = app.clone();
     tauri::async_runtime::spawn_blocking(move || -> Result<ApplyReport, String> {
-        let id = collection::parse_gist_ref(&url_or_id)
-            .ok_or_else(|| "That doesn't look like a GitHub gist link".to_string())?;
         let mut conn = db::open(&db)?;
         let token = secrets::get(&conn, "gh_token");
-        let json = github::read_gist_file(&id, collection::FILE_NAME, token.as_deref())?;
-        let coll = collection::parse(&json)?;
+        let coll = read_collection_json(&url_or_id, token.as_deref())?;
 
         let have: std::collections::HashSet<&str> =
             installed.iter().map(|m| m.tech_name.as_str()).collect();

@@ -159,6 +159,73 @@ pub fn parse_gist_ref(input: &str) -> Option<String> {
     candidate.filter(|c| is_gist_id(c)).map(|c| c.to_string())
 }
 
+/// Where a shared collection lives: a gist (P1, private/unlisted) or a public repo (P2).
+#[derive(Debug, Clone, PartialEq)]
+pub enum CollectionRef {
+    Gist(String),
+    Repo { owner: String, repo: String },
+}
+
+/// Parse whatever the user pasted into a collection reference — a gist link/id, or a
+/// GitHub repo URL / bare `owner/repo`. Gist forms win first (they're unambiguous); a
+/// repo is anything that resolves to a `github.com/{owner}/{repo}`.
+pub fn parse_collection_ref(input: &str) -> Option<CollectionRef> {
+    if let Some(id) = parse_gist_ref(input) {
+        return Some(CollectionRef::Gist(id));
+    }
+    parse_repo_ref(input).map(|(owner, repo)| CollectionRef::Repo { owner, repo })
+}
+
+/// GitHub usernames/orgs: alphanumeric + hyphen, ≤39 chars (no dots — that's how we
+/// reject a non-github host masquerading as an owner in a bare `host/path`).
+fn is_gh_owner(s: &str) -> bool {
+    !s.is_empty() && s.len() <= 39 && s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-')
+}
+
+/// GitHub repo names: alphanumeric + `-` `_` `.`, ≤100 chars.
+fn is_gh_repo(s: &str) -> bool {
+    !s.is_empty()
+        && s.len() <= 100
+        && s.bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_' || b == b'.')
+}
+
+/// Extract `(owner, repo)` from a `github.com/{owner}/{repo}` URL (with optional
+/// `/tree/…`, `.git`, trailing slash, query/fragment) or a bare `owner/repo`. Rejects any
+/// non-github host.
+fn parse_repo_ref(input: &str) -> Option<(String, String)> {
+    let s = input.trim();
+    let s = s
+        .split(['#', '?'])
+        .next()
+        .unwrap_or(s)
+        .trim_end_matches('/');
+
+    let rest = if let Some(r) = s
+        .strip_prefix("https://")
+        .or_else(|| s.strip_prefix("http://"))
+    {
+        // Had a scheme → the host must be github.com (else reject via `?`).
+        r.strip_prefix("www.")
+            .unwrap_or(r)
+            .strip_prefix("github.com/")?
+    } else if let Some(r) = s
+        .strip_prefix("github.com/")
+        .or_else(|| s.strip_prefix("www.github.com/"))
+    {
+        r
+    } else if s.contains("://") {
+        return None; // some other scheme
+    } else {
+        s // bare owner/repo
+    };
+
+    let mut segs = rest.split('/').filter(|p| !p.is_empty());
+    let owner = segs.next()?;
+    let repo = segs.next()?.trim_end_matches(".git");
+    (is_gh_owner(owner) && is_gh_repo(repo)).then(|| (owner.to_string(), repo.to_string()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -303,5 +370,45 @@ mod tests {
         assert_eq!(parse_gist_ref("https://github.com/HLLMR/silo"), None); // not a gist
         assert_eq!(parse_gist_ref("hello world"), None);
         assert_eq!(parse_gist_ref("short123"), None); // too short to be an id
+    }
+
+    #[test]
+    fn collection_ref_resolves_gists_and_repos() {
+        let id = "aa11bb22cc33dd44ee55ff6677889900";
+        // Gist forms → Gist.
+        assert_eq!(
+            parse_collection_ref(id),
+            Some(CollectionRef::Gist(id.to_string()))
+        );
+        assert_eq!(
+            parse_collection_ref(&format!("https://gist.github.com/hllmr/{id}")),
+            Some(CollectionRef::Gist(id.to_string()))
+        );
+        // Repo forms → Repo.
+        let repo = CollectionRef::Repo {
+            owner: "HLLMR".into(),
+            repo: "my-pack".into(),
+        };
+        assert_eq!(
+            parse_collection_ref("https://github.com/HLLMR/my-pack"),
+            Some(repo.clone())
+        );
+        assert_eq!(
+            parse_collection_ref("https://github.com/HLLMR/my-pack/tree/main"),
+            Some(repo.clone())
+        );
+        assert_eq!(
+            parse_collection_ref("github.com/HLLMR/my-pack.git"),
+            Some(repo.clone())
+        );
+        assert_eq!(parse_collection_ref("HLLMR/my-pack"), Some(repo));
+    }
+
+    #[test]
+    fn collection_ref_rejects_junk_and_other_hosts() {
+        assert_eq!(parse_collection_ref("hello world"), None);
+        assert_eq!(parse_collection_ref("https://gitlab.com/foo/bar"), None); // not github
+        assert_eq!(parse_collection_ref("foo.com/bar"), None); // bare host, not owner/repo
+        assert_eq!(parse_collection_ref("https://github.com/HLLMR"), None); // no repo segment
     }
 }

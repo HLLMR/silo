@@ -661,6 +661,30 @@ fn fetch_gist_raw(url: &str, token: Option<&str>) -> Result<String, String> {
         .map_err(|e| e.to_string())
 }
 
+/// Read a file from a public repo's default branch via the Contents API. The
+/// `application/vnd.github.raw` media type returns the file bytes directly (no base64),
+/// and the API resolves the default branch for us. Token optional — public repos read
+/// anonymously; pass it for the higher rate limit. This is the P2 (public-repo) transport
+/// counterpart to `read_gist_file`.
+pub fn read_repo_file(
+    owner: &str,
+    repo: &str,
+    path: &str,
+    token: Option<&str>,
+) -> Result<String, String> {
+    let url = format!("https://api.github.com/repos/{owner}/{repo}/contents/{path}");
+    let mut req = ureq::get(&url)
+        .set("Accept", "application/vnd.github.raw")
+        .set("User-Agent", UA);
+    if let Some(t) = token {
+        req = req.set("Authorization", &format!("Bearer {t}"));
+    }
+    req.call()
+        .map_err(gh_err)?
+        .into_string()
+        .map_err(|e| e.to_string())
+}
+
 /// Best-effort scan of arbitrary text (a modDesc.xml) for the first
 /// `github.com/owner/repo` reference. Skips non-repo GitHub paths.
 pub fn find_repo_in_text(text: &str) -> Option<(String, String)> {
