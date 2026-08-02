@@ -6,6 +6,52 @@ gap between the RC protocol and visible proof it ran.
 
 ---
 
+## v0.2.4 — 2026-08-01
+
+### Artifact identity
+| Field | Value |
+|---|---|
+| Version | 0.2.4 (exe version resource + registry `DisplayVersion` agree) |
+| Source | GitHub release `v0.2.4` (non-prerelease "Latest"), signed; `latest.json` resolves at the updater endpoint |
+| Install path | reached via **in-app auto-update** from 0.2.3 (per-user NSIS at `%LOCALAPPDATA%\Silo`) |
+| Environment | Windows 11 Pro 26100, standard user; real library of **728 mods** (organized) |
+
+### Live tests — operator-driven (GUI + kills by owner, forensics scripted)
+
+- **Auto-update 0.2.3 → 0.2.4 — ✅ PASS.** In-app "Update to 0.2.4" downloaded the signed
+  release, verified the minisign signature, installed, and relaunched as 0.2.4 (confirmed by
+  version resource + registry). Validates the whole updater pipeline end-to-end in the wild.
+- **App-update is non-destructive — ✅ PASS.** Forensic diff of the entire `mods/` tree before
+  vs. after the update: **byte-identical** (728 files unchanged); flat root unchanged; DB
+  `integrity_check: ok`, `mod_cache` = 728. Updating the app touches no mod files.
+- **User-ownership / projection guard (RC §D, the crown jewel) — ✅ PASS.** With a mod set
+  Active, a *different* file was placed at that mod's managed name in the flat `mods/` root.
+  On **launch** (when Silo projects the active set), Silo **did not overwrite or delete** the
+  foreign file — it survived byte-for-byte (sha unchanged), and the archived original was
+  intact. Whole-tree diff showed no unexplained deletion/change. Library restored to baseline
+  after (byte-identical). Confirms the supreme invariant: *Silo never removes a file it can't
+  prove it created*, even when that file occupies a projection target.
+
+### Findings
+- **#34 (low / enhancement) — silent conflict handling.** Silo preserves a foreign/mismatched
+  file at a managed name (data-safe) but doesn't *flag* it in the library view or *report* that
+  it skipped the projection. Visibility gap, not a data-safety bug. Tracked.
+
+### Not run live (covered elsewhere)
+- **Bad-download interception (RC §C).** Injecting a wrong/corrupt asset mid-download needs a
+  network proxy — impractical through the real GUI. Covered by the identity-guard unit tests
+  (#30: wrong-mod / non-mod / corrupt all refused) and the catalog installer's hash check.
+- **Kill-mid-operation crash recovery (RC §A).** The organizer's interrupted-state safety is
+  covered by its regression tests; a live kill-mid-Organize pass is deferred.
+
+### Sign-off
+- Hard-stop-class invariants exercised live (auto-update integrity, non-destructive update,
+  ownership/projection guard): **PASS**. One low-severity visibility finding (#34).
+- Verdict: **suitable for the controlled public beta.** Run the deferred live kill-mid-op pass
+  before a broad promotional push if desired.
+
+---
+
 ## v0.2.2 — 2026-08-01
 
 ### Artifact identity
