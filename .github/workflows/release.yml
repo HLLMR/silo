@@ -68,12 +68,24 @@ jobs:
       # (`npm run build`), but the deps must be installed first.
       - run: npm ci
 
-      # Windows Authenticode signing via Azure Trusted Signing. tauri-action invokes this
-      # as the bundle sign command DURING the build (so the updater's minisign signature is
-      # computed over the already-signed binary — order matters). macOS/Linux are unsigned.
-      - name: Install Trusted Signing CLI (Windows)
+      # Windows Authenticode signing via Azure Trusted Signing. tauri-action invokes the
+      # generated bundle sign command DURING the build (so the updater's minisign signature
+      # is computed over the already-signed binary — order matters). macOS/Linux are unsigned.
+      - name: Set up Windows code signing
         if: matrix.platform == 'windows-latest'
-        run: cargo install trusted-signing-cli --locked
+        shell: pwsh
+        env:
+          TS_ENDPOINT: ${{ secrets.TRUSTED_SIGNING_ENDPOINT }}
+          TS_ACCOUNT: ${{ secrets.TRUSTED_SIGNING_ACCOUNT }}
+          TS_PROFILE: ${{ secrets.TRUSTED_SIGNING_PROFILE }}
+        run: |
+          cargo install trusted-signing-cli --locked
+          # Pass endpoint/account/certificate as explicit flags (env-var names differ across
+          # CLI versions); %1 is the file Tauri substitutes. Auth (tenant/client/secret) is
+          # read from env by the CLI. Written at build time so no secrets live in the tree.
+          $cmd = "trusted-signing-cli -e $env:TS_ENDPOINT -a $env:TS_ACCOUNT -c $env:TS_PROFILE %1"
+          $cfg = @{ '$schema' = 'https://schema.tauri.app/config/2'; bundle = @{ windows = @{ signCommand = $cmd } } }
+          $cfg | ConvertTo-Json -Depth 6 | Set-Content -Encoding utf8 src-tauri/tauri.conf.signing.json
 
       - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         env:
@@ -82,11 +94,8 @@ jobs:
           # updater can verify and install. Keys live in repo secrets (never in the tree).
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # Azure Trusted Signing — read by trusted-signing-cli (endpoint/account/profile)
-          # and by DefaultAzureCredential (tenant/client/secret). Windows job only uses them.
-          AZURE_ENDPOINT: ${{ secrets.TRUSTED_SIGNING_ENDPOINT }}
-          AZURE_CODE_SIGNING_NAME: ${{ secrets.TRUSTED_SIGNING_ACCOUNT }}
-          AZURE_CERT_PROFILE_NAME: ${{ secrets.TRUSTED_SIGNING_PROFILE }}
+          # Azure auth for trusted-signing-cli (endpoint/account/profile are flags, above).
+          # Windows job only uses these.
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
