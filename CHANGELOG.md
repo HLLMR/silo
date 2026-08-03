@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   verified publisher, so Windows SmartScreen no longer flags them as from an "unknown publisher."
   macOS/Linux builds remain OS-unsigned for now. (#60)
 
+- **Dev mods are marked with a "Dev" badge in the library.** Unpacked folder mods (a development
+  build you're working on, not a packaged `.zip`) now carry a badge so they're easy to spot and
+  clearly distinct from managed library mods. Pairs with the earlier fix that made symlinked dev
+  mods show up at all. (#76)
+
 ### Fixed
 
 - **Release downloads now include a `SHA256SUMS.txt`** so you can verify your installer. The job

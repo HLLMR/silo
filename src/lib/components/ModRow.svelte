@@ -124,6 +124,12 @@
     >
       {mod.category}{mod.subcategory ? " · " + mod.subcategory : ""}
     </button>
+    {#if mod.kind === "dir"}
+      <span
+        class="badge dev"
+        title="Unpacked folder mod (dev build) — Silo shows it but leaves it unmanaged"
+      >Dev</span>
+    {/if}
     {#if organized && !active}<span class="badge parked">parked</span>{/if}
     {#if verdict?.status === "verified"}
       <span class="badge verified" title="Verified against the published build">✓ Verified</span>
@@ -351,6 +357,11 @@
   .badge.dep {
     color: var(--accent);
     border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  }
+  .badge.dev {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
   }
   .size {
     flex: 0 0 auto;
