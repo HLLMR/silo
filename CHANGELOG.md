@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Windows installers are now code-signed** (Azure Trusted Signing). The `.exe`/`.msi` carry a
+  verified publisher, so Windows SmartScreen no longer flags them as from an "unknown publisher."
+  macOS/Linux builds remain OS-unsigned for now. (#60)
+
 ### Fixed
 
 - **Release downloads now include a `SHA256SUMS.txt`** so you can verify your installer. The job
