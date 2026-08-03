@@ -2,9 +2,9 @@ name: Release
 
 # Cut a release by pushing a version tag, e.g. `git tag v0.1.0 && git push origin v0.1.0`.
 # tauri-action builds native installers per-OS and attaches them to a DRAFT (non-prerelease)
-# release, so you review before publishing. Bundles are signed for the in-app updater
-# (minisign), but NOT OS-code-signed — SmartScreen/Gatekeeper still warn; users can build
-# from source to verify.
+# release, so you review before publishing. All bundles are signed for the in-app updater
+# (minisign). Windows installers are additionally Authenticode-signed via Azure Trusted
+# Signing (no SmartScreen "unknown publisher"); macOS/Linux remain OS-unsigned.
 on:
   push:
     tags: ['v*']
@@ -29,7 +29,9 @@ jobs:
             args: ''
             rust-target: ''
           - platform: windows-latest
-            args: ''
+            # Merge the Windows Authenticode sign command (Azure Trusted Signing) only in
+            # CI, so local `tauri build` never tries to sign.
+            args: --config src-tauri/tauri.conf.signing.json
             rust-target: ''
 
     runs-on: ${{ matrix.platform }}
@@ -66,6 +68,13 @@ jobs:
       # (`npm run build`), but the deps must be installed first.
       - run: npm ci
 
+      # Windows Authenticode signing via Azure Trusted Signing. tauri-action invokes this
+      # as the bundle sign command DURING the build (so the updater's minisign signature is
+      # computed over the already-signed binary — order matters). macOS/Linux are unsigned.
+      - name: Install Trusted Signing CLI (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: cargo install trusted-signing-cli --locked
+
       - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -73,14 +82,23 @@ jobs:
           # updater can verify and install. Keys live in repo secrets (never in the tree).
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Azure Trusted Signing — read by trusted-signing-cli (endpoint/account/profile)
+          # and by DefaultAzureCredential (tenant/client/secret). Windows job only uses them.
+          AZURE_ENDPOINT: ${{ secrets.TRUSTED_SIGNING_ENDPOINT }}
+          AZURE_CODE_SIGNING_NAME: ${{ secrets.TRUSTED_SIGNING_ACCOUNT }}
+          AZURE_CERT_PROFILE_NAME: ${{ secrets.TRUSTED_SIGNING_PROFILE }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Silo ${{ github.ref_name }}'
           releaseBody: |
             Beta release. Download the installer for your OS below.
 
-            Silo is open source and unsigned — Windows SmartScreen / macOS Gatekeeper
-            may warn on first launch. You can inspect or build from source at any time.
+            Windows installers are code-signed. macOS/Linux builds are open source and
+            OS-unsigned — Gatekeeper may warn on first launch; you can inspect or build
+            from source at any time.
           releaseDraft: true
           # Stable "Latest" channel: publish as a full (non-prerelease) release so the
           # in-app updater's /releases/latest/ endpoint resolves to it. Still created as a
