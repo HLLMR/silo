@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Release artifacts now carry a GitHub build-provenance attestation.** You can verify any
+  download came from Silo's public build pipeline — `gh attestation verify <file> --repo HLLMR/silo`.
+  See [docs/VERIFY_DOWNLOAD.md](docs/VERIFY_DOWNLOAD.md) for verifying the signature, checksum, and
+  provenance of a download. (#60)
+
 ## [0.3.1] - 2026-08-03
 
 ### Added

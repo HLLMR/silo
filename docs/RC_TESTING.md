@@ -88,7 +88,8 @@ stop**.
 `tauri:dev` is for *diagnosing* a failure only. The gate is the installed app across this matrix:
 
 - [ ] Clean packaged install (NSIS `.exe` and MSI).
-- [ ] **Standard Windows user, no elevation.** (SmartScreen will warn — that's expected/unsigned.)
+- [ ] **Standard Windows user, no elevation.** (Installer is code-signed — confirm the publisher
+      reads "David Hellmer," not "Unknown publisher"; SmartScreen may still prompt on a fresh build.)
 - [ ] Fresh app-data state (no prior `silo.db`).
 - [ ] **Existing v0.1.0 app-data state** (upgrade — see Phase 2F).
 - [ ] Real FS25 library (read-only workflows only).
@@ -236,7 +237,8 @@ Before publishing the draft:
 - [ ] Install the Windows artifact on a clean machine/VM; launch; scan a small fixture library;
       verify uninstall leaves user data intact.
 - [ ] Generate and attach **SHA-256 checksums**.
-- [ ] Release notes state: **beta, unsigned, known limitations, upgrade guidance.**
+- [ ] Release notes state: **beta, Windows code-signed / macOS-Linux OS-unsigned, known
+      limitations, upgrade guidance.**
 - [ ] Confirm the website's download links resolve to **v0.2.0** (and the corrected landing is
       deployed + cache-purged).
 - [ ] Mark v0.1.0 superseded.
