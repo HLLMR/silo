@@ -12,6 +12,7 @@
     loadoutsOpen,
     activeLoadoutName,
     mpOpen,
+    collectionsOpen,
     showOrganize,
     unorganizedCount,
     hasMods,
@@ -25,6 +26,7 @@
     onToggleSaves,
     onToggleLoadouts,
     onToggleMp,
+    onToggleCollections,
     onOrganize,
     onCheckUpdates,
     onRescan,
@@ -43,6 +45,7 @@
     loadoutsOpen: boolean;
     activeLoadoutName: string | null;
     mpOpen: boolean;
+    collectionsOpen: boolean;
     showOrganize: boolean;
     unorganizedCount: number;
     hasMods: boolean;
@@ -56,6 +59,7 @@
     onToggleSaves: () => void;
     onToggleLoadouts: () => void;
     onToggleMp: () => void;
+    onToggleCollections: () => void;
     onOrganize: () => void;
     onCheckUpdates: () => void;
     onRescan: () => void;
@@ -118,6 +122,16 @@
     {:else}
       Loadouts
     {/if}
+  </button>
+
+  <button
+    class="btn"
+    class:on={collectionsOpen}
+    title="Collections: share a curated set of mods as a link, or open one someone sent you"
+    onclick={onToggleCollections}
+    disabled={!!busy}
+  >
+    Collections
   </button>
 
   <button
