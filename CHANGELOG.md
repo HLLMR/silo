@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Collections is now its own toolbar entry**, split out of the Multiplayer panel.
+  Sharing a curated set of mods as a link (and importing one) is a distinct feature from
+  matching your active set to a host for a session, so it now lives under its own
+  **Collections** button. `silo://collection` deep links open it directly.
+
 ## [0.4.0] - 2026-08-03
 
 ### Added

@@ -89,6 +89,7 @@
   import LogTriage from "./lib/components/LogTriage.svelte";
   import BindingsView from "./lib/components/BindingsView.svelte";
   import MpSync from "./lib/components/MpSync.svelte";
+  import Collections from "./lib/components/Collections.svelte";
   import BridgeTool from "./lib/components/BridgeTool.svelte";
   import ConflictsPanel from "./lib/components/panels/ConflictsPanel.svelte";
   import HealthPanel from "./lib/components/panels/HealthPanel.svelte";
@@ -180,16 +181,17 @@
   let logOpen = $state(false);
   let bindingsOpen = $state(false);
   let mpOpen = $state(false);
-  // Set when a silo://collection?url=… deep link arrives — opens the import panel pre-filled.
-  let mpImportUrl = $state<string | null>(null);
+  let collectionsOpen = $state(false);
+  // Set when a silo://collection?url=… deep link arrives — opens Collections, pre-filled.
+  let collImportUrl = $state<string | null>(null);
 
   function handleDeepLinks(urls: string[] | null | undefined) {
     if (!urls) return;
     for (const raw of urls) {
       const target = parseCollectionDeepLink(raw);
       if (target) {
-        mpImportUrl = target;
-        mpOpen = true;
+        collImportUrl = target;
+        collectionsOpen = true;
         break;
       }
     }
@@ -1124,6 +1126,7 @@
       ? loadouts.find((l) => l.id === activeLoadoutId)?.name ?? null
       : null}
     {mpOpen}
+    {collectionsOpen}
     showOrganize={unorganizedCount > 0 && !autoFileNew}
     {unorganizedCount}
     hasMods={mods.length > 0}
@@ -1137,6 +1140,7 @@
     onToggleSaves={() => (savesOpen = !savesOpen)}
     onToggleLoadouts={() => (loadoutsOpen = !loadoutsOpen)}
     onToggleMp={() => (mpOpen = !mpOpen)}
+    onToggleCollections={() => (collectionsOpen = !collectionsOpen)}
     onOrganize={organizeNew}
     onCheckUpdates={checkAllUpdates}
     onRescan={() => runScan()}
@@ -1333,14 +1337,22 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="backdrop" onclick={() => (mpOpen = false)}></div>
     <div class="log-panel">
-      <MpSync
+      <MpSync active={activeModRefs} onClose={() => (mpOpen = false)} />
+    </div>
+  {/if}
+
+  {#if collectionsOpen}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="backdrop" onclick={() => (collectionsOpen = false)}></div>
+    <div class="log-panel">
+      <Collections
         active={activeModRefs}
         library={mods}
-        initialImportUrl={mpImportUrl}
+        initialImportUrl={collImportUrl}
         onImported={() => runScan(false)}
         onClose={() => {
-          mpOpen = false;
-          mpImportUrl = null;
+          collectionsOpen = false;
+          collImportUrl = null;
         }}
       />
     </div>
