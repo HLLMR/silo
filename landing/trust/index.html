@@ -276,7 +276,7 @@
       <p>The only data we have is <strong>aggregate counts</strong> — no account, no telemetry, nothing about you or your library. Here's all of it, warts and small numbers included (it's an early beta).</p>
     </div>
     <div class="nerd-grid">
-      <div class="stat"><div class="n" id="nDownloads">21</div><div class="l">Silo downloads · all releases</div></div>
+      <div class="stat"><div class="n" id="nDownloads">—</div><div class="l">installer &amp; app-package downloads</div></div>
       <div class="stat"><div class="n" id="nReleases">4</div><div class="l">releases shipped</div></div>
       <div class="stat"><div class="n" id="nLatest">0.2.3</div><div class="l">latest version</div></div>
       <div class="stat"><div class="n" id="nHosted">0</div><div class="l">mods we host</div></div>
@@ -286,7 +286,7 @@
       <div class="nerd-col">
         <h3 class="nerd-h">Downloads by release</h3>
         <div class="dlbars" id="dlbars"></div>
-        <p class="nerd-cap">Counted from GitHub's public release data.</p>
+        <p class="nerd-cap" id="dlcap">Installer &amp; app-package files only, counted from GitHub's public release data.</p>
       </div>
       <div class="nerd-col">
         <h3 class="nerd-h">SiloAPI traffic <span class="livedot pending" id="liveDot" title="waiting for the metrics feed">●</span></h3>
@@ -343,11 +343,24 @@
       if(c&&c.categories)set("statCats",c.categories.length);
     }).catch(function(){});
 
-    // Release data (downloads total + per-release bars, releases count, latest) from GitHub.
+    // Release data from GitHub. We count only installer / app-package files (.exe/.msi/.dmg/
+    // .AppImage/.deb/.rpm) — files a person deliberately grabs to install the app. The other
+    // assets on each release (latest.json auto-update polls, .sig signature checks, mirror
+    // sweeps of every file) are machines, not installs — summing them all badly overstates
+    // "downloads", so we report the filtered count and disclose the raw total in the caption.
+    var INSTALLER=/\.(exe|msi|dmg|AppImage|deb|rpm)$/i;
     fetch("https://api.github.com/repos/HLLMR/silo/releases").then(function(r){return r.json();}).then(function(rel){
       if(!Array.isArray(rel)||!rel.length)return;
-      var per=rel.map(function(x){return {tag:x.tag_name,dl:(x.assets||[]).reduce(function(a,b){return a+(b.download_count||0);},0)};});
+      var per=rel.map(function(x){
+        var assets=x.assets||[];
+        return {
+          tag:x.tag_name,
+          dl:assets.reduce(function(a,b){return a+(INSTALLER.test(b.name)?(b.download_count||0):0);},0),
+          all:assets.reduce(function(a,b){return a+(b.download_count||0);},0)
+        };
+      });
       var total=per.reduce(function(a,b){return a+b.dl;},0);
+      var totalAll=per.reduce(function(a,b){return a+b.all;},0);
       set("nDownloads",total);
       set("nReleases",rel.length);
       var latest=(rel[0].tag_name||"").replace(/^v/i,"");
@@ -357,6 +370,8 @@
         var pct=Math.max(3,Math.round((p.dl/max)*100));
         return '<div class="bar"><span class="bl">'+esc(p.tag)+'</span><span class="bt"><span class="bf" style="width:'+pct+'%"></span></span><span class="bv">'+fmt(p.dl)+'</span></div>';
       }).join("");
+      var cap=document.getElementById("dlcap");
+      if(cap)cap.textContent="Installer & app-package files only (.exe · .msi · .dmg · .AppImage · .deb · .rpm). GitHub served "+fmt(totalAll)+" files total across these releases — the rest are auto-update polls, signature checks, and mirror sweeps, not installs.";
     }).catch(function(){});
 
     // Time-window API traffic — from a privacy-preserving feed (aggregate counts only, derived from
