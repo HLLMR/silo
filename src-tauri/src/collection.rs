@@ -283,7 +283,9 @@ pub fn readme(c: &Collection, page_url: &str, source_url: &str) -> String {
         s.push_str(&format!("Curated by **{a}**.\n\n"));
     }
     s.push_str("## Open in Silo\n\n");
-    s.push_str(&format!("**[▶ Open this collection in Silo]({page_url})**\n\n"));
+    s.push_str(&format!(
+        "**[▶ Open this collection in Silo]({page_url})**\n\n"
+    ));
     s.push_str("That page hands off to the Silo desktop app — install Silo first if you don't have it. You can also open **Collections → Open a shared link** in Silo and paste:\n\n");
     s.push_str(&format!("```\n{source_url}\n```\n\n"));
     s.push_str(&format!("## Mods ({})\n\n", c.mods.len()));
