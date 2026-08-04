@@ -35,8 +35,11 @@
     onInstalled: (filename: string) => void;
     /** Route the user to the source-connect UI (Settings) from a source card. */
     onNeedAuth?: () => void;
+    /** Pre-seed the catalog search (e.g. from a library row's "Find in Browse").
+     *  Applied on mount; Browse remounts on every view switch, so this seeds each entry. */
+    seed?: string | null;
   }
-  let { installed, onInstalled, onNeedAuth }: Props = $props();
+  let { installed, onInstalled, onNeedAuth, seed = null }: Props = $props();
 
   // Source connection state, for the interactive cards in the drawer.
   let gh = $state<{ connected: boolean; canWrite: boolean }>({
@@ -243,6 +246,7 @@
     } catch {
       // Older server without /categories — the filter just stays hidden.
     }
+    if (seed && seed.trim()) query = seed.trim();
     await load();
   });
 

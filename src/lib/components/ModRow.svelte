@@ -18,6 +18,7 @@
     onToggleActive,
     onOpenSettings,
     onOpenDetail,
+    onContextMenu,
     tags = [],
     overridden = false,
     organized = false,
@@ -31,6 +32,7 @@
     onToggleActive: () => void;
     onOpenSettings: () => void;
     onOpenDetail: () => void;
+    onContextMenu?: (ev: MouseEvent) => void;
     tags?: string[];
     overridden?: boolean;
     organized?: boolean;
@@ -80,11 +82,13 @@
   );
 </script>
 
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   class="row"
   class:has-error={!!mod.error}
   class:broken={curation.broken}
   class:dimmed={curation.hidden || (organized && !active)}
+  oncontextmenu={onContextMenu}
 >
   <button
     class="active-dot"
