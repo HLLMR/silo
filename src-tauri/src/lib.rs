@@ -1272,6 +1272,112 @@ fn read_collection_json(
     collection::parse(&json)
 }
 
+/// A collection the user has published, for the "Your collections" management list.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CollectionSummary {
+    /// `"gist"` | `"repo"`.
+    kind: String,
+    /// Gist id, or `"owner/repo"` — what `collection_delete` takes.
+    reference: String,
+    name: String,
+    mod_count: usize,
+    created_at: Option<String>,
+    /// The silo.hllmr.com/c/ share link.
+    page_url: String,
+    /// The raw gist/repo URL on GitHub.
+    source_url: String,
+    /// Whether Silo can delete it in-app (gists: yes; repos need a scope we don't hold).
+    can_delete: bool,
+}
+
+/// List the collections the user has published to their GitHub — secret gists (carrying the
+/// collection file) and `silo-`-prefixed public repos. Best-effort per item: one that fails
+/// to read or parse is skipped rather than failing the whole list.
+#[tauri::command]
+async fn collections_list(app: tauri::AppHandle) -> Result<Vec<CollectionSummary>, String> {
+    let db = db_path(&app)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<Vec<CollectionSummary>, String> {
+        let conn = db::open(&db)?;
+        let token = secrets::get(&conn, "gh_token")
+            .ok_or_else(|| "Connect your GitHub account first".to_string())?;
+        let mut out: Vec<CollectionSummary> = Vec::new();
+
+        if let Ok(gists) = github::list_user_gists(&token) {
+            for g in gists {
+                if !g.filenames.iter().any(|f| f == collection::FILE_NAME) {
+                    continue;
+                }
+                if let Ok(coll) = read_collection_json(&g.id, Some(&token)) {
+                    out.push(CollectionSummary {
+                        kind: "gist".into(),
+                        reference: g.id.clone(),
+                        name: coll.name,
+                        mod_count: coll.mods.len(),
+                        created_at: g.created_at,
+                        page_url: collection::gist_page_url(&g.id),
+                        source_url: g.html_url,
+                        can_delete: true,
+                    });
+                }
+            }
+        }
+
+        if let Ok(repos) = github::list_owned_repos(&token) {
+            for r in repos {
+                if !r.name.starts_with("silo-") {
+                    continue;
+                }
+                if let Ok(coll) = read_collection_json(&r.full_name, Some(&token)) {
+                    let (owner, rname) =
+                        r.full_name.split_once('/').unwrap_or(("", r.name.as_str()));
+                    out.push(CollectionSummary {
+                        kind: "repo".into(),
+                        reference: r.full_name.clone(),
+                        name: coll.name,
+                        mod_count: coll.mods.len(),
+                        created_at: r.created_at,
+                        page_url: collection::repo_page_url(owner, rname),
+                        source_url: r.html_url,
+                        can_delete: false,
+                    });
+                }
+            }
+        }
+
+        // Newest first (gists and repos interleaved by creation time).
+        out.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        Ok(out)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Delete a published collection. Gists (the private-share default) delete in-app with the
+/// `gist` scope; public repos need `delete_repo` (not requested) so those are removed on GitHub.
+#[tauri::command]
+async fn collection_delete(
+    app: tauri::AppHandle,
+    kind: String,
+    reference: String,
+) -> Result<(), String> {
+    let db = db_path(&app)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
+        let conn = db::open(&db)?;
+        let token = secrets::get(&conn, "gh_token")
+            .ok_or_else(|| "Connect your GitHub account first".to_string())?;
+        match kind.as_str() {
+            "gist" => github::delete_gist(&token, &reference),
+            _ => Err(
+                "Silo can delete gist collections here. For a public repo, delete it on GitHub."
+                    .into(),
+            ),
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// One mod in an import plan, tagged with what the importer would do about it.
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -1866,6 +1972,8 @@ pub fn run() {
             collection_export,
             collection_import_preview,
             collection_apply,
+            collections_list,
+            collection_delete,
             generate_bridge,
             bisect_plan,
             bisect_narrow,
