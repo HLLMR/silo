@@ -1194,6 +1194,9 @@ async fn collection_export(
             mods: entries,
         };
         let json = collection::to_json(&coll)?;
+        // The shareable link is always the silo.hllmr.com/c/ handoff page — never the raw
+        // gist/repo URL (which dead-ends recipients on JSON and can't carry a working
+        // "Open in Silo" link, since GitHub strips silo:// schemes).
         let url = if public.unwrap_or(false) {
             // P2: a public, forkable repo holding the collection + a human-readable README.
             let repo = github::create_public_repo(
@@ -1201,12 +1204,13 @@ async fn collection_export(
                 &collection::repo_slug(&name),
                 &format!("A Silo FS25 mod collection ({} mods)", coll.mods.len()),
             )?;
-            let readme = collection::readme(&coll, &repo.html_url);
             let (owner, rname) = repo
                 .full_name
                 .split_once('/')
                 .map(|(o, r)| (o.to_string(), r.to_string()))
                 .unwrap_or_default();
+            let page_url = collection::repo_page_url(&owner, &rname);
+            let readme = collection::readme(&coll, &page_url, &repo.html_url);
             github::put_repo_file(
                 &token,
                 &owner,
@@ -1223,16 +1227,21 @@ async fn collection_export(
                 &readme,
                 "Add README (via Silo)",
             )?;
-            repo.html_url
+            page_url
         } else {
-            // P1: a secret (unlisted) gist for private / group sharing.
-            github::create_secret_gist(
+            // P1: a secret (unlisted) gist for private / group sharing. Create with the JSON,
+            // then attach a README linking the handoff page (its URL needs the new gist id).
+            let gist = github::create_secret_gist(
                 &token,
                 &format!("{name} — a Silo mod collection"),
                 collection::FILE_NAME,
                 &json,
-            )?
-            .html_url
+            )?;
+            let page_url = collection::gist_page_url(&gist.id);
+            let readme = collection::readme(&coll, &page_url, &gist.html_url);
+            // Best-effort: the JSON + share link already work without it.
+            let _ = github::update_gist_file(&token, &gist.id, "README.md", &readme);
+            page_url
         };
         Ok(ExportResult {
             url,

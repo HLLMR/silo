@@ -620,6 +620,23 @@ pub fn create_secret_gist(
     Ok(GistRef { id, html_url })
 }
 
+/// PATCH /gists/{id} — add or replace a named file in a gist we own. Used to attach a README
+/// after creation (the README links the handoff page, whose URL needs the server-assigned id).
+pub fn update_gist_file(
+    token: &str,
+    id: &str,
+    filename: &str,
+    content: &str,
+) -> Result<(), String> {
+    ureq::request("PATCH", &format!("https://api.github.com/gists/{id}"))
+        .set("Accept", "application/vnd.github+json")
+        .set("User-Agent", UA)
+        .set("Authorization", &format!("Bearer {token}"))
+        .send_json(ureq::json!({ "files": { filename: { "content": content } } }))
+        .map_err(gh_err)?;
+    Ok(())
+}
+
 /// GET /gists/{id} and return the named file's content. Reads are unauthenticated-capable,
 /// but pass the owner token when available (higher rate limit; required for a secret gist
 /// the anonymous API won't return). Errors if the file is absent from the gist.

@@ -30,6 +30,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Sharing a curated set of mods as a link (and importing one) is a distinct feature from
   matching your active set to a host for a session, so it now lives under its own
   **Collections** button. `silo://collection` deep links open it directly.
+- **A shared collection link is now a real page, not a raw gist.** Creating a collection
+  gives you a `silo.hllmr.com/c/…` link. Recipients land on a page that shows the mod list
+  and an **Open in Silo** button (with a download link if they don't have Silo yet) — instead
+  of a wall of GitHub JSON. The gist/repo still backs it and gets a README pointing at the
+  page. (Previously the "Open in Silo" button lived in the GitHub README, where GitHub's
+  sanitizer strips `silo://` links, so it never worked.)
 
 ## [0.4.0] - 2026-08-03
 

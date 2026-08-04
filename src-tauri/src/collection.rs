@@ -249,24 +249,28 @@ pub fn repo_slug(name: &str) -> String {
     }
 }
 
-/// Percent-encode a string for use as a URL query value (RFC 3986 unreserved set kept).
-/// Used for the `silo://collection?url=…` deep link in a public collection's README.
-fn percent_encode(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for b in s.bytes() {
-        match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
-                out.push(b as char)
-            }
-            _ => out.push_str(&format!("%{b:02X}")),
-        }
-    }
-    out
+/// The public handoff page. Recipients open `silo.hllmr.com/c/…`, which fetches the list and
+/// hands off to the Silo app (or offers a download) — the human-friendly link a sharer sends,
+/// instead of a raw gist/repo URL that dead-ends on a wall of JSON.
+pub const PAGE_BASE: &str = "https://silo.hllmr.com/c/";
+
+/// Handoff-page URL for a gist-backed collection (`?g=<id>`).
+pub fn gist_page_url(id: &str) -> String {
+    format!("{PAGE_BASE}?g={id}")
 }
 
-/// A human-readable README for a public collection repo: what it is, how to open it in
-/// Silo, and the mod list with source links. Lists mods only — no files are redistributed.
-pub fn readme(c: &Collection, open_url: &str) -> String {
+/// Handoff-page URL for a repo-backed collection (`?r=<owner>/<repo>`).
+pub fn repo_page_url(owner: &str, repo: &str) -> String {
+    format!("{PAGE_BASE}?r={owner}/{repo}")
+}
+
+/// A human-readable README for a shared collection (repo or gist): what it is, how to open
+/// it in Silo, and the mod list with source links. Lists mods only — no files redistributed.
+///
+/// `page_url` is the `silo.hllmr.com/c/…` handoff page (an https link GitHub renders as
+/// clickable — a `silo://` link would be stripped by GitHub's markdown sanitizer). `source_url`
+/// is the raw gist/repo link, for pasting straight into Silo's importer.
+pub fn readme(c: &Collection, page_url: &str, source_url: &str) -> String {
     let mut s = format!("# {}\n\n", c.name);
     if let Some(d) = c.description.as_deref().filter(|d| !d.trim().is_empty()) {
         s.push_str(d);
@@ -280,11 +284,10 @@ pub fn readme(c: &Collection, open_url: &str) -> String {
     }
     s.push_str("## Open in Silo\n\n");
     s.push_str(&format!(
-        "**[▶ Open this collection in Silo](silo://collection?url={})**\n\n",
-        percent_encode(open_url)
+        "**[▶ Open this collection in Silo]({page_url})**\n\n"
     ));
-    s.push_str("(Requires the Silo desktop app.) Or open **Multiplayer → Open a shared link** in Silo and paste this repo's URL:\n\n");
-    s.push_str(&format!("```\n{open_url}\n```\n\n"));
+    s.push_str("That page hands off to the Silo desktop app — install Silo first if you don't have it. You can also open **Collections → Open a shared link** in Silo and paste:\n\n");
+    s.push_str(&format!("```\n{source_url}\n```\n\n"));
     s.push_str(&format!("## Mods ({})\n\n", c.mods.len()));
     for m in &c.mods {
         let ver = m
@@ -503,24 +506,20 @@ mod tests {
 
     #[test]
     fn readme_has_the_essentials() {
-        let md = readme(&sample(), "https://github.com/hllmr/silo-my-server-pack");
+        let md = readme(
+            &sample(),
+            "https://silo.hllmr.com/c/?r=hllmr/silo-my-server-pack",
+            "https://github.com/hllmr/silo-my-server-pack",
+        );
         assert!(md.contains("# My Server Pack"));
         assert!(md.contains("Open in Silo"));
+        // The "Open in Silo" button links the https handoff page (GitHub renders it),
+        // never a silo:// link (GitHub's sanitizer strips custom schemes).
+        assert!(md.contains("(https://silo.hllmr.com/c/?r=hllmr/silo-my-server-pack)"));
+        assert!(!md.contains("silo://"));
+        // The raw source URL is offered for pasting into Silo's importer.
         assert!(md.contains("https://github.com/hllmr/silo-my-server-pack"));
         assert!(md.contains("FS25_Foo"));
         assert!(md.contains("no mod files are redistributed"));
-        // The deep link carries a percent-encoded repo URL.
-        assert!(md.contains(
-            "silo://collection?url=https%3A%2F%2Fgithub.com%2Fhllmr%2Fsilo-my-server-pack"
-        ));
-    }
-
-    #[test]
-    fn percent_encode_keeps_unreserved_escapes_the_rest() {
-        assert_eq!(percent_encode("aZ0-_.~"), "aZ0-_.~");
-        assert_eq!(
-            percent_encode("https://github.com/o/r"),
-            "https%3A%2F%2Fgithub.com%2Fo%2Fr"
-        );
     }
 }
