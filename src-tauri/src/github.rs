@@ -637,6 +637,83 @@ pub fn update_gist_file(
     Ok(())
 }
 
+/// One of the user's gists, from the list endpoint — enough to spot Silo collections
+/// (a gist carrying the collection file) without reading each one's content.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GistListItem {
+    pub id: String,
+    pub description: String,
+    pub created_at: Option<String>,
+    pub html_url: String,
+    pub filenames: Vec<String>,
+}
+
+/// GET /gists — the authenticated user's own gists (first page, newest first). Needs `gist`.
+pub fn list_user_gists(token: &str) -> Result<Vec<GistListItem>, String> {
+    let v = gh_get("https://api.github.com/gists?per_page=100", Some(token))?;
+    let arr = v
+        .as_array()
+        .ok_or("Unexpected gists response from GitHub")?;
+    Ok(arr
+        .iter()
+        .map(|g| GistListItem {
+            id: g["id"].as_str().unwrap_or_default().to_string(),
+            description: g["description"].as_str().unwrap_or_default().to_string(),
+            created_at: g["created_at"].as_str().map(String::from),
+            html_url: g["html_url"].as_str().unwrap_or_default().to_string(),
+            filenames: g["files"]
+                .as_object()
+                .map(|o| o.keys().cloned().collect())
+                .unwrap_or_default(),
+        })
+        .collect())
+}
+
+/// DELETE /gists/{id} — unpublish a gist we own. Needs `gist`.
+pub fn delete_gist(token: &str, id: &str) -> Result<(), String> {
+    ureq::delete(&format!("https://api.github.com/gists/{id}"))
+        .set("Accept", "application/vnd.github+json")
+        .set("User-Agent", UA)
+        .set("Authorization", &format!("Bearer {token}"))
+        .call()
+        .map_err(gh_err)?;
+    Ok(())
+}
+
+/// One of the user's owned repos, from the list endpoint — enough to spot collection repos
+/// (name-prefixed `silo-`) before reading each one's collection file.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RepoListItem {
+    pub full_name: String,
+    pub name: String,
+    pub html_url: String,
+    pub created_at: Option<String>,
+}
+
+/// GET /user/repos (owned, newest first) — needs the `public_repo`/repo scope Silo already
+/// requests. Deleting a repo would need the separate `delete_repo` scope (not requested), so
+/// collection repos are list-only in-app; deletion happens on GitHub.
+pub fn list_owned_repos(token: &str) -> Result<Vec<RepoListItem>, String> {
+    let v = gh_get(
+        "https://api.github.com/user/repos?per_page=100&affiliation=owner&sort=created&direction=desc",
+        Some(token),
+    )?;
+    let arr = v
+        .as_array()
+        .ok_or("Unexpected repos response from GitHub")?;
+    Ok(arr
+        .iter()
+        .map(|r| RepoListItem {
+            full_name: r["full_name"].as_str().unwrap_or_default().to_string(),
+            name: r["name"].as_str().unwrap_or_default().to_string(),
+            html_url: r["html_url"].as_str().unwrap_or_default().to_string(),
+            created_at: r["created_at"].as_str().map(String::from),
+        })
+        .collect())
+}
+
 /// GET /gists/{id} and return the named file's content. Reads are unauthenticated-capable,
 /// but pass the owner token when available (higher rate limit; required for a secret gist
 /// the anonymous API won't return). Errors if the file is absent from the gist.

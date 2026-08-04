@@ -11,7 +11,10 @@
     detectConflicts,
     ghStatus,
     openExternal,
+    collectionsList,
+    collectionDelete,
   } from "../api";
+  import type { CollectionSummary } from "../api";
   import type {
     MpModRef,
     CollectionExportResult,
@@ -63,8 +66,58 @@
       canGist = false;
       canWrite = false;
     }
+    // Only worth listing when a scope that can publish a collection is present — otherwise
+    // the list is always empty (and the command would need a token anyway).
+    if (canGist || canWrite) void loadMyCollections();
   }
   refreshGh();
+
+  // ── Your collections (management) ──
+  let myColls = $state<CollectionSummary[]>([]);
+  let myLoading = $state(false);
+  let myErr = $state<string | null>(null);
+  let copiedRef = $state<string | null>(null);
+  let deletingRef = $state<string | null>(null);
+
+  async function loadMyCollections() {
+    myLoading = true;
+    myErr = null;
+    try {
+      myColls = await collectionsList();
+    } catch (e) {
+      myErr = String(e);
+    } finally {
+      myLoading = false;
+    }
+  }
+
+  async function copyShareLink(c: CollectionSummary) {
+    try {
+      await navigator.clipboard.writeText(c.pageUrl);
+      copiedRef = c.reference;
+      setTimeout(() => {
+        if (copiedRef === c.reference) copiedRef = null;
+      }, 1500);
+    } catch {
+      /* clipboard blocked — ignore */
+    }
+  }
+
+  async function doDelete(c: CollectionSummary) {
+    if (!c.canDelete || deletingRef) return;
+    if (!confirm(`Delete “${c.name}”? This removes it from your GitHub and breaks its share link.`))
+      return;
+    deletingRef = c.reference;
+    myErr = null;
+    try {
+      await collectionDelete(c.kind, c.reference);
+      myColls = myColls.filter((x) => x.reference !== c.reference);
+    } catch (e) {
+      myErr = String(e);
+    } finally {
+      deletingRef = null;
+    }
+  }
 
   async function doShare() {
     if (!collName.trim()) return;
@@ -74,6 +127,7 @@
     copied = false;
     try {
       shareResult = await collectionExport(collName.trim(), null, sharePublic, active);
+      void loadMyCollections();
     } catch (e) {
       shareErr = String(e);
     } finally {
@@ -274,6 +328,59 @@
       {#if shareErr}<div class="err">{shareErr}</div>{/if}
     {/if}
   </div>
+
+  {#if canGist || canWrite}
+    <div class="share">
+      <div class="card-title">Your collections</div>
+      <p class="card-body">
+        Collections you've published to your GitHub. Copy a share link again, open its page,
+        or remove one.
+      </p>
+      {#if myLoading}
+        <div class="busy">Loading your collections…</div>
+      {:else if myErr}
+        <div class="err">{myErr}</div>
+      {:else if myColls.length === 0}
+        <p class="caveat" style="margin-top:6px">Nothing published yet — create one above.</p>
+      {:else}
+        {#each myColls as c (c.reference)}
+          <div class="coll-row">
+            <div class="coll-info">
+              <span class="coll-title" title={c.name}>{c.name}</span>
+              <span class="coll-sub">
+                <span class="kind {c.kind}">{c.kind === "repo" ? "Public" : "Secret"}</span>
+                {c.modCount} mod{c.modCount === 1 ? "" : "s"}
+              </span>
+            </div>
+            <div class="coll-actions">
+              <button class="mini" onclick={() => copyShareLink(c)}>
+                {copiedRef === c.reference ? "Copied ✓" : "Copy link"}
+              </button>
+              <button class="mini" onclick={() => openExternal(c.pageUrl)} title="Open the share page">Page ↗</button>
+              <button class="mini" onclick={() => openExternal(c.sourceUrl)} title="Open on GitHub">GitHub ↗</button>
+              {#if c.canDelete}
+                <button
+                  class="mini danger"
+                  onclick={() => doDelete(c)}
+                  disabled={deletingRef === c.reference}
+                >
+                  {deletingRef === c.reference ? "Deleting…" : "Delete"}
+                </button>
+              {:else}
+                <button
+                  class="mini"
+                  onclick={() => openExternal(c.sourceUrl)}
+                  title="Public collection repos are deleted on GitHub"
+                >
+                  Delete on GitHub ↗
+                </button>
+              {/if}
+            </div>
+          </div>
+        {/each}
+      {/if}
+    </div>
+  {/if}
 
   <div class="share">
     <div class="card-title">Open a shared link</div>
@@ -521,6 +628,83 @@
     align-items: center;
     gap: 10px;
     margin: 4px 0 4px;
+  }
+  .coll-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 4px;
+    border-top: 1px solid var(--border);
+  }
+  .coll-row:first-of-type {
+    border-top: none;
+    margin-top: 4px;
+  }
+  .coll-info {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .coll-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .coll-sub {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.76rem;
+    color: var(--text-muted);
+  }
+  .kind {
+    font-size: 0.64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 1px 6px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+  }
+  .kind.repo {
+    color: var(--info);
+    border-color: color-mix(in srgb, var(--info) 40%, var(--border));
+  }
+  .kind.gist {
+    color: var(--text-muted);
+  }
+  .coll-actions {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .mini {
+    padding: 4px 9px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.76rem;
+    cursor: pointer;
+  }
+  .mini:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+  }
+  .mini.danger:hover:not(:disabled) {
+    color: var(--danger);
+    border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+  }
+  .mini:disabled {
+    opacity: 0.55;
+    cursor: default;
   }
   .heads-up {
     margin-top: 12px;

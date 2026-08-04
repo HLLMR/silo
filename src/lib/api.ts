@@ -427,6 +427,32 @@ export function collectionExport(
   });
 }
 
+/** A collection the user has published, for the "Your collections" management list. */
+export interface CollectionSummary {
+  kind: "gist" | "repo";
+  /** Gist id, or "owner/repo" — what collectionDelete takes. */
+  reference: string;
+  name: string;
+  modCount: number;
+  createdAt: string | null;
+  /** The silo.hllmr.com/c/ share link. */
+  pageUrl: string;
+  /** The raw gist/repo URL on GitHub. */
+  sourceUrl: string;
+  /** Whether Silo can delete it in-app (gists yes; repos → delete on GitHub). */
+  canDelete: boolean;
+}
+
+/** List the collections you've published to your GitHub (secret gists + silo- repos). */
+export function collectionsList(): Promise<CollectionSummary[]> {
+  return invoke<CollectionSummary[]>("collections_list");
+}
+
+/** Delete a published collection. Gists delete in-app; repos must be removed on GitHub. */
+export function collectionDelete(kind: string, reference: string): Promise<void> {
+  return invoke("collection_delete", { kind, reference });
+}
+
 /**
  * Preview importing a shared collection from a gist link/id, bucketed against the
  * installed library + catalog. Read-only — touches no files.
