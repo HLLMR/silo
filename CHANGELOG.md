@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-04
+
 ### Fixed
 
 - **"Newest" in Browse now matches ModHub's order.** It was sorting by our catalog's
