@@ -9,6 +9,7 @@
 <p align="center">
   <a href="https://github.com/HLLMR/silo/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/HLLMR/silo?include_prereleases&sort=semver&color=4a7330&label=release"></a>
   <a href="https://github.com/HLLMR/silo/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/HLLMR/silo/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="docs/VERIFY_DOWNLOAD.md"><img alt="Windows: code signed" src="https://img.shields.io/badge/Windows-code%20signed-4a7330"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-4a7330"></a>
   <img alt="Platforms" src="https://img.shields.io/badge/platforms-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-4a7330">
   <a href="https://github.com/HLLMR/silo/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/HLLMR/silo/total?color=e3b23c&label=downloads"></a>
@@ -26,8 +27,9 @@ disk is reversible. **Free and open source. Windows (tested) · macOS & Linux (e
   &nbsp;·&nbsp; <a href="#install">Build from source</a>
 </p>
 
-> **Status: public beta.** Builds are unsigned (open source), so Windows SmartScreen /
-> macOS Gatekeeper may warn on first launch.
+> **Status: public beta.** Windows installers are [code-signed](docs/VERIFY_DOWNLOAD.md) by a
+> verified publisher (SmartScreen may still prompt on new releases while reputation builds, but
+> shows the publisher, not "unknown"). macOS/Linux builds are OS-unsigned — Gatekeeper may warn.
 >
 > **Platforms: Windows is the tested, supported platform.** macOS (Intel & Apple Silicon)
 > and Linux builds are **experimental and largely untested** — we'd love testers on those
@@ -68,8 +70,9 @@ is the management layer the game left out.
 ## Install
 
 **Download:** grab the installer for your OS from
-[Releases](https://github.com/HLLMR/silo/releases). Builds are unsigned (open source), so
-Windows SmartScreen / macOS Gatekeeper may warn on first launch.
+[Releases](https://github.com/HLLMR/silo/releases). Windows builds are code-signed — you can
+[verify the signature, checksum, and build provenance](docs/VERIFY_DOWNLOAD.md). macOS/Linux
+builds are OS-unsigned, so Gatekeeper may warn on first launch.
 
 **Build from source:** needs [Rust](https://rustup.rs) + [Node 20+](https://nodejs.org)
 and the [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/) for your OS.

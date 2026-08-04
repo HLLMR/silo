@@ -169,7 +169,7 @@
 <li>Run it. Silo installs for your user account and doesn't need administrator rights.</li>
 </ol>
 
-<blockquote class="note"><strong>The blue "Windows protected your PC" warning is expected.</strong> Silo is a free, open-source beta and the installer isn't code-signed yet, so Microsoft SmartScreen flags it as from an unknown publisher. To continue, click <strong>More info</strong>, then <strong>Run anyway</strong>. This warning goes away once signing is in place.</blockquote>
+<blockquote class="note"><strong>A blue "Windows protected your PC" prompt can still appear on a brand-new release.</strong> Silo's Windows installer is digitally signed by a verified publisher (<strong>David Hellmer</strong>), so it shows that publisher rather than "unknown" — but SmartScreen builds reputation per release, so a very fresh build may still prompt. If it does, click <strong>More info</strong>, then <strong>Run anyway</strong>. You can <a href="https://github.com/HLLMR/silo/blob/main/docs/VERIFY_DOWNLOAD.md">verify the signature yourself</a> first.</blockquote>
 
 <h3>What happens on first run</h3>
 
@@ -601,12 +601,12 @@
 <section id="troubleshooting"><h2 id="troubleshooting-h">Troubleshooting & FAQ</h2>
 
 <h3>Windows SmartScreen (or macOS Gatekeeper) warns on first launch</h3>
-<p>Expected. Silo is open source and its builds are <strong>unsigned</strong>, so the operating system doesn't recognize the publisher yet. It is not a sign anything is wrong.</p>
+<p>Silo's <strong>Windows</strong> installer is digitally signed by a verified publisher (<strong>David Hellmer</strong>), so Windows can identify who published it. SmartScreen builds reputation per release, so a brand-new build may still prompt — but it shows the verified publisher, not "unknown," and eases over time. macOS and Linux builds are open source and OS-unsigned, so Gatekeeper may not recognize the publisher yet. Neither is a sign anything is wrong.</p>
 <ul>
 <li><strong>Windows:</strong> click <strong>More info</strong>, then <strong>Run anyway</strong>.</li>
 <li><strong>macOS:</strong> right-click the app and choose <strong>Open</strong> from the menu.</li>
 </ul>
-<p>If you'd rather not take our word for it, you can read or build the source yourself from the GitHub repository.</p>
+<p>You don't have to take our word for it — you can <a href="https://github.com/HLLMR/silo/blob/main/docs/VERIFY_DOWNLOAD.md">verify the signature, checksum, and build provenance</a>, or read and build the source yourself from the GitHub repository.</p>
 
 <h3>Do I need Developer Mode or administrator rights?</h3>
 <p>Almost never. When you organize your library, Silo tucks each mod into a <code>mods/archive/&lt;Category&gt;/</code> subfolder (the game only reads the flat root, so it ignores these) and projects the active set back into the root:</p>
