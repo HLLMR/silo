@@ -266,6 +266,9 @@
           <span class="sr-only">Search mods</span>
           <input id="q" type="search" placeholder="Search mods by name…" autocomplete="off" />
         </label>
+        <select class="sel" id="cat" aria-label="Category">
+          <option value="">All categories</option>
+        </select>
         <select class="sel" id="sort" aria-label="Sort">
           <option value="popular">Most popular</option>
           <option value="recent">Recently updated</option>
@@ -445,19 +448,38 @@
 
     try {
       var c = await (await fetch(API + "/categories")).json();
+      var rows = c.categories || [];
       var el = document.getElementById("cats");
+      var catSel = document.getElementById("cat");
+
+      // The dropdown is the complete, authoritative filter (every category + count);
+      // the chips are quick-picks for the top categories. Both stay in sync.
+      var opts = ['<option value="">All categories</option>'];
+      rows.forEach(function (row) {
+        opts.push('<option value="' + esc(row.category) + '">' + esc(row.category) + " (" + fmt(row.count) + ")</option>");
+      });
+      catSel.innerHTML = opts.join("");
+
       var chips = ['<button class="chip on" data-cat="" type="button">All</button>'];
-      (c.categories || []).slice(0, 14).forEach(function (row) {
+      rows.slice(0, 10).forEach(function (row) {
         chips.push('<button class="chip" data-cat="' + esc(row.category) + '" type="button">' + esc(row.category) + '<span class="n">' + fmt(row.count) + "</span></button>");
       });
       el.innerHTML = chips.join("");
+
+      function setCategory(cat) {
+        state.category = cat || "";
+        el.querySelectorAll(".chip").forEach(function (x) {
+          x.classList.toggle("on", (x.getAttribute("data-cat") || "") === state.category);
+        });
+        catSel.value = state.category;
+        load(true);
+      }
+
       el.addEventListener("click", function (ev) {
         var b = ev.target.closest(".chip"); if (!b) return;
-        el.querySelectorAll(".chip").forEach(function (x) { x.classList.remove("on"); });
-        b.classList.add("on");
-        state.category = b.getAttribute("data-cat") || "";
-        load(true);
+        setCategory(b.getAttribute("data-cat") || "");
       });
+      catSel.addEventListener("change", function () { setCategory(catSel.value); });
     } catch (e) { /* categories are optional chrome */ }
 
     load(true);
