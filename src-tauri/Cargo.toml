@@ -22,6 +22,8 @@ tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-process = "2"
+# "Open in Silo" — silo:// deep links (a shared collection's web page can hand off to the app).
+tauri-plugin-deep-link = "2"
 # Desktop-only self-update (GitHub Releases → signed latest.json). Silo targets
 # Windows/macOS/Linux only, so no mobile cfg-guard is needed.
 tauri-plugin-updater = "2"
@@ -59,6 +61,11 @@ keyring = { version = "3", features = [
     "sync-secret-service",
     "crypto-rust",
 ] }
+
+# single-instance is desktop-only; the `deep-link` feature forwards a silo:// URL to the
+# already-running instance instead of spawning a second one (Windows/Linux behaviour).
+[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
+tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 
 [profile.dev]
 # Faster incremental dev builds; the heavy work is I/O-bound anyway.

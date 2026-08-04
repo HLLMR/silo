@@ -1769,7 +1769,25 @@ fn detect_foreign_files(root: Option<String>) -> Result<Vec<organize::ForeignFil
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+
+    // single-instance MUST be registered first. Its `deep-link` feature forwards a silo://
+    // URL to the running instance (rather than spawning a second one); the callback fires on
+    // that second launch, so we just surface the existing window — the deep-link plugin has
+    // already re-emitted the URL to the frontend's onOpenUrl listener.
+    #[cfg(desktop)]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            use tauri::Manager;
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.set_focus();
+                let _ = w.unminimize();
+            }
+        }));
+    }
+
+    builder
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())

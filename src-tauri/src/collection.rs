@@ -249,6 +249,21 @@ pub fn repo_slug(name: &str) -> String {
     }
 }
 
+/// Percent-encode a string for use as a URL query value (RFC 3986 unreserved set kept).
+/// Used for the `silo://collection?url=…` deep link in a public collection's README.
+fn percent_encode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for b in s.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char)
+            }
+            _ => out.push_str(&format!("%{b:02X}")),
+        }
+    }
+    out
+}
+
 /// A human-readable README for a public collection repo: what it is, how to open it in
 /// Silo, and the mod list with source links. Lists mods only — no files are redistributed.
 pub fn readme(c: &Collection, open_url: &str) -> String {
@@ -263,7 +278,12 @@ pub fn readme(c: &Collection, open_url: &str) -> String {
     if let Some(a) = c.author.as_deref().filter(|a| !a.trim().is_empty()) {
         s.push_str(&format!("Curated by **{a}**.\n\n"));
     }
-    s.push_str("## Open in Silo\n\nIn Silo, open **Multiplayer → Open a shared link** and paste this repo's URL:\n\n");
+    s.push_str("## Open in Silo\n\n");
+    s.push_str(&format!(
+        "**[▶ Open this collection in Silo](silo://collection?url={})**\n\n",
+        percent_encode(open_url)
+    ));
+    s.push_str("(Requires the Silo desktop app.) Or open **Multiplayer → Open a shared link** in Silo and paste this repo's URL:\n\n");
     s.push_str(&format!("```\n{open_url}\n```\n\n"));
     s.push_str(&format!("## Mods ({})\n\n", c.mods.len()));
     for m in &c.mods {
@@ -489,5 +509,18 @@ mod tests {
         assert!(md.contains("https://github.com/hllmr/silo-my-server-pack"));
         assert!(md.contains("FS25_Foo"));
         assert!(md.contains("no mod files are redistributed"));
+        // The deep link carries a percent-encoded repo URL.
+        assert!(md.contains(
+            "silo://collection?url=https%3A%2F%2Fgithub.com%2Fhllmr%2Fsilo-my-server-pack"
+        ));
+    }
+
+    #[test]
+    fn percent_encode_keeps_unreserved_escapes_the_rest() {
+        assert_eq!(percent_encode("aZ0-_.~"), "aZ0-_.~");
+        assert_eq!(
+            percent_encode("https://github.com/o/r"),
+            "https%3A%2F%2Fgithub.com%2Fo%2Fr"
+        );
     }
 }

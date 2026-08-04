@@ -4,7 +4,10 @@
   "description": "Silo — Farming Simulator 25 mod library manager",
   "license": "MIT",
   "homepage": "https://silo.hllmr.com",
-  "repository": { "type": "git", "url": "https://github.com/HLLMR/silo.git" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HLLMR/silo.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,6 +20,7 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-deep-link": "^2.4.9",
     "@tauri-apps/plugin-dialog": "^2.7.2",
     "@tauri-apps/plugin-opener": "^2.5.4",
     "@tauri-apps/plugin-process": "^2",
