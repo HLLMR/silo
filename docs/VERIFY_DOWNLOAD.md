@@ -68,3 +68,9 @@ gh attestation verify <the-file-you-downloaded> --repo HLLMR/silo
 
 A successful verification confirms the file was produced by Silo's public build pipeline. It
 does not, by itself, prove the software is safe — it proves *where it came from*.
+
+## See what's inside (SBOM)
+
+Each release also attaches `silo-sbom.cdx.json` — a CycloneDX Software Bill of Materials
+listing every Rust crate and npm package (with licenses) that goes into the build. Open it in
+any SBOM viewer, or scan it for known vulnerabilities with your tool of choice.

@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   See [docs/VERIFY_DOWNLOAD.md](docs/VERIFY_DOWNLOAD.md) for verifying the signature, checksum, and
   provenance of a download. (#60)
 
+- **Every release includes a Software Bill of Materials** (`silo-sbom.cdx.json`, CycloneDX) — a
+  full inventory of the Rust crates and npm packages (with licenses) that make up the build, so
+  anyone can audit exactly what's inside. (#60)
+
 ## [0.3.1] - 2026-08-03
 
 ### Added

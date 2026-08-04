@@ -186,3 +186,39 @@ jobs:
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
           subject-path: 'dist/*'
+
+  # Attach a Software Bill of Materials (every Rust crate + npm package + license) so the
+  # exact contents of a build are inspectable/auditable. Syft scans the lockfiles.
+  sbom:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Generate SBOM (CycloneDX)
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: silo-sbom.cdx.json
+          upload-artifact: false
+      - name: Attach SBOM to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ github.ref_name }}"
+          repo="${{ github.repository }}"
+          # Drafts aren't returned by /releases/tags/:tag — scan the list for this tag's id.
+          rel=$(gh api "repos/$repo/releases" --paginate \
+                --jq "map(select(.tag_name==\"$tag\")) | .[0].id")
+          [ -n "$rel" ] && [ "$rel" != "null" ] || { echo "no release found for $tag"; exit 1; }
+          old=$(gh api "repos/$repo/releases/$rel/assets" \
+                --jq '.[] | select(.name=="silo-sbom.cdx.json") | .id' | head -1)
+          [ -n "$old" ] && gh api -X DELETE "repos/$repo/releases/assets/$old" || true
+          curl -sSf -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-binary @silo-sbom.cdx.json \
+            "https://uploads.github.com/repos/$repo/releases/$rel/assets?name=silo-sbom.cdx.json"
