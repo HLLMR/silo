@@ -99,6 +99,7 @@
   import SavegamesPanel from "./lib/components/panels/SavegamesPanel.svelte";
   import SettingsPanel from "./lib/components/panels/SettingsPanel.svelte";
   import CategoryMenu from "./lib/components/panels/CategoryMenu.svelte";
+  import ContextMenu, { type ContextMenuItem } from "./lib/components/ContextMenu.svelte";
   import Topbar from "./lib/components/panels/Topbar.svelte";
   import StatBar from "./lib/components/panels/StatBar.svelte";
   import LibraryToolbar from "./lib/components/panels/LibraryToolbar.svelte";
@@ -717,6 +718,61 @@
     editing = { techName, x: ev.clientX, y: ev.clientY };
   }
 
+  // ── Library row right-click menu ──
+  let rowMenu = $state<{ mod: ModEntry; ev: MouseEvent } | null>(null);
+  // Seeds ModBrowser's catalog search when "Find in Browse" is used. ModBrowser remounts
+  // on every view switch, so setting this before switching views seeds the fresh mount.
+  let browseSeed = $state<string | null>(null);
+
+  function openInBrowse(mod: ModEntry) {
+    browseSeed = mod.title ?? mod.techName;
+    switchView("browse");
+  }
+
+  function rowMenuItems(mod: ModEntry, ev: MouseEvent): ContextMenuItem[] {
+    const c = cur(mod.techName);
+    const isActive = activeSet.has(mod.techName);
+    const items: ContextMenuItem[] = [
+      {
+        label: isActive ? "Park (deactivate)" : "Activate",
+        icon: isActive ? "○" : "●",
+        onClick: () => toggleActive(mod.techName),
+      },
+      { label: "Open details", icon: "⊞", onClick: () => (detailMod = mod) },
+      { label: "Find in Browse", icon: "⌕", onClick: () => openInBrowse(mod) },
+      { separator: true },
+      { label: "Change category…", icon: "🏷", onClick: () => openEditor(mod.techName, ev) },
+    ];
+    if (settingsModsSet.has(mod.techName)) {
+      items.push({
+        label: "Edit settings…",
+        icon: "⚙",
+        onClick: () =>
+          (settingsMod = { techName: mod.techName, title: mod.title ?? mod.techName }),
+      });
+    }
+    items.push(
+      { separator: true },
+      {
+        label: c.favorite ? "Remove favorite" : "Favorite",
+        icon: c.favorite ? "★" : "☆",
+        onClick: () => toggleCuration(mod.techName, "favorite"),
+      },
+      {
+        label: c.hidden ? "Unhide" : "Hide",
+        icon: "⊘",
+        onClick: () => toggleCuration(mod.techName, "hidden"),
+      },
+      {
+        label: c.broken ? "Clear broken flag" : "Mark broken",
+        icon: "⚠",
+        danger: !c.broken,
+        onClick: () => toggleCuration(mod.techName, "broken"),
+      },
+    );
+    return items;
+  }
+
   async function setCategory(
     techName: string,
     category: string,
@@ -1041,6 +1097,15 @@
   onMount(() => {
     let unlisten: (() => void) | undefined;
     let dlUnlisten: (() => void) | undefined;
+    // Suppress the WebView's built-in right-click menu (reload/inspect junk) app-wide,
+    // but keep the native cut/copy/paste menu inside editable fields. Our own row menu
+    // (ModRow → ContextMenu) still opens; it sets its own handler on the row.
+    const onCtx = (e: MouseEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || t.closest("input, textarea, select"))) return;
+      e.preventDefault();
+    };
+    window.addEventListener("contextmenu", onCtx);
     (async () => {
       unlisten = await onScanProgress((p) => (progress = p));
       try {
@@ -1092,6 +1157,7 @@
     return () => {
       unlisten?.();
       dlUnlisten?.();
+      window.removeEventListener("contextmenu", onCtx);
     };
   });
 
@@ -1402,6 +1468,7 @@
         installed={libraryTechNames}
         onInstalled={() => runScan(true)}
         onNeedAuth={() => (settingsOpen = true)}
+        seed={browseSeed}
       />
     </div>
   {:else}
@@ -1474,6 +1541,10 @@
                 onOpenSettings={() =>
                   (settingsMod = { techName: mod.techName, title: mod.title ?? mod.techName })}
                 onOpenDetail={() => (detailMod = mod)}
+                onContextMenu={(ev) => {
+                  ev.preventDefault();
+                  rowMenu = { mod, ev };
+                }}
               />
             {/snippet}
           </VirtualList>
@@ -1491,6 +1562,15 @@
       onSelect={(c) => setCategory(editing!.techName, c)}
       onReset={() => resetCategory(editing!.techName)}
       onClose={() => (editing = null)}
+    />
+  {/if}
+
+  {#if rowMenu}
+    <ContextMenu
+      x={rowMenu.ev.clientX}
+      y={rowMenu.ev.clientY}
+      items={rowMenuItems(rowMenu.mod, rowMenu.ev)}
+      onClose={() => (rowMenu = null)}
     />
   {/if}
 </div>

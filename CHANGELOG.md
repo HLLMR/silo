@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Right-click menu on library mods.** Right-clicking a mod opens a context menu with its
+  real commands — Activate/Park, Open details, **Find in Browse** (jumps to the catalog and
+  searches for it), Change category, Edit settings, Favorite, Hide, Mark broken. The
+  WebView's built-in reload/inspect menu is suppressed app-wide (cut/copy/paste still works
+  in text fields).
+
 ### Changed
 
 - **Collections is now its own toolbar entry**, split out of the Multiplayer panel.
