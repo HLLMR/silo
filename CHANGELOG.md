@@ -37,9 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   page. (Previously the "Open in Silo" button lived in the GitHub README, where GitHub's
   sanitizer strips `silo://` links, so it never worked.)
 - **Manage your collections in-app.** The Collections panel now lists the collections you've
-  published to your GitHub — copy a share link again, open its page, jump to it on GitHub, or
-  delete it (secret gists delete in-app; public repos link out to GitHub, which Silo can't
-  delete without extra permissions). No more digging through GitHub by hand.
+  published to your GitHub — copy a share link again, open its page, jump to it on GitHub,
+  **Update** it (re-pin to your current active set, keeping the same share link), or delete it
+  (secret gists delete in-app; public repos link out to GitHub, which Silo can't delete without
+  extra permissions). No more digging through GitHub by hand.
 
 ## [0.4.0] - 2026-08-03
 
