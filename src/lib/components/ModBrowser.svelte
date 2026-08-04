@@ -64,7 +64,7 @@
 
   let query = $state("");
   let category = $state("");
-  let sort = $state<"popular" | "recent" | "name" | "downloads" | "rating">(
+  let sort = $state<"popular" | "newest" | "name" | "downloads" | "rating">(
     "popular",
   );
   let categories = $state<CategoryCount[]>([]);
@@ -268,7 +268,7 @@
         <option value="popular">Popular</option>
         <option value="downloads">Most downloaded</option>
         <option value="rating">Top rated</option>
-        <option value="recent">Newest</option>
+        <option value="newest">Newest</option>
         <option value="name">Name (A–Z)</option>
       </select>
       {#if categories.length > 0}
