@@ -1114,6 +1114,48 @@ struct ExportResult {
     omitted: Vec<String>,
 }
 
+/// Pin an active set into collection entries: drop dev/unpacked (directory) mods (no stable
+/// bytes to pin), and for each packaged mod stamp its version, catalog source/id (one batch
+/// lookup, best-effort), and the curator's own provenance hash. Returns the entries sorted by
+/// tech-name plus the omitted dir-mod tech-names. Shared by export and update.
+fn build_collection_entries(
+    base: &str,
+    mods: Vec<mpsync::ModRef>,
+) -> (Vec<collection::CollectionMod>, Vec<String>) {
+    let (zips, dirs): (Vec<_>, Vec<_>) = mods.into_iter().partition(|m| m.kind == "zip");
+    let omitted: Vec<String> = dirs.into_iter().map(|m| m.tech_name).collect();
+
+    let names: Vec<String> = zips.iter().map(|m| m.tech_name.clone()).collect();
+    let hits = siloapi::lookup(base, &names).unwrap_or_default();
+    let by_tech: std::collections::HashMap<&str, &siloapi::LookupResult> = hits
+        .iter()
+        .filter_map(|r| r.tech_name.as_deref().map(|t| (t, r)))
+        .collect();
+
+    let mut entries: Vec<collection::CollectionMod> = zips
+        .iter()
+        .map(|m| {
+            // The curator's own build hash — the trust anchor. Best-effort per mod.
+            let manifest_hash = provenance::manifest_from_zip(std::path::Path::new(&m.path))
+                .ok()
+                .map(|lm| lm.manifest_hash);
+            let hit = by_tech.get(m.tech_name.as_str());
+            let dl = hit.and_then(|r| r.download.as_ref());
+            collection::CollectionMod {
+                tech_name: m.tech_name.clone(),
+                version: m.version.clone(),
+                source: dl.map(|d| d.source.clone()),
+                source_url: None,
+                manifest_hash,
+                installable: hit.map(|_| dl.is_some()),
+                catalog_id: hit.map(|r| r.id.clone()),
+            }
+        })
+        .collect();
+    entries.sort_by(|a, b| a.tech_name.cmp(&b.tech_name));
+    (entries, omitted)
+}
+
 /// Export a mod set as a shareable Collection: pin each mod's identity (version +
 /// canonical provenance hash of the curator's own build), enrich with a catalog source so
 /// an importer can fetch it, and publish it to the user's GitHub — a secret gist (private,
@@ -1144,45 +1186,13 @@ async fn collection_export(
             .ok_or_else(|| "Connect your GitHub account first".to_string())?;
         let author = db::get_app_setting(&conn, "gh_user");
 
-        // Directory (dev/unpacked) mods can't be pinned by bytes — leave them out and say so.
-        let (zips, dirs): (Vec<_>, Vec<_>) = mods.into_iter().partition(|m| m.kind == "zip");
-        let omitted: Vec<String> = dirs.into_iter().map(|m| m.tech_name).collect();
-        if zips.is_empty() {
+        // Pin the packaged mods (dev/unpacked ones can't be byte-pinned — reported as omitted).
+        let (entries, omitted) = build_collection_entries(&base, mods);
+        if entries.is_empty() {
             return Err(
                 "Nothing to share — a collection needs at least one packaged (.zip) mod".into(),
             );
         }
-
-        // Catalog enrichment: one batch lookup gives each mod a source + catalog id so an
-        // importer can resolve it. Best-effort — an uncataloged mod still pins by identity.
-        let names: Vec<String> = zips.iter().map(|m| m.tech_name.clone()).collect();
-        let hits = siloapi::lookup(&base, &names).unwrap_or_default();
-        let by_tech: std::collections::HashMap<&str, &siloapi::LookupResult> = hits
-            .iter()
-            .filter_map(|r| r.tech_name.as_deref().map(|t| (t, r)))
-            .collect();
-
-        let mut entries: Vec<collection::CollectionMod> = zips
-            .iter()
-            .map(|m| {
-                // The curator's own build hash — the trust anchor. Best-effort per mod.
-                let manifest_hash = provenance::manifest_from_zip(std::path::Path::new(&m.path))
-                    .ok()
-                    .map(|lm| lm.manifest_hash);
-                let hit = by_tech.get(m.tech_name.as_str());
-                let dl = hit.and_then(|r| r.download.as_ref());
-                collection::CollectionMod {
-                    tech_name: m.tech_name.clone(),
-                    version: m.version.clone(),
-                    source: dl.map(|d| d.source.clone()),
-                    source_url: None,
-                    manifest_hash,
-                    installable: hit.map(|_| dl.is_some()),
-                    catalog_id: hit.map(|r| r.id.clone()),
-                }
-            })
-            .collect();
-        entries.sort_by(|a, b| a.tech_name.cmp(&b.tech_name));
 
         let coll = collection::Collection {
             schema: collection::SCHEMA.to_string(),
@@ -1242,6 +1252,85 @@ async fn collection_export(
             // Best-effort: the JSON + share link already work without it.
             let _ = github::update_gist_file(&token, &gist.id, "README.md", &readme);
             page_url
+        };
+        Ok(ExportResult {
+            url,
+            count: coll.mods.len(),
+            omitted,
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Update an existing collection in place: re-pin `mods` (the current active set) and write
+/// the new list back to the *same* gist/repo, keeping its name/description/author/date — so
+/// the share link never changes. Returns the (unchanged) page URL + new count.
+#[tauri::command]
+async fn collection_update(
+    app: tauri::AppHandle,
+    reference: String,
+    mods: Vec<mpsync::ModRef>,
+) -> Result<ExportResult, String> {
+    let base = siloapi_base(&app)?;
+    let db = db_path(&app)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<ExportResult, String> {
+        let conn = db::open(&db)?;
+        let token = secrets::get(&conn, "gh_token")
+            .ok_or_else(|| "Connect your GitHub account first".to_string())?;
+        let where_ = collection::parse_collection_ref(&reference)
+            .ok_or_else(|| "That collection reference isn't valid".to_string())?;
+
+        // Preserve the collection's identity (name/description/author/date); re-pin the mods.
+        let existing = read_collection_json(&reference, Some(&token))?;
+        let (entries, omitted) = build_collection_entries(&base, mods);
+        if entries.is_empty() {
+            return Err(
+                "Nothing to update with — the active set has no packaged (.zip) mods".into(),
+            );
+        }
+        let coll = collection::Collection {
+            schema: collection::SCHEMA.to_string(),
+            name: existing.name,
+            description: existing.description,
+            author: existing.author,
+            created_at: existing.created_at,
+            savegame: existing.savegame,
+            mods: entries,
+        };
+        let json = collection::to_json(&coll)?;
+
+        let url = match where_ {
+            collection::CollectionRef::Gist(id) => {
+                let page_url = collection::gist_page_url(&id);
+                let source_url = format!("https://gist.github.com/{id}");
+                let readme = collection::readme(&coll, &page_url, &source_url);
+                github::update_gist_file(&token, &id, collection::FILE_NAME, &json)?;
+                let _ = github::update_gist_file(&token, &id, "README.md", &readme);
+                page_url
+            }
+            collection::CollectionRef::Repo { owner, repo } => {
+                let page_url = collection::repo_page_url(&owner, &repo);
+                let source_url = format!("https://github.com/{owner}/{repo}");
+                let readme = collection::readme(&coll, &page_url, &source_url);
+                github::put_repo_file(
+                    &token,
+                    &owner,
+                    &repo,
+                    collection::FILE_NAME,
+                    &json,
+                    "Update collection (via Silo)",
+                )?;
+                github::put_repo_file(
+                    &token,
+                    &owner,
+                    &repo,
+                    "README.md",
+                    &readme,
+                    "Update README (via Silo)",
+                )?;
+                page_url
+            }
         };
         Ok(ExportResult {
             url,
@@ -1970,6 +2059,7 @@ pub fn run() {
             mp_export,
             mp_verify_file,
             collection_export,
+            collection_update,
             collection_import_preview,
             collection_apply,
             collections_list,

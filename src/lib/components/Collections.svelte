@@ -13,6 +13,7 @@
     openExternal,
     collectionsList,
     collectionDelete,
+    collectionUpdate,
   } from "../api";
   import type { CollectionSummary } from "../api";
   import type {
@@ -78,6 +79,8 @@
   let myErr = $state<string | null>(null);
   let copiedRef = $state<string | null>(null);
   let deletingRef = $state<string | null>(null);
+  let updatingRef = $state<string | null>(null);
+  let updatedNote = $state<string | null>(null);
 
   async function loadMyCollections() {
     myLoading = true;
@@ -100,6 +103,32 @@
       }, 1500);
     } catch {
       /* clipboard blocked — ignore */
+    }
+  }
+
+  async function doUpdate(c: CollectionSummary) {
+    if (updatingRef) return;
+    if (
+      !confirm(
+        `Update “${c.name}” to your current active set (${zipCount} packaged mod${zipCount === 1 ? "" : "s"})? ` +
+          `The mod list is replaced; the share link stays the same.`,
+      )
+    )
+      return;
+    updatingRef = c.reference;
+    myErr = null;
+    updatedNote = null;
+    try {
+      const r = await collectionUpdate(c.reference, active);
+      await loadMyCollections();
+      updatedNote = `Updated “${c.name}” to ${r.count} mod${r.count === 1 ? "" : "s"}.`;
+      setTimeout(() => {
+        updatedNote = null;
+      }, 4000);
+    } catch (e) {
+      myErr = String(e);
+    } finally {
+      updatingRef = null;
     }
   }
 
@@ -336,6 +365,7 @@
         Collections you've published to your GitHub. Copy a share link again, open its page,
         or remove one.
       </p>
+      {#if updatedNote}<div class="ok-note">{updatedNote}</div>{/if}
       {#if myLoading}
         <div class="busy">Loading your collections…</div>
       {:else if myErr}
@@ -358,6 +388,14 @@
               </button>
               <button class="mini" onclick={() => openExternal(c.pageUrl)} title="Open the share page">Page ↗</button>
               <button class="mini" onclick={() => openExternal(c.sourceUrl)} title="Open on GitHub">GitHub ↗</button>
+              <button
+                class="mini"
+                onclick={() => doUpdate(c)}
+                disabled={updatingRef === c.reference || zipCount === 0}
+                title="Re-pin this collection to your current active set (same link)"
+              >
+                {updatingRef === c.reference ? "Updating…" : "Update"}
+              </button>
               {#if c.canDelete}
                 <button
                   class="mini danger"

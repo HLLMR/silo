@@ -836,11 +836,16 @@ pub fn put_repo_file(
 ) -> Result<(), String> {
     use base64::Engine;
     let encoded = base64::engine::general_purpose::STANDARD.encode(content.as_bytes());
-    let body = ureq::json!({
+    let mut body = ureq::json!({
         "message": message,
         "content": encoded,
         "branch": "main",
     });
+    // Creating a file needs no sha; *replacing* an existing one requires its current blob
+    // sha, or GitHub 422s. Best-effort lookup — absent (new file / empty repo) → create.
+    if let Some(sha) = repo_file_sha(token, owner, repo, path) {
+        body["sha"] = serde_json::Value::String(sha);
+    }
     ureq::put(&format!(
         "https://api.github.com/repos/{owner}/{repo}/contents/{path}"
     ))
@@ -850,6 +855,17 @@ pub fn put_repo_file(
     .send_json(body)
     .map_err(gh_err)?;
     Ok(())
+}
+
+/// The current blob sha of a repo file, if it exists — needed to replace it via the Contents
+/// API. Best-effort: any error (missing file, empty repo, network) yields `None` → treat as new.
+fn repo_file_sha(token: &str, owner: &str, repo: &str, path: &str) -> Option<String> {
+    let v = gh_get(
+        &format!("https://api.github.com/repos/{owner}/{repo}/contents/{path}"),
+        Some(token),
+    )
+    .ok()?;
+    v["sha"].as_str().map(String::from)
 }
 
 /// Best-effort scan of arbitrary text (a modDesc.xml) for the first

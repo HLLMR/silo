@@ -427,6 +427,17 @@ export function collectionExport(
   });
 }
 
+/**
+ * Re-pin an existing collection to the given (current active) set and write it back to the
+ * same gist/repo — the share link stays the same. Keeps the collection's name/description.
+ */
+export function collectionUpdate(
+  reference: string,
+  mods: MpModRef[],
+): Promise<CollectionExportResult> {
+  return invoke<CollectionExportResult>("collection_update", { reference, mods });
+}
+
 /** A collection the user has published, for the "Your collections" management list. */
 export interface CollectionSummary {
   kind: "gist" | "repo";
