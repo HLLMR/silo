@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **"Newest" in Browse now matches ModHub's order.** It was sorting by our catalog's
+  refresh timestamp (so it barely changed anything); it now uses SiloAPI's `newest` sort,
+  backed by ModHub's native grid ordinal — the same order you see on ModHub, updates and
+  re-releases included. The web `/browse` "Newest" option uses it too.
+
 ### Added
 
 - **Right-click menu on library mods.** Right-clicking a mod opens a context menu with its
