@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **"Open in Silo" links for shared collections.** A public collection's page now has an
+  **Open in Silo** button (a `silo://` link); clicking it opens the app straight to that
+  collection's import — no copy-pasting the URL. Silo registers the `silo://` handler when you
+  install it, and a second launch focuses the running window instead of opening a duplicate. (#72)
+
 - **Release artifacts now carry a GitHub build-provenance attestation.** You can verify any
   download came from Silo's public build pipeline — `gh attestation verify <file> --repo HLLMR/silo`.
   See [docs/VERIFY_DOWNLOAD.md](docs/VERIFY_DOWNLOAD.md) for verifying the signature, checksum, and

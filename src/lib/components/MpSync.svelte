@@ -24,18 +24,20 @@
     Conflict,
   } from "../types";
   import type { UnlistenFn } from "@tauri-apps/api/event";
-  import { onDestroy } from "svelte";
+  import { onDestroy, onMount } from "svelte";
 
   interface Props {
     /** The active set as (techName, path, kind, version) refs. */
     active: MpModRef[];
     /** The whole installed library — for import bucketing + dependency/conflict pre-flight. */
     library: ModEntry[];
+    /** A collection URL to import immediately (from a silo:// deep link). Pre-fills + previews. */
+    initialImportUrl?: string | null;
     /** Called after a successful import so the parent can rescan the library. */
     onImported?: () => void;
     onClose: () => void;
   }
-  let { active, library, onImported, onClose }: Props = $props();
+  let { active, library, initialImportUrl = null, onImported, onClose }: Props = $props();
   const installed = $derived(library.map((m) => ({ techName: m.techName, version: m.version })));
 
   let busy = $state<string | null>(null);
@@ -191,6 +193,14 @@
   }
 
   onDestroy(() => unlisten?.());
+
+  // Deep-link entry: if opened via silo://collection?url=…, pre-fill and preview at once.
+  onMount(() => {
+    if (initialImportUrl) {
+      importUrl = initialImportUrl;
+      void doPreview();
+    }
+  });
 
   async function doExport() {
     busy = "Hashing & saving…";

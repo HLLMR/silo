@@ -449,6 +449,24 @@ export function collectionApply(
   return invoke<ApplyReport>("collection_apply", { urlOrId, installed, root: null });
 }
 
+/**
+ * Parse a `silo://collection?url=<link>` deep link → the collection URL to import, or null
+ * if it isn't a collection deep link. (The web-side "Open in Silo" button on a shared
+ * collection points here.)
+ */
+export function parseCollectionDeepLink(raw: string): string | null {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "silo:") return null;
+    const kind = u.hostname || u.pathname.replace(/^\/+/, "");
+    if (kind !== "collection") return null;
+    const target = u.searchParams.get("url");
+    return target && target.trim() ? target.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Per-mod progress during a collection import. */
 export function onCollectionProgress(
   handler: (p: CollectionProgress) => void,

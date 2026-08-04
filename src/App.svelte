@@ -4,6 +4,7 @@
     defaultModsPaths,
     scanMods,
     onScanProgress,
+    parseCollectionDeepLink,
     getCuration,
     setCuration,
     getOverrides,
@@ -38,6 +39,7 @@
     detectForeignFiles,
     type ForeignFile,
   } from "./lib/api";
+  import { onOpenUrl, getCurrent } from "@tauri-apps/plugin-deep-link";
   import { checkUpdate, installUpdate, type AvailableUpdate } from "./lib/updater";
   import {
     GAME_GRAPHICS_FIELDS,
@@ -178,6 +180,20 @@
   let logOpen = $state(false);
   let bindingsOpen = $state(false);
   let mpOpen = $state(false);
+  // Set when a silo://collection?url=… deep link arrives — opens the import panel pre-filled.
+  let mpImportUrl = $state<string | null>(null);
+
+  function handleDeepLinks(urls: string[] | null | undefined) {
+    if (!urls) return;
+    for (const raw of urls) {
+      const target = parseCollectionDeepLink(raw);
+      if (target) {
+        mpImportUrl = target;
+        mpOpen = true;
+        break;
+      }
+    }
+  }
   let bridgeOpen = $state(false);
   // Active set as manifest refs for MP sync (techName, path, kind, version).
   const activeModRefs = $derived(
@@ -1022,6 +1038,7 @@
 
   onMount(() => {
     let unlisten: (() => void) | undefined;
+    let dlUnlisten: (() => void) | undefined;
     (async () => {
       unlisten = await onScanProgress((p) => (progress = p));
       try {
@@ -1056,8 +1073,24 @@
       } catch {
         /* non-critical */
       }
+      // Deep links: a silo://collection?url=… link (from a shared collection's web page)
+      // opens the import panel pre-filled. getCurrent() catches a cold launch via link;
+      // onOpenUrl fires while the app is already running.
+      try {
+        handleDeepLinks(await getCurrent());
+      } catch {
+        /* not a desktop deep-link context */
+      }
+      try {
+        dlUnlisten = await onOpenUrl(handleDeepLinks);
+      } catch {
+        /* ignore */
+      }
     })();
-    return () => unlisten?.();
+    return () => {
+      unlisten?.();
+      dlUnlisten?.();
+    };
   });
 
   async function restoreBisect() {
@@ -1303,8 +1336,12 @@
       <MpSync
         active={activeModRefs}
         library={mods}
+        initialImportUrl={mpImportUrl}
         onImported={() => runScan(false)}
-        onClose={() => (mpOpen = false)}
+        onClose={() => {
+          mpOpen = false;
+          mpImportUrl = null;
+        }}
       />
     </div>
   {/if}
