@@ -9,6 +9,7 @@
     criticalCount,
     healthCount,
     conflictedCount,
+    updatesCount,
     tookMs,
     favoritesOnly = $bindable(),
     showHidden = $bindable(),
@@ -32,12 +33,13 @@
     criticalCount: number;
     healthCount: number;
     conflictedCount: number;
+    updatesCount: number;
     tookMs: number | null;
     favoritesOnly: boolean;
     showHidden: boolean;
     flaggedOnly: boolean;
     conflictedOnly: boolean;
-    statFilter: "" | "maps" | "scripts" | "unique" | "active";
+    statFilter: "" | "maps" | "scripts" | "unique" | "active" | "updates";
     query: string;
     onOpenStats: () => void;
     onOpenConflicts: () => void;
@@ -108,6 +110,17 @@
     <span class="stat-num tnum">{healthCount}</span>
     <span class="stat-label">need attention</span>
   </button>
+  {#if updatesCount > 0}
+    <button
+      class="stat statbtn upd"
+      class:sel={statFilter === "updates"}
+      title="Filter to mods with an available update"
+      onclick={() => (statFilter = statFilter === "updates" ? "" : "updates")}
+    >
+      <span class="stat-num tnum">{updatesCount}</span>
+      <span class="stat-label">update{updatesCount === 1 ? "" : "s"}</span>
+    </button>
+  {/if}
   <button
     class="stat statbtn"
     title="Crash & log triage: did the last run crash, and which mod is at fault?"
@@ -227,6 +240,14 @@
     color: var(--primary);
     text-decoration: underline;
     text-underline-offset: 2px;
+  }
+  /* Updates are actionable — tint them gold like the topbar update button. */
+  .upd .stat-num,
+  .upd .stat-label {
+    color: var(--gold-700);
+  }
+  .upd.sel .stat-label {
+    color: var(--gold-700);
   }
   .statbtn.flag .stat-num {
     color: var(--warn);

@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **An "updates" filter in the stat bar.** After running ⟳ Updates, a gold **N updates** chip
+  appears when any library mods are outdated; click it to scope the list to just those. (Pairs
+  with the drawer showing per-mod update status.)
 - **Click a stat to filter the library.** The **maps**, **script mods**, **uniqueType**, and
   **active** counts in the stat bar are now toggle filters — click one to scope the list to it,
   click again (or another) to switch or clear. "active" gives you the quick "show only what's
