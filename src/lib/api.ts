@@ -338,6 +338,12 @@ export function siloapiModDetail(id: string): Promise<CatalogModDetail> {
   return invoke<CatalogModDetail>("siloapi_mod_detail", { id });
 }
 
+/** Resolve a library mod (by tech name) to its catalog record, or null if not catalogued.
+ *  Lets the library detail drawer show the same summary/sources/latest-version as Browse. */
+export function catalogDetailByTech(techName: string): Promise<CatalogModDetail | null> {
+  return invoke<CatalogModDetail | null>("catalog_detail_by_tech", { techName });
+}
+
 /** Fetch a catalog thumbnail as a data: URL (Rust adds the referer the Giants CDN now
  *  requires; cached on disk). Returns "" if it can't be fetched. */
 export function catalogImage(url: string): Promise<string> {

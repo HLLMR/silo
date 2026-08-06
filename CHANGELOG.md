@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The library detail drawer now shows catalog info** — a mod's summary (clamped, with **Read
+  more** for the full text), where it's **available** (ModHub / GitHub / Nexus, with links), and
+  whether it's **outdated** (⬆ update available vs. ✓ up to date). No more hopping to Browse to
+  find out if a library mod has a newer version.
 - **An "updates" filter in the stat bar.** After running ⟳ Updates, a gold **N updates** chip
   appears when any library mods are outdated; click it to scope the list to just those. (Pairs
   with the drawer showing per-mod update status.)
