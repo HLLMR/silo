@@ -130,9 +130,9 @@
   let favoritesOnly = $state(false);
   let flaggedOnly = $state(false);
   let conflictedOnly = $state(false);
-  // A single categorical facet from the stat bar (maps/scripts/uniqueType/active) — click a
-  // count to scope the list to it; click again (or another) to switch/clear.
-  let statFilter = $state<"" | "maps" | "scripts" | "unique" | "active">("");
+  // A single categorical facet from the stat bar (maps/scripts/uniqueType/active/updates) —
+  // click a count to scope the list to it; click again (or another) to switch/clear.
+  let statFilter = $state<"" | "maps" | "scripts" | "unique" | "active" | "updates">("");
   let editing = $state<{ techName: string; x: number; y: number } | null>(null);
   let activeSet = $state<Set<string>>(new Set());
   let busy = $state<string | null>(null);
@@ -935,6 +935,7 @@
   }
 
   const availableUpdates = $derived(updateResults.filter((r) => r.hasUpdate));
+  const updatesSet = $derived(new Set(availableUpdates.map((r) => r.techName)));
 
   async function toggleCuration(
     techName: string,
@@ -982,6 +983,8 @@
       list = list.filter((m) => m.uniqueType != null);
     } else if (statFilter === "active") {
       list = list.filter((m) => activeSet.has(m.techName));
+    } else if (statFilter === "updates") {
+      list = list.filter((m) => updatesSet.has(m.techName));
     }
     if (selectedTag) {
       list = list.filter((m) => tagsOf(m.techName).includes(selectedTag!));
@@ -1514,6 +1517,7 @@
     {criticalCount}
     {healthCount}
     conflictedCount={conflictedSet.size}
+    updatesCount={availableUpdates.length}
     tookMs={result ? result.tookMs : null}
     bind:favoritesOnly
     bind:showHidden

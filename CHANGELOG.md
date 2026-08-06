@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **An "updates" filter in the stat bar.** After running ⟳ Updates, a gold **N updates** chip
+  appears when any library mods are outdated; click it to scope the list to just those. (Pairs
+  with the drawer showing per-mod update status.)
 - **The library auto-refreshes when you return to Silo.** Download a mod in your browser into
   the mods folder, alt-tab back, and it appears — no manual Rescan or restart. Triggered on window
   focus, throttled so quick tabbing doesn't re-scan repeatedly (the scan cache keeps it cheap).
