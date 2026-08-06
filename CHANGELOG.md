@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The library auto-refreshes when you return to Silo.** Download a mod in your browser into
+  the mods folder, alt-tab back, and it appears — no manual Rescan or restart. Triggered on window
+  focus, throttled so quick tabbing doesn't re-scan repeatedly (the scan cache keeps it cheap).
 - **Click a stat to filter the library.** The **maps**, **script mods**, **uniqueType**, and
   **active** counts in the stat bar are now toggle filters — click one to scope the list to it,
   click again (or another) to switch or clear. "active" gives you the quick "show only what's

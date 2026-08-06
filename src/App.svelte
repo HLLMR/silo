@@ -40,6 +40,7 @@
     type ForeignFile,
   } from "./lib/api";
   import { onOpenUrl, getCurrent } from "@tauri-apps/plugin-deep-link";
+  import { getCurrentWindow } from "@tauri-apps/api/window";
   import { checkUpdate, installUpdate, type AvailableUpdate } from "./lib/updater";
   import {
     GAME_GRAPHICS_FIELDS,
@@ -110,6 +111,9 @@
   let mods = $state<ModEntry[]>([]);
   let foreignFiles = $state<ForeignFile[]>([]);
   let scanning = $state(false);
+  // Epoch-ms of the last scan attempt — throttles the auto-rescan-on-focus so alt-tabbing
+  // doesn't re-scan on every focus.
+  let lastScanAt = 0;
   let progress = $state({ done: 0, total: 0 });
   let result = $state<ScanResult | null>(null);
   let query = $state("");
@@ -1096,6 +1100,7 @@
       errorMsg = String(e);
     } finally {
       scanning = false;
+      lastScanAt = Date.now();
     }
     // Auto-file any mods still loose in the flat root (e.g. freshly downloaded),
     // keeping them active so filing is transparent to the game.
@@ -1109,6 +1114,7 @@
   onMount(() => {
     let unlisten: (() => void) | undefined;
     let dlUnlisten: (() => void) | undefined;
+    let focusUnlisten: (() => void) | undefined;
     // Suppress the WebView's built-in right-click menu (reload/inspect junk) app-wide,
     // but keep the native cut/copy/paste menu inside editable fields. Our own row menu
     // (ModRow → ContextMenu) still opens; it sets its own handler on the row.
@@ -1165,10 +1171,24 @@
       } catch {
         /* ignore */
       }
+      // Auto-refresh on window focus: a mod downloaded in a browser lands while Silo is in the
+      // background, so pick it up when the user returns instead of waiting for a manual rescan.
+      // Throttled (skip if busy/scanning or scanned <4s ago) so alt-tabbing doesn't thrash; the
+      // scan cache (path+mtime+size) makes an unchanged rescan cheap anyway.
+      try {
+        focusUnlisten = await getCurrentWindow().onFocusChanged(({ payload: focused }) => {
+          if (focused && !scanning && !busy && roots.length && Date.now() - lastScanAt > 4000) {
+            void runScan(true);
+          }
+        });
+      } catch {
+        /* not a desktop window context */
+      }
     })();
     return () => {
       unlisten?.();
       dlUnlisten?.();
+      focusUnlisten?.();
       window.removeEventListener("contextmenu", onCtx);
     };
   });
