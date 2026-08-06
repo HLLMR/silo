@@ -144,6 +144,31 @@
   .chip:hover { color: var(--text); border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); }
   .chip.on { background: color-mix(in srgb, var(--primary) 15%, transparent); color: var(--primary); border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
   .chip .n { opacity: 0.6; font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-size: 11px; margin-left: 5px; }
+  .filter-btn { cursor: pointer; font-weight: 700; }
+  .filter-btn.on { color: var(--primary); border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); background: color-mix(in srgb, var(--primary) 10%, transparent); }
+  .facets { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  .facet-group { display: flex; flex-direction: column; gap: 8px; }
+  .facet-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 700; }
+  .facet-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .fchip {
+    border: 1px solid var(--border); background: var(--raised); color: var(--text);
+    padding: 4px 11px; border-radius: 999px; font-size: 13px; text-transform: capitalize; cursor: pointer;
+    transition: all 0.13s; display: inline-flex; align-items: baseline; gap: 5px;
+  }
+  .fchip:hover { border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); }
+  .fchip.on { background: color-mix(in srgb, var(--primary) 15%, transparent); color: var(--primary); border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); font-weight: 600; }
+  .fchip .n { opacity: 0.55; font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-size: 11px; }
+  .facet-year { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .year-in { width: 130px; padding: 8px 11px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--raised); color: var(--text); font: inherit; font-size: 14px; }
+  .facet-hint { font-size: 12.5px; color: var(--muted); }
+  .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 12px; }
+  .achip {
+    border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--border)); background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--primary); padding: 4px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; text-transform: capitalize; cursor: pointer;
+  }
+  .clear-f { border: none; background: transparent; color: var(--muted); font: inherit; font-size: 12.5px; cursor: pointer; text-decoration: underline; }
+  .sheet-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .sheet-tags .dtag { font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--raised); color: var(--muted); text-transform: capitalize; }
 
   /* ── Grid ── */
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; padding: 8px 0 40px; }
@@ -276,8 +301,11 @@
           <option value="downloads">Most downloaded</option>
           <option value="name">Name (A–Z)</option>
         </select>
+        <button class="sel filter-btn" id="filterBtn" type="button" hidden aria-expanded="false">⛃ Filters</button>
       </div>
       <div class="cats" id="cats"></div>
+      <div class="facets" id="facets" hidden></div>
+      <div class="active-filters" id="activeFilters" hidden></div>
     </div>
   </div>
 
@@ -319,6 +347,7 @@
       <div class="by" id="sheetBy"></div>
       <div class="metaline" id="sheetMeta"></div>
       <div class="desc" id="sheetDesc"></div>
+      <div class="sheet-tags" id="sheetTags"></div>
       <div class="src-list" id="sheetSources"></div>
       <p class="attrib">
         Information indexed from public sources and linked above. Silo does not host these files —
@@ -354,7 +383,7 @@
   })();
 
   // ── State ──
-  var state = { q: "", category: "", sort: "popular", offset: 0, limit: 30, total: 0, loading: false };
+  var state = { q: "", category: "", sort: "popular", tags: [], availableBy: null, offset: 0, limit: 30, total: 0, loading: false };
   var grid = document.getElementById("grid");
   var moreBtn = document.getElementById("moreBtn");
 
@@ -406,7 +435,9 @@
     var url = API + "/mods?limit=" + state.limit + "&offset=" + state.offset +
       "&sort=" + encodeURIComponent(state.sort) +
       (state.q ? "&q=" + encodeURIComponent(state.q) : "") +
-      (state.category ? "&category=" + encodeURIComponent(state.category) : "");
+      (state.category ? "&category=" + encodeURIComponent(state.category) : "") +
+      state.tags.map(function (t) { return "&tag=" + encodeURIComponent(t); }).join("") +
+      (state.availableBy ? "&availableBy=" + state.availableBy : "");
     try {
       var res = await fetch(url);
       if (!res.ok) throw new Error("HTTP " + res.status);
@@ -482,6 +513,83 @@
       catSel.addEventListener("change", function () { setCategory(catSel.value); });
     } catch (e) { /* categories are optional chrome */ }
 
+    // ── Facets (brand/theme/region/realism/era + availableBy year) — mirrors the in-app filters ──
+    var facetsEl = document.getElementById("facets");
+    var filterBtn = document.getElementById("filterBtn");
+    var activeEl = document.getElementById("activeFilters");
+    var FACET_ORDER = ["theme", "brand", "region", "realism", "era"];
+    var FACET_LABEL = { theme: "Theme", brand: "Brand", region: "Region", realism: "Realism", era: "Era" };
+
+    function renderActiveFilters() {
+      var n = state.tags.length + (state.availableBy ? 1 : 0);
+      filterBtn.textContent = "⛃ Filters" + (n ? " (" + n + ")" : "");
+      filterBtn.classList.toggle("on", !facetsEl.hidden || n > 0);
+      if (!n) { activeEl.hidden = true; activeEl.innerHTML = ""; return; }
+      activeEl.hidden = false;
+      var h = state.tags.map(function (t) {
+        return '<button class="achip" data-tag="' + esc(t) + '" type="button">' + esc(t.replace(":", " · ")) + " ✕</button>";
+      }).join("");
+      if (state.availableBy) h += '<button class="achip" data-avail="1" type="button">available by ' + state.availableBy + " ✕</button>";
+      h += '<button class="clear-f" id="clearF" type="button">Clear all</button>';
+      activeEl.innerHTML = h;
+    }
+    function syncFacets() {
+      facetsEl.querySelectorAll(".fchip").forEach(function (b) {
+        b.classList.toggle("on", state.tags.indexOf(b.getAttribute("data-tag")) >= 0);
+      });
+      renderActiveFilters();
+    }
+    try {
+      var fdata = await (await fetch(API + "/facets")).json();
+      var facets = fdata.facets || {};
+      var order = Object.keys(facets).sort(function (a, b) {
+        var ia = FACET_ORDER.indexOf(a), ib = FACET_ORDER.indexOf(b);
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      });
+      if (order.length) {
+        var html = order.map(function (ns) {
+          return '<div class="facet-group"><div class="facet-label">' + esc(FACET_LABEL[ns] || ns) + '</div><div class="facet-chips">' +
+            (facets[ns] || []).slice(0, 16).map(function (fv) {
+              return '<button class="fchip" data-tag="' + esc(ns + ":" + fv.value) + '" type="button">' + esc(fv.value) + '<span class="n">' + fmt(fv.count) + "</span></button>";
+            }).join("") + "</div></div>";
+        }).join("");
+        html += '<div class="facet-group"><div class="facet-label">Available by year</div><div class="facet-year"><input class="year-in" id="availBy" type="number" min="1900" max="2100" placeholder="e.g. 1985"><span class="facet-hint">Period-correct — only machines that existed by this year (dated mods only).</span></div></div>';
+        facetsEl.innerHTML = html;
+        filterBtn.hidden = false;
+
+        filterBtn.addEventListener("click", function () {
+          facetsEl.hidden = !facetsEl.hidden;
+          filterBtn.setAttribute("aria-expanded", String(!facetsEl.hidden));
+          renderActiveFilters();
+        });
+        facetsEl.addEventListener("click", function (ev) {
+          var b = ev.target.closest(".fchip"); if (!b) return;
+          var tag = b.getAttribute("data-tag");
+          var i = state.tags.indexOf(tag);
+          if (i >= 0) state.tags.splice(i, 1); else state.tags.push(tag);
+          syncFacets(); load(true);
+        });
+        document.getElementById("availBy").addEventListener("change", function (e) {
+          var v = parseInt(e.target.value, 10);
+          state.availableBy = (v >= 1900 && v <= 2100) ? v : null;
+          syncFacets(); load(true);
+        });
+        activeEl.addEventListener("click", function (ev) {
+          var rm = ev.target.closest(".achip");
+          if (rm) {
+            if (rm.getAttribute("data-avail")) { state.availableBy = null; var yi = document.getElementById("availBy"); if (yi) yi.value = ""; }
+            else { var i = state.tags.indexOf(rm.getAttribute("data-tag")); if (i >= 0) state.tags.splice(i, 1); }
+            syncFacets(); load(true); return;
+          }
+          if (ev.target.closest("#clearF")) {
+            state.tags = []; state.availableBy = null;
+            var yi2 = document.getElementById("availBy"); if (yi2) yi2.value = "";
+            syncFacets(); load(true);
+          }
+        });
+      }
+    } catch (e) { /* facets optional — older server just has no panel */ }
+
     load(true);
   }
 
@@ -492,6 +600,7 @@
     document.getElementById("sheetBy").textContent = "";
     document.getElementById("sheetMeta").innerHTML = "";
     document.getElementById("sheetDesc").textContent = "";
+    document.getElementById("sheetTags").innerHTML = "";
     document.getElementById("sheetSources").innerHTML = "";
     var cover = document.getElementById("sheetCover");
     cover.querySelectorAll("img").forEach(function (n) { n.remove(); });
@@ -512,8 +621,15 @@
     if (m.category) meta.push('<span class="pill">' + esc(m.category) + "</span>");
     if (m.latestVersion) meta.push('<span class="pill">v' + esc(String(m.latestVersion).replace(/^v/i, "")) + "</span>");
     if (m.rating != null && m.ratingCount) meta.push('<span class="pill">★ ' + Number(m.rating).toFixed(1) + " (" + fmt(m.ratingCount) + ")</span>");
+    if (m.downloads != null) meta.push('<span class="pill">⬇ ' + fmt(m.downloads) + "</span>");
+    if (m.trustScore != null) meta.push('<span class="pill">trust ' + m.trustScore + "/100</span>");
     document.getElementById("sheetMeta").innerHTML = meta.join("");
     document.getElementById("sheetDesc").textContent = m.description || "";
+    var tagsEl = document.getElementById("sheetTags");
+    tagsEl.innerHTML = (m.tags || []).map(function (t) {
+      var tip = t.namespace + (t.confidence != null ? " · " + Math.round(t.confidence * 100) + "%" : "") + (t.source ? " · " + t.source : "");
+      return '<span class="dtag" title="' + esc(tip) + '">' + esc(t.value) + "</span>";
+    }).join("");
     var srcs = m.sources || [];
     document.getElementById("sheetSources").innerHTML = srcs.map(function (s) {
       var url = s.sourceUrl || s.downloadUrl || "";

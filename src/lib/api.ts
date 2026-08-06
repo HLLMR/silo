@@ -317,6 +317,10 @@ export function browseMods(opts: {
   query?: string;
   category?: string;
   sort?: string;
+  /** Facet tags as "namespace:value", ANDed server-side (e.g. ["brand:fendt","region:europe"]). */
+  tags?: string[];
+  /** Period-correct: keep only mods whose model existed by this year (year_from ≤ Y). */
+  availableBy?: number | null;
   limit?: number;
   offset?: number;
 }): Promise<BrowsePage> {
@@ -324,9 +328,19 @@ export function browseMods(opts: {
     query: opts.query ?? null,
     category: opts.category ?? null,
     sort: opts.sort ?? null,
+    tags: opts.tags && opts.tags.length ? opts.tags : null,
+    availableBy: opts.availableBy ?? null,
     limit: opts.limit ?? null,
     offset: opts.offset ?? null,
   });
+}
+
+/** The available Browse facets (brand/theme/region/realism/era) + counts, for the filter chips. */
+export interface Facets {
+  facets: Record<string, { value: string; count: number }[]>;
+}
+export function siloapiFacets(): Promise<Facets> {
+  return invoke<Facets>("siloapi_facets");
 }
 
 export function siloapiStats(): Promise<SiloStats> {
