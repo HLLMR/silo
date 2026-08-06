@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Browse the FS25 mod catalog — Silo</title>
+<script src="/nav.js"></script>
 <meta name="description" content="Browse the Farming Simulator 25 mod catalog Silo has aggregated from ModHub, GitHub and Nexus — search, filter, and see which builds are integrity-verified. No account, no download, no tracking. Every mod links back to its original source." />
 <meta property="og:title" content="Browse the FS25 mod catalog — Silo" />
 <meta property="og:description" content="Search thousands of Farming Simulator 25 mods aggregated from ModHub, GitHub and Nexus. No account, no tracking — every mod links back to its source." />
@@ -144,29 +145,14 @@
   .chip:hover { color: var(--text); border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); }
   .chip.on { background: color-mix(in srgb, var(--primary) 15%, transparent); color: var(--primary); border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
   .chip .n { opacity: 0.6; font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-size: 11px; margin-left: 5px; }
-  .filter-btn { cursor: pointer; font-weight: 700; }
-  .filter-btn.on { color: var(--primary); border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); background: color-mix(in srgb, var(--primary) 10%, transparent); }
-  .facets { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
-  .facet-group { display: flex; flex-direction: column; gap: 8px; }
-  .facet-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 700; }
-  .facet-chips { display: flex; flex-wrap: wrap; gap: 7px; }
-  .fchip {
-    border: 1px solid var(--border); background: var(--raised); color: var(--text);
-    padding: 4px 11px; border-radius: 999px; font-size: 13px; text-transform: capitalize; cursor: pointer;
-    transition: all 0.13s; display: inline-flex; align-items: baseline; gap: 5px;
-  }
-  .fchip:hover { border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); }
-  .fchip.on { background: color-mix(in srgb, var(--primary) 15%, transparent); color: var(--primary); border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); font-weight: 600; }
-  .fchip .n { opacity: 0.55; font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-size: 11px; }
-  .facet-year { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .year-in { width: 130px; padding: 8px 11px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--raised); color: var(--text); font: inherit; font-size: 14px; }
-  .facet-hint { font-size: 12.5px; color: var(--muted); }
-  .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 12px; }
-  .achip {
-    border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--border)); background: color-mix(in srgb, var(--primary) 12%, transparent);
-    color: var(--primary); padding: 4px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; text-transform: capitalize; cursor: pointer;
-  }
-  .clear-f { border: none; background: transparent; color: var(--muted); font: inherit; font-size: 12.5px; cursor: pointer; text-decoration: underline; }
+  /* ── Facets — a single compact row of dropdowns (one value per facet, ANDed server-side) ── */
+  .facetrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+  .facet-sel { max-width: 200px; }
+  .year-in { width: 172px; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--raised); color: var(--text); font: inherit; font-size: 14px; font-weight: 600; }
+  .year-in:focus { outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent); outline-offset: 1px; border-color: var(--primary); }
+  .year-in::placeholder { font-weight: 500; color: var(--muted); }
+  .clear-f { border: none; background: transparent; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px 8px; }
+  .clear-f:hover { color: var(--primary); text-decoration: underline; }
   .sheet-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
   .sheet-tags .dtag { font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--raised); color: var(--muted); text-transform: capitalize; }
 
@@ -256,21 +242,6 @@
 </head>
 <body>
 
-<header class="top">
-  <div class="wrap top-in">
-    <a class="brand" href="/" aria-label="Silo home">
-      <span class="logo">S</span>
-      <span>
-        <h1>Silo</h1>
-        <span class="sub">FS25 mod catalog</span>
-      </span>
-    </a>
-    <div class="top-spacer"></div>
-    <button class="btn icon-btn" id="themeBtn" type="button" aria-label="Toggle light / dark theme" title="Toggle theme">◐</button>
-    <a class="btn primary" href="/#download">Get the app</a>
-  </div>
-</header>
-
 <main>
   <section class="head">
     <div class="wrap">
@@ -301,11 +272,9 @@
           <option value="downloads">Most downloaded</option>
           <option value="name">Name (A–Z)</option>
         </select>
-        <button class="sel filter-btn" id="filterBtn" type="button" hidden aria-expanded="false">⛃ Filters</button>
       </div>
       <div class="cats" id="cats"></div>
-      <div class="facets" id="facets" hidden></div>
-      <div class="active-filters" id="activeFilters" hidden></div>
+      <div class="facetrow" id="facetrow" hidden></div>
     </div>
   </div>
 
@@ -314,28 +283,6 @@
     <div class="more-row"><button class="btn" id="moreBtn" type="button" hidden>Load more</button></div>
   </div>
 </main>
-
-<footer>
-  <div class="wrap cols">
-    <div>
-      <p>
-        <strong>Silo</strong> is a free, open-source mod manager for Farming Simulator 25.
-        This catalog aggregates publicly available mod information from ModHub, GitHub and Nexus
-        and links back to each source. Silo does not host or redistribute mod files, and this
-        page sets no cookies and runs no analytics.
-      </p>
-      <p>Mod names, images and descriptions belong to their respective authors and platforms.</p>
-    </div>
-    <div class="links">
-      <a href="/">Home</a>
-      <a href="/trust/">Trust</a>
-      <a href="/help/">Help</a>
-      <a href="https://github.com/HLLMR/silo" rel="noopener">Source</a>
-      <a href="/#download">Download</a>
-      <a href="/legal/">Legal</a>
-    </div>
-  </div>
-</footer>
 
 <div id="lightbox" class="lb" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
@@ -367,20 +314,6 @@
   })();
 
   var SRC_LABEL = { modhub: "ModHub", github: "GitHub", nexus: "Nexus", kingmods: "KingMods", silo: "Silo" };
-
-  // ── Theme toggle (respects OS default; persists the user's explicit choice) ──
-  (function () {
-    var saved = null;
-    try { saved = localStorage.getItem("silo-theme"); } catch (e) {}
-    if (saved) document.documentElement.setAttribute("data-theme", saved);
-    document.getElementById("themeBtn").addEventListener("click", function () {
-      var cur = document.documentElement.getAttribute("data-theme");
-      if (!cur) cur = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-      var next = cur === "dark" ? "light" : "dark";
-      document.documentElement.setAttribute("data-theme", next);
-      try { localStorage.setItem("silo-theme", next); } catch (e) {}
-    });
-  })();
 
   // ── State ──
   var state = { q: "", category: "", sort: "popular", tags: [], availableBy: null, offset: 0, limit: 30, total: 0, loading: false };
@@ -513,31 +446,14 @@
       catSel.addEventListener("change", function () { setCategory(catSel.value); });
     } catch (e) { /* categories are optional chrome */ }
 
-    // ── Facets (brand/theme/region/realism/era + availableBy year) — mirrors the in-app filters ──
-    var facetsEl = document.getElementById("facets");
-    var filterBtn = document.getElementById("filterBtn");
-    var activeEl = document.getElementById("activeFilters");
+    // ── Facets (brand/theme/region/realism/era + availableBy year) — a compact dropdown row, mirrors the in-app filters ──
+    var facetRow = document.getElementById("facetrow");
     var FACET_ORDER = ["theme", "brand", "region", "realism", "era"];
     var FACET_LABEL = { theme: "Theme", brand: "Brand", region: "Region", realism: "Realism", era: "Era" };
-
-    function renderActiveFilters() {
-      var n = state.tags.length + (state.availableBy ? 1 : 0);
-      filterBtn.textContent = "⛃ Filters" + (n ? " (" + n + ")" : "");
-      filterBtn.classList.toggle("on", !facetsEl.hidden || n > 0);
-      if (!n) { activeEl.hidden = true; activeEl.innerHTML = ""; return; }
-      activeEl.hidden = false;
-      var h = state.tags.map(function (t) {
-        return '<button class="achip" data-tag="' + esc(t) + '" type="button">' + esc(t.replace(":", " · ")) + " ✕</button>";
-      }).join("");
-      if (state.availableBy) h += '<button class="achip" data-avail="1" type="button">available by ' + state.availableBy + " ✕</button>";
-      h += '<button class="clear-f" id="clearF" type="button">Clear all</button>';
-      activeEl.innerHTML = h;
-    }
-    function syncFacets() {
-      facetsEl.querySelectorAll(".fchip").forEach(function (b) {
-        b.classList.toggle("on", state.tags.indexOf(b.getAttribute("data-tag")) >= 0);
-      });
-      renderActiveFilters();
+    function prettify(v) { return String(v).replace(/-/g, " ").replace(/\b\w/g, function (c) { return c.toUpperCase(); }); }
+    function updateClear() {
+      var cf = document.getElementById("clearF");
+      if (cf) cf.hidden = (state.tags.length + (state.availableBy ? 1 : 0)) === 0;
     }
     try {
       var fdata = await (await fetch(API + "/facets")).json();
@@ -545,50 +461,43 @@
       var order = Object.keys(facets).sort(function (a, b) {
         var ia = FACET_ORDER.indexOf(a), ib = FACET_ORDER.indexOf(b);
         return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
-      });
+      }).filter(function (ns) { return (facets[ns] || []).length; });
       if (order.length) {
+        // One <select> per facet — pick a single value per facet; facets are ANDed server-side.
         var html = order.map(function (ns) {
-          return '<div class="facet-group"><div class="facet-label">' + esc(FACET_LABEL[ns] || ns) + '</div><div class="facet-chips">' +
-            (facets[ns] || []).slice(0, 16).map(function (fv) {
-              return '<button class="fchip" data-tag="' + esc(ns + ":" + fv.value) + '" type="button">' + esc(fv.value) + '<span class="n">' + fmt(fv.count) + "</span></button>";
-            }).join("") + "</div></div>";
+          var opts = ['<option value="">' + esc(FACET_LABEL[ns] || ns) + ": all</option>"];
+          (facets[ns] || []).forEach(function (fv) {
+            opts.push('<option value="' + esc(ns + ":" + fv.value) + '">' + esc(prettify(fv.value)) + " (" + fmt(fv.count) + ")</option>");
+          });
+          return '<select class="sel facet-sel" data-ns="' + esc(ns) + '" aria-label="Filter by ' + esc(FACET_LABEL[ns] || ns) + '">' + opts.join("") + "</select>";
         }).join("");
-        html += '<div class="facet-group"><div class="facet-label">Available by year</div><div class="facet-year"><input class="year-in" id="availBy" type="number" min="1900" max="2100" placeholder="e.g. 1985"><span class="facet-hint">Period-correct — only machines that existed by this year (dated mods only).</span></div></div>';
-        facetsEl.innerHTML = html;
-        filterBtn.hidden = false;
+        html += '<input class="sel year-in" id="availBy" type="number" min="1900" max="2100" placeholder="Available by year" title="Period-correct — only machines that existed by this year (dated mods only).">';
+        html += '<button class="clear-f" id="clearF" type="button" hidden>Clear ✕</button>';
+        facetRow.innerHTML = html;
+        facetRow.hidden = false;
 
-        filterBtn.addEventListener("click", function () {
-          facetsEl.hidden = !facetsEl.hidden;
-          filterBtn.setAttribute("aria-expanded", String(!facetsEl.hidden));
-          renderActiveFilters();
-        });
-        facetsEl.addEventListener("click", function (ev) {
-          var b = ev.target.closest(".fchip"); if (!b) return;
-          var tag = b.getAttribute("data-tag");
-          var i = state.tags.indexOf(tag);
-          if (i >= 0) state.tags.splice(i, 1); else state.tags.push(tag);
-          syncFacets(); load(true);
-        });
-        document.getElementById("availBy").addEventListener("change", function (e) {
-          var v = parseInt(e.target.value, 10);
-          state.availableBy = (v >= 1900 && v <= 2100) ? v : null;
-          syncFacets(); load(true);
-        });
-        activeEl.addEventListener("click", function (ev) {
-          var rm = ev.target.closest(".achip");
-          if (rm) {
-            if (rm.getAttribute("data-avail")) { state.availableBy = null; var yi = document.getElementById("availBy"); if (yi) yi.value = ""; }
-            else { var i = state.tags.indexOf(rm.getAttribute("data-tag")); if (i >= 0) state.tags.splice(i, 1); }
-            syncFacets(); load(true); return;
+        facetRow.addEventListener("change", function (ev) {
+          var sel = ev.target.closest(".facet-sel");
+          if (sel) {
+            var ns = sel.getAttribute("data-ns");
+            state.tags = state.tags.filter(function (t) { return t.split(":")[0] !== ns; });
+            if (sel.value) state.tags.push(sel.value);
+            updateClear(); load(true); return;
           }
-          if (ev.target.closest("#clearF")) {
-            state.tags = []; state.availableBy = null;
-            var yi2 = document.getElementById("availBy"); if (yi2) yi2.value = "";
-            syncFacets(); load(true);
+          if (ev.target.id === "availBy") {
+            var v = parseInt(ev.target.value, 10);
+            state.availableBy = (v >= 1900 && v <= 2100) ? v : null;
+            updateClear(); load(true);
           }
+        });
+        document.getElementById("clearF").addEventListener("click", function () {
+          state.tags = []; state.availableBy = null;
+          facetRow.querySelectorAll(".facet-sel").forEach(function (s) { s.value = ""; });
+          var yi = document.getElementById("availBy"); if (yi) yi.value = "";
+          updateClear(); load(true);
         });
       }
-    } catch (e) { /* facets optional — older server just has no panel */ }
+    } catch (e) { /* facets optional — older server just has no row */ }
 
     load(true);
   }
