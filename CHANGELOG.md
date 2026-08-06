@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The library detail drawer now shows catalog info** — a mod's summary (clamped, with **Read
+  more** for the full text), where it's **available** (ModHub / GitHub / Nexus, with links), and
+  whether it's **outdated** (⬆ update available vs. ✓ up to date). No more hopping to Browse to
+  find out if a library mod has a newer version.
 - **An "updates" filter in the stat bar.** After running ⟳ Updates, a gold **N updates** chip
   appears when any library mods are outdated; click it to scope the list to just those. (Pairs
   with the drawer showing per-mod update status.)
@@ -35,13 +39,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   refresh timestamp (so it barely changed anything); it now uses SiloAPI's `newest` sort,
   backed by ModHub's native grid ordinal — the same order you see on ModHub, updates and
   re-releases included. The web `/browse` "Newest" option uses it too.
-
-### Fixed
-
-- **Mod settings forms now recognize the `*Value` attribute convention** (`boolValue`, `intValue`,
-  `floatValue`, `stringValue`) that real mods like Easy Dev Controls use — previously only
-  `boolean`/`integer`/… were parsed, so those mods' settings came up as an empty form. Metadata
-  attrs (e.g. `isSaved`) are preserved verbatim on save.
 
 ### Added
 
@@ -71,13 +68,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] - 2026-08-03
 
-### Fixed
-
-- **Mod settings forms now recognize the `*Value` attribute convention** (`boolValue`, `intValue`,
-  `floatValue`, `stringValue`) that real mods like Easy Dev Controls use — previously only
-  `boolean`/`integer`/… were parsed, so those mods' settings came up as an empty form. Metadata
-  attrs (e.g. `isSaved`) are preserved verbatim on save.
-
 ### Added
 
 - **"Open in Silo" links for shared collections.** A public collection's page now has an
@@ -95,13 +85,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   anyone can audit exactly what's inside. (#60)
 
 ## [0.3.1] - 2026-08-03
-
-### Fixed
-
-- **Mod settings forms now recognize the `*Value` attribute convention** (`boolValue`, `intValue`,
-  `floatValue`, `stringValue`) that real mods like Easy Dev Controls use — previously only
-  `boolean`/`integer`/… were parsed, so those mods' settings came up as an empty form. Metadata
-  attrs (e.g. `isSaved`) are preserved verbatim on save.
 
 ### Added
 
@@ -121,13 +104,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it now attaches on each release. (#82)
 
 ## [0.3.0] - 2026-08-02
-
-### Fixed
-
-- **Mod settings forms now recognize the `*Value` attribute convention** (`boolValue`, `intValue`,
-  `floatValue`, `stringValue`) that real mods like Easy Dev Controls use — previously only
-  `boolean`/`integer`/… were parsed, so those mods' settings came up as an empty form. Metadata
-  attrs (e.g. `isSaved`) are preserved verbatim on save.
 
 ### Added
 
@@ -205,13 +181,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.2] - 2026-08-01
 
-### Fixed
-
-- **Mod settings forms now recognize the `*Value` attribute convention** (`boolValue`, `intValue`,
-  `floatValue`, `stringValue`) that real mods like Easy Dev Controls use — previously only
-  `boolean`/`integer`/… were parsed, so those mods' settings came up as an empty form. Metadata
-  attrs (e.g. `isSaved`) are preserved verbatim on save.
-
 ### Added
 
 - **In-app auto-update.** Silo checks GitHub Releases on launch for a newer signed build and,
@@ -222,13 +191,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   0.2.2 once, and future updates are one click.
 
 ## [0.2.1] - 2026-08-01
-
-### Fixed
-
-- **Mod settings forms now recognize the `*Value` attribute convention** (`boolValue`, `intValue`,
-  `floatValue`, `stringValue`) that real mods like Easy Dev Controls use — previously only
-  `boolean`/`integer`/… were parsed, so those mods' settings came up as an empty form. Metadata
-  attrs (e.g. `isSaved`) are preserved verbatim on save.
 
 ### Added
 
@@ -247,13 +209,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   read-only → actions escalation.
 
 ## [0.2.0] - 2026-08-01
-
-### Fixed
-
-- **Mod settings forms now recognize the `*Value` attribute convention** (`boolValue`, `intValue`,
-  `floatValue`, `stringValue`) that real mods like Easy Dev Controls use — previously only
-  `boolean`/`integer`/… were parsed, so those mods' settings came up as an empty form. Metadata
-  attrs (e.g. `isSaved`) are preserved verbatim on save.
 
 ### Added
 
@@ -320,13 +275,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2026-07-30
 
 First public beta.
-
-### Fixed
-
-- **Mod settings forms now recognize the `*Value` attribute convention** (`boolValue`, `intValue`,
-  `floatValue`, `stringValue`) that real mods like Easy Dev Controls use — previously only
-  `boolean`/`integer`/… were parsed, so those mods' settings came up as an empty form. Metadata
-  attrs (e.g. `isSaved`) are preserved verbatim on save.
 
 ### Added
 

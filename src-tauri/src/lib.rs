@@ -600,6 +600,26 @@ async fn siloapi_mod_detail(
         .map_err(|e| e.to_string())?
 }
 
+/// Resolve a *library* mod (by tech name) to its full catalog record, so the library detail
+/// drawer can show the same info Browse does — summary, sources, latest version. Returns None
+/// when the mod isn't catalogued (dev/obscure mods), in which case the drawer just shows less.
+#[tauri::command]
+async fn catalog_detail_by_tech(
+    app: tauri::AppHandle,
+    tech_name: String,
+) -> Result<Option<siloapi::BrowseMod>, String> {
+    let base = siloapi_base(&app)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<Option<siloapi::BrowseMod>, String> {
+        let hits = siloapi::lookup(&base, std::slice::from_ref(&tech_name))?;
+        match hits.into_iter().find(|h| !h.id.is_empty()) {
+            Some(h) => siloapi::detail(&base, &h.id).map(Some),
+            None => Ok(None),
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// Fetch a catalog mod thumbnail as a `data:` URL (the webview can't set the referer the
 /// Giants CDN now requires). Cached on disk by URL so each image is fetched at most once.
 /// STOPGAP: the polite long-term fix is SiloAPI caching + serving these during its sweeps.
@@ -2030,6 +2050,7 @@ pub fn run() {
             siloapi_stats,
             siloapi_categories,
             siloapi_mod_detail,
+            catalog_detail_by_tech,
             catalog_image,
             install_remote_mod,
             catalog_check_updates,

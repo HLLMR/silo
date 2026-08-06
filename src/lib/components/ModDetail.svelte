@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { ModEntry, CurationRow, Conflict } from "../types";
-  import { getModIcon, revealInFolder } from "../api";
+  import type { ModEntry, CurationRow, Conflict, CatalogModDetail } from "../types";
+  import { getModIcon, revealInFolder, catalogDetailByTech, openExternal } from "../api";
+  import { label as sourceLabel } from "../browse";
   import { resizable } from "../resize";
   import ModStatus from "./ModStatus.svelte";
   import ModCuration from "./ModCuration.svelte";
@@ -90,6 +91,28 @@
     if (b >= 1024) return (b / 1024).toFixed(0) + " KB";
     return b + " B";
   }
+
+  // Catalog awareness: resolve this library mod to its catalog record, so the library drawer
+  // shows the same summary / sources / latest version Browse does — the "is this outdated?"
+  // loop, without leaving the library. Null when the mod isn't catalogued.
+  let catalog = $state<CatalogModDetail | null>(null);
+  let showFullDesc = $state(false);
+  $effect(() => {
+    const tn = mod.techName;
+    catalog = null;
+    showFullDesc = false;
+    catalogDetailByTech(tn)
+      .then((c) => {
+        if (mod.techName === tn) catalog = c;
+      })
+      .catch(() => {});
+  });
+  const norm = (v: string) => v.replace(/^v/i, "").trim();
+  const catalogNewer = $derived(
+    !!(catalog?.latestVersion && mod.version && norm(catalog.latestVersion) !== norm(mod.version)),
+  );
+  const summaryText = $derived((catalog?.descriptionFull || catalog?.description || "").trim());
+  const summaryHasMore = $derived(summaryText.length > 420);
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
@@ -131,6 +154,39 @@
       📂 Reveal
     </button>
   </div>
+
+  {#if catalog}
+    <div class="d-cat-info">
+      {#if catalogNewer}
+        <div class="d-upd">
+          <span>⬆ Update available — catalog has <b>v{catalog.latestVersion}</b>{mod.version ? ` (you have v${mod.version})` : ""}</span>
+          {#if catalog.pageUrl}
+            <button class="d-upd-link" onclick={() => openExternal(catalog!.pageUrl!)}>View source ↗</button>
+          {/if}
+        </div>
+      {:else if catalog.latestVersion}
+        <div class="d-uptodate">✓ Up to date <span class="d-mut">· catalog latest v{catalog.latestVersion}</span></div>
+      {/if}
+
+      {#if summaryText}
+        <div class="d-summary">{summaryText}</div>
+        {#if summaryHasMore}
+          <button class="d-readmore" onclick={() => (showFullDesc = true)}>Read more…</button>
+        {/if}
+      {/if}
+
+      {#if catalog.sources?.length}
+        <div class="d-sources">
+          <span class="d-src-label">Available on</span>
+          {#each catalog.sources as s (s.source + s.sourceUrl)}
+            <button class="d-src" onclick={() => openExternal(s.sourceUrl)}>
+              {sourceLabel(s.source)}{s.version ? ` · ${s.version}` : ""} ↗
+            </button>
+          {/each}
+        </div>
+      {/if}
+    </div>
+  {/if}
 
   <div class="d-meta">
     <div><span>Category</span>{mod.category}{mod.subcategory ? ` · ${mod.subcategory}` : ""}</div>
@@ -212,6 +268,18 @@
     </div>
   {/if}
 </aside>
+
+{#if showFullDesc && catalog}
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+  <div class="fd-back" onclick={() => (showFullDesc = false)}></div>
+  <div class="fd-modal">
+    <div class="fd-head">
+      <span class="fd-title">{label}</span>
+      <button class="d-x" onclick={() => (showFullDesc = false)} aria-label="Close">✕</button>
+    </div>
+    <div class="fd-body">{catalog.descriptionFull || catalog.description}</div>
+  </div>
+{/if}
 
 <style>
   .drawer {
@@ -306,6 +374,133 @@
     color: var(--primary);
     border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
     background: color-mix(in srgb, var(--primary) 10%, transparent);
+  }
+  .d-cat-info {
+    padding: 12px 0;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .d-upd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 12.5px;
+    color: var(--gold-700);
+    background: color-mix(in srgb, var(--gold-500) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--gold-500) 40%, var(--border));
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+  }
+  .d-upd-link {
+    border: none;
+    background: transparent;
+    color: var(--gold-700);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .d-uptodate {
+    font-size: 12px;
+    color: var(--primary);
+  }
+  .d-mut {
+    color: var(--text-muted);
+  }
+  .d-summary {
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--text);
+    white-space: pre-wrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 20;
+    line-clamp: 20;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .d-readmore {
+    align-self: flex-start;
+    border: none;
+    background: transparent;
+    color: var(--primary);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+  }
+  .d-sources {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+  .d-src-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    font-weight: 700;
+  }
+  .d-src {
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    padding: 4px 9px;
+    border-radius: var(--radius-sm);
+    font: inherit;
+    font-size: 11.5px;
+    cursor: pointer;
+  }
+  .d-src:hover {
+    border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+  }
+  .fd-back {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: color-mix(in srgb, var(--bg) 55%, transparent);
+  }
+  .fd-modal {
+    position: fixed;
+    z-index: 61;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(680px, calc(100vw - 40px));
+    max-height: min(80vh, 720px);
+    display: flex;
+    flex-direction: column;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-2);
+  }
+  .fd-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .fd-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+  }
+  .fd-body {
+    padding: 14px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    color: var(--text);
+    scrollbar-width: thin;
   }
   .d-meta {
     display: grid;
