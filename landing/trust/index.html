@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Silo — verified mods, one catalog across every source</title>
+<script src="/nav.js"></script>
 <meta name="description" content="Silo aggregates ModHub, GitHub and Nexus into one record per Farming Simulator 25 mod — the latest version across every source — and hashes each build from its source, so an installed mod can be verified as the real, untampered one." />
 <meta property="og:title" content="Silo — verified mods, one catalog across every source" />
 <meta property="og:description" content="One record per FS25 mod across ModHub, GitHub and Nexus, with the latest version everywhere — and a check that proves a build is the real one. Free, no account." />
@@ -150,14 +151,6 @@
 </style>
 </head>
 <body>
-<header class="top"><div class="wrap top-in">
-  <a class="brand" href="/" aria-label="Silo home"><span class="logo">S</span><span><h1>Silo</h1><span class="sub">Verified mod catalog</span></span></a>
-  <div class="top-spacer"></div>
-  <nav class="nav-links"><a href="/browse/">Browse</a><a href="/help/">Help</a><a href="https://github.com/HLLMR/silo" rel="noopener">Source</a></nav>
-  <button class="btn icon-btn" id="themeBtn" type="button" aria-label="Toggle theme" title="Toggle theme">◐</button>
-  <a class="btn primary" href="/#download">Get the app</a>
-</div></header>
-
 <section class="hero">
   <div class="hero-glow"></div>
   <div class="wrap">
@@ -316,16 +309,8 @@
   </div>
 </section>
 
-<footer><div class="wrap">
-  <div class="links"><a href="/">Home</a><a href="/browse/">Browse</a><a href="/help/">Help</a><a href="https://github.com/HLLMR/silo" rel="noopener">Source</a><a href="/legal/">Legal</a></div>
-  <div class="copy">Aggregated from public sources · not affiliated with GIANTS Software</div>
-</div></footer>
-
 <script>
   "use strict";
-  (function(){var s=null;try{s=localStorage.getItem("silo-theme");}catch(e){}if(s)document.documentElement.setAttribute("data-theme",s);
-    document.getElementById("themeBtn").addEventListener("click",function(){var c=document.documentElement.getAttribute("data-theme");if(!c)c=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";var n=c==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("silo-theme",n);}catch(e){}});})();
-
   // Live stats — keep the numbers honest without a redeploy. Falls back to the baked-in values.
   (function(){
     var API="https://silo-api.hllmr.com";
