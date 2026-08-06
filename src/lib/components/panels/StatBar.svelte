@@ -14,6 +14,7 @@
     showHidden = $bindable(),
     flaggedOnly = $bindable(),
     conflictedOnly = $bindable(),
+    statFilter = $bindable(),
     query = $bindable(),
     onOpenStats,
     onOpenConflicts,
@@ -36,6 +37,7 @@
     showHidden: boolean;
     flaggedOnly: boolean;
     conflictedOnly: boolean;
+    statFilter: "" | "maps" | "scripts" | "unique" | "active";
     query: string;
     onOpenStats: () => void;
     onOpenConflicts: () => void;
@@ -51,22 +53,42 @@
     <span class="stat-num tnum">{modCount}</span>
     <span class="stat-label">mods</span>
   </button>
-  <div class="stat">
+  <button
+    class="stat statbtn"
+    class:sel={statFilter === "maps"}
+    title="Filter to maps only"
+    onclick={() => (statFilter = statFilter === "maps" ? "" : "maps")}
+  >
     <span class="stat-num tnum">{mapsCount}</span>
     <span class="stat-label">maps</span>
-  </div>
-  <div class="stat">
+  </button>
+  <button
+    class="stat statbtn"
+    class:sel={statFilter === "scripts"}
+    title="Filter to script mods only"
+    onclick={() => (statFilter = statFilter === "scripts" ? "" : "scripts")}
+  >
     <span class="stat-num tnum">{scriptsCount}</span>
     <span class="stat-label">script mods</span>
-  </div>
-  <div class="stat">
+  </button>
+  <button
+    class="stat statbtn"
+    class:sel={statFilter === "unique"}
+    title="Filter to mods that declare a uniqueType"
+    onclick={() => (statFilter = statFilter === "unique" ? "" : "unique")}
+  >
     <span class="stat-num tnum">{uniqueCount}</span>
     <span class="stat-label">uniqueType</span>
-  </div>
-  <div class="stat">
+  </button>
+  <button
+    class="stat statbtn"
+    class:sel={statFilter === "active"}
+    title="Filter to the active set only"
+    onclick={() => (statFilter = statFilter === "active" ? "" : "active")}
+  >
     <span class="stat-num tnum">{activeCount}</span>
     <span class="stat-label">active</span>
-  </div>
+  </button>
   <button
     class="stat statbtn"
     class:flag={conflictCount > 0}
@@ -196,6 +218,15 @@
   }
   .statbtn:hover {
     opacity: 0.8;
+  }
+  /* A stat acting as an active filter — highlight the number + underline the label. */
+  .statbtn.sel .stat-num {
+    color: var(--primary);
+  }
+  .statbtn.sel .stat-label {
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
   .statbtn.flag .stat-num {
     color: var(--warn);

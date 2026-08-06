@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Click a stat to filter the library.** The **maps**, **script mods**, **uniqueType**, and
+  **active** counts in the stat bar are now toggle filters — click one to scope the list to it,
+  click again (or another) to switch or clear. "active" gives you the quick "show only what's
+  loaded" view.
+
 ## [0.5.0] - 2026-08-04
 
 ### Fixed
