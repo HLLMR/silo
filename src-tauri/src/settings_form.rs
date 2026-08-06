@@ -1,10 +1,12 @@
 //! Turn a mod's settings XML into an editable form and write edits back safely.
 //!
-//! Handles the FS-idiomatic settings shape — elements carrying a typed value in a
-//! `boolean`/`integer`/`float`/`string` (or `value`) attribute, e.g.
-//! `<setting name="FOO" boolean="true"/>`. Each such attribute becomes a form
-//! field; the element's `name` attribute (or tag) is the label. Anything the form
-//! can't model stays editable via the raw-XML escape hatch in the UI.
+//! Handles the two FS settings conventions seen in the wild: the short form
+//! (`boolean`/`integer`/`float`/`string`, or `value`) e.g. `<setting name="FOO" boolean="true"/>`,
+//! and the `*Value` form real mods like Easy Dev Controls use, e.g.
+//! `<setting name="runSpeedIndex" intValue="3" isSaved="true"/>`. Each such value attribute
+//! becomes a form field; the element's `name` attribute (or tag) is the label. Metadata attrs
+//! (`isSaved`, …) are preserved verbatim, and anything the form can't model stays editable via
+//! the raw-XML escape hatch in the UI.
 //!
 //! Field ids are assigned in a single deterministic document-order walk, and the
 //! exact same walk drives write-back — so a field always maps to the same value,
@@ -86,11 +88,16 @@ fn element_slots(e: &BytesStart) -> Vec<Slot> {
 
     let mut slots: Vec<Slot> = Vec::new();
     for (key, val) in &raw {
+        // Two attribute conventions coexist in the wild. The short form
+        // (`boolean`/`integer`/`float`/`string`/`value`) and the `*Value` form that real mods
+        // like Easy Dev Controls use (`boolValue="true"`, `intValue="3"`). Recognize both, or
+        // those mods' settings come up as an empty form. Metadata attrs (name, isSaved, …) are
+        // deliberately NOT slots — they're preserved verbatim on write.
         let kind = match key.as_str() {
-            "boolean" => Some("bool"),
-            "integer" => Some("int"),
-            "float" => Some("float"),
-            "string" => Some("string"),
+            "boolean" | "boolValue" => Some("bool"),
+            "integer" | "intValue" => Some("int"),
+            "float" | "floatValue" => Some("float"),
+            "string" | "stringValue" => Some("string"),
             "value" => Some(infer_kind(val)),
             _ => None,
         };
@@ -277,6 +284,36 @@ mod tests {
         assert_eq!(f[0].value, "1");
         assert_eq!(f[1].kind, "bool");
         assert_eq!(f[1].value, "true");
+    }
+
+    // Real mods (Easy Dev Controls) use the `*Value` convention with metadata attrs alongside.
+    const EDC: &str = "<settings>\n    <setting name=\"runSpeedIndex\" intValue=\"3\" isSaved=\"true\"/>\n    <setting name=\"superStrength\" boolValue=\"false\" isSaved=\"false\"/>\n</settings>";
+
+    #[test]
+    fn parses_the_star_value_convention() {
+        let f = parse(EDC);
+        assert_eq!(f.len(), 2, "both settings should become fields");
+        assert_eq!(f[0].label, "runSpeedIndex");
+        assert_eq!(f[0].kind, "int");
+        assert_eq!(f[0].value, "3");
+        assert_eq!(f[1].label, "superStrength");
+        assert_eq!(f[1].kind, "bool");
+        assert_eq!(f[1].value, "false");
+    }
+
+    #[test]
+    fn edits_star_value_and_preserves_metadata() {
+        let edits = vec![Edit {
+            id: 0,
+            value: "8".into(),
+        }];
+        let out = apply_edits(EDC, &edits).unwrap();
+        assert!(out.contains("intValue=\"8\""));
+        // Metadata attrs (name, isSaved) are untouched.
+        assert!(out.contains("name=\"runSpeedIndex\""));
+        assert!(out.contains("isSaved=\"true\""));
+        // The other setting is unchanged.
+        assert!(out.contains("boolValue=\"false\""));
     }
 
     #[test]
