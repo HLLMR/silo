@@ -126,6 +126,9 @@
   let favoritesOnly = $state(false);
   let flaggedOnly = $state(false);
   let conflictedOnly = $state(false);
+  // A single categorical facet from the stat bar (maps/scripts/uniqueType/active) — click a
+  // count to scope the list to it; click again (or another) to switch/clear.
+  let statFilter = $state<"" | "maps" | "scripts" | "unique" | "active">("");
   let editing = $state<{ techName: string; x: number; y: number } | null>(null);
   let activeSet = $state<Set<string>>(new Set());
   let busy = $state<string | null>(null);
@@ -967,6 +970,15 @@
         (m) => conflictedSet.has(m.techName) || conflictedSet.has(m.title ?? ""),
       );
     }
+    if (statFilter === "maps") {
+      list = list.filter((m) => m.isMap);
+    } else if (statFilter === "scripts") {
+      list = list.filter((m) => m.scriptCount > 0);
+    } else if (statFilter === "unique") {
+      list = list.filter((m) => m.uniqueType != null);
+    } else if (statFilter === "active") {
+      list = list.filter((m) => activeSet.has(m.techName));
+    }
     if (selectedTag) {
       list = list.filter((m) => tagsOf(m.techName).includes(selectedTag!));
     }
@@ -1487,6 +1499,7 @@
     bind:showHidden
     bind:flaggedOnly
     bind:conflictedOnly
+    bind:statFilter
     bind:query
     onOpenStats={() => (statsOpen = !statsOpen)}
     onOpenConflicts={() => (conflictsOpen = !conflictsOpen)}
