@@ -281,6 +281,20 @@ export interface BrowseMod {
   popularity?: number | null;
   sources: ModSourceOption[];
   pageUrl: string | null;
+  /** Semantic facet tags (brand/theme/region/realism/era), highest-confidence first.
+   *  Populated on detail; empty on list results. */
+  tags?: ModTag[];
+  /** Real-world production-year range for identifiable machines (drives availableBy). */
+  yearFrom?: number | null;
+  yearTo?: number | null;
+}
+
+/** One semantic facet tag (SiloAPI docs/TAGGING.md). `confidence` lets the client threshold. */
+export interface ModTag {
+  namespace: string;
+  value: string;
+  confidence?: number | null;
+  source?: string | null;
 }
 
 /** A page of catalog results + how many match the filter overall. */

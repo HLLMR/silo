@@ -64,6 +64,47 @@ pub struct BrowseMod {
     /// Where to send the user when nothing is directly installable.
     #[serde(default)]
     pub page_url: Option<String>,
+    /// Semantic facet tags (brand/theme/region/realism/era), highest-confidence first.
+    /// Populated on the detail endpoint; empty on list results.
+    #[serde(default)]
+    pub tags: Vec<Tag>,
+    /// Real-world production-year range for identifiable machines (drives `availableBy`).
+    #[serde(default)]
+    pub year_from: Option<i64>,
+    #[serde(default)]
+    pub year_to: Option<i64>,
+}
+
+/// One semantic facet tag on a mod (see SiloAPI docs/TAGGING.md). `confidence` lets the client
+/// threshold ("don't cry wolf"); `source` is the provenance (heuristic:* or llm:*).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Tag {
+    pub namespace: String,
+    pub value: String,
+    #[serde(default)]
+    pub confidence: Option<f64>,
+    #[serde(default)]
+    pub source: Option<String>,
+}
+
+/// The `/facets` response: available filter values per namespace, with mod counts.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct FacetValue {
+    pub value: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Facets {
+    pub facets: std::collections::HashMap<String, Vec<FacetValue>>,
+}
+
+/// GET /facets — the available facet values (brand/theme/region/realism/era) + counts, so the
+/// UI can render filter chips. Best-effort: an older server without the route just yields none.
+pub fn facets(base: &str) -> Result<Facets, String> {
+    let url = format!("{}/facets", base.trim_end_matches('/'));
+    get(&url)?.into_json().map_err(|e| e.to_string())
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -175,6 +216,8 @@ pub fn browse(
     query: Option<&str>,
     category: Option<&str>,
     sort: Option<&str>,
+    tags: &[String],
+    available_by: Option<u32>,
     limit: u32,
     offset: u32,
 ) -> Result<BrowsePage, String> {
@@ -189,6 +232,14 @@ pub fn browse(
     }
     if let Some(c) = category.filter(|s| !s.trim().is_empty()) {
         url.push_str(&format!("&category={}", urlencode(c.trim())));
+    }
+    // Facet tags are repeatable and ANDed server-side (?tag=brand:fendt&tag=region:europe).
+    for t in tags.iter().filter(|s| !s.trim().is_empty()) {
+        url.push_str(&format!("&tag={}", urlencode(t.trim())));
+    }
+    // Period-correct filter: keep only mods whose model existed by this year (year_from ≤ Y).
+    if let Some(y) = available_by {
+        url.push_str(&format!("&availableBy={y}"));
     }
 
     let fetch = |u: &str| -> Result<BrowsePage, String> {

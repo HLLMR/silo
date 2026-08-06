@@ -83,6 +83,17 @@
         {/if}
       {/if}
 
+      {#if d.tags?.length}
+        <div class="drawer-tags">
+          {#each d.tags as t (t.namespace + t.value)}
+            <span
+              class="dtag"
+              title="{t.namespace}{t.confidence != null ? ` · ${Math.round(t.confidence * 100)}% confidence` : ''}{t.source ? ` · ${t.source}` : ''}"
+            >{t.value}</span>
+          {/each}
+        </div>
+      {/if}
+
       <div class="drawer-sec">Available from</div>
       {#if d.sources.length === 0}
         <p class="drawer-none">No sources recorded.</p>
@@ -289,6 +300,21 @@
     letter-spacing: 0.05em;
     color: var(--text-muted);
     margin-bottom: 6px;
+  }
+  .drawer-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 0 0 14px;
+  }
+  .dtag {
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-muted);
+    text-transform: capitalize;
   }
   .src-cards {
     display: flex;

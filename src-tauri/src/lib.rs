@@ -570,6 +570,8 @@ async fn browse_mods(
     query: Option<String>,
     category: Option<String>,
     sort: Option<String>,
+    tags: Option<Vec<String>>,
+    available_by: Option<u32>,
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> Result<siloapi::BrowsePage, String> {
@@ -580,12 +582,23 @@ async fn browse_mods(
             query.as_deref(),
             category.as_deref(),
             sort.as_deref(),
+            &tags.unwrap_or_default(),
+            available_by,
             limit.unwrap_or(40),
             offset.unwrap_or(0),
         )
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+/// The available Browse facets (brand/theme/region/realism/era + counts), for the filter chips.
+#[tauri::command]
+async fn siloapi_facets(app: tauri::AppHandle) -> Result<siloapi::Facets, String> {
+    let base = siloapi_base(&app)?;
+    tauri::async_runtime::spawn_blocking(move || siloapi::facets(&base))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 /// One mod's full catalog record (metadata + every source it was seen on).
@@ -2047,6 +2060,7 @@ pub fn run() {
             siloapi_status,
             siloapi_set_base,
             browse_mods,
+            siloapi_facets,
             siloapi_stats,
             siloapi_categories,
             siloapi_mod_detail,

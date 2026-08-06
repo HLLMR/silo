@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Filter Browse by facets.** A new filter panel in Browse scopes the catalog by **brand,
+  theme, region, realism, and era** (from SiloAPI's semantic tags — click to combine them), plus
+  an **"available by year"** filter for period-correct playthroughs (only machines that existed
+  by that year). A mod's tags also show in its detail drawer.
 - **The library detail drawer now shows catalog info** — a mod's summary (clamped, with **Read
   more** for the full text), where it's **available** (ModHub / GitHub / Nexus, with links), and
   whether it's **outdated** (⬆ update available vs. ✓ up to date). No more hopping to Browse to

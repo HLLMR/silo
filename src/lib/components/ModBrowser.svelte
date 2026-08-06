@@ -8,12 +8,14 @@
     siloapiStatus,
     siloapiModDetail,
     siloapiCategories,
+    siloapiFacets,
     installRemoteMod,
     onInstallProgress,
     openExternal,
     ghStatus,
     nexusStatus,
     nexusModDescription,
+    type Facets,
   } from "../api";
   import type {
     BrowseMod,
@@ -68,6 +70,51 @@
     "popular",
   );
   let categories = $state<CategoryCount[]>([]);
+  // Semantic facet filters (silo-api #4). activeTags are "namespace:value" strings, ANDed by
+  // the server; availableBy is the period-correct year filter. facets drives the chip UI.
+  let facets = $state<Facets | null>(null);
+  let activeTags = $state<string[]>([]);
+  let availableBy = $state<number | null>(null);
+  let showFilters = $state(false);
+  // Render facets in a sensible order; anything else the server adds falls in after.
+  const FACET_ORDER = ["theme", "brand", "region", "realism", "era"];
+  const FACET_LABEL: Record<string, string> = {
+    theme: "Theme",
+    brand: "Brand",
+    region: "Region",
+    realism: "Realism",
+    era: "Era",
+  };
+  const facetGroups = $derived(
+    facets
+      ? Object.keys(facets.facets).sort((a, b) => {
+          const ia = FACET_ORDER.indexOf(a);
+          const ib = FACET_ORDER.indexOf(b);
+          return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+        })
+      : [],
+  );
+  const filterCount = $derived(activeTags.length + (availableBy != null ? 1 : 0));
+
+  function toggleTag(ns: string, value: string) {
+    const t = `${ns}:${value}`;
+    activeTags = activeTags.includes(t) ? activeTags.filter((x) => x !== t) : [...activeTags, t];
+    load();
+  }
+  function removeTag(t: string) {
+    activeTags = activeTags.filter((x) => x !== t);
+    load();
+  }
+  function clearFilters() {
+    activeTags = [];
+    availableBy = null;
+    load();
+  }
+  function setAvailableBy(v: string) {
+    const n = parseInt(v, 10);
+    availableBy = Number.isFinite(n) && n >= 1900 && n <= 2100 ? n : null;
+    load();
+  }
   let results = $state<BrowseMod[]>([]);
   let total = $state(0);
   let lastPageFull = $state(false);
@@ -166,6 +213,8 @@
         query: query.trim() || undefined,
         category: category || undefined,
         sort,
+        tags: activeTags,
+        availableBy,
         limit: PAGE,
         offset: 0,
       });
@@ -189,15 +238,26 @@
     loadingMore = true;
     const forQuery = query;
     const forCategory = category;
+    const forTags = activeTags.join("|");
+    const forAvail = availableBy;
     try {
       const page = await browseMods({
         query: forQuery.trim() || undefined,
         category: forCategory || undefined,
         sort,
+        tags: activeTags,
+        availableBy,
         limit: PAGE,
         offset: results.length,
       });
-      if (forQuery !== query || forCategory !== category) return; // filters moved on
+      // filters moved on mid-flight → drop this page rather than splice wrong results
+      if (
+        forQuery !== query ||
+        forCategory !== category ||
+        forTags !== activeTags.join("|") ||
+        forAvail !== availableBy
+      )
+        return;
       results = [...results, ...page.mods];
       total = page.total;
       lastPageFull = page.mods.length === PAGE;
@@ -246,6 +306,11 @@
     } catch {
       // Older server without /categories — the filter just stays hidden.
     }
+    try {
+      facets = await siloapiFacets();
+    } catch {
+      // Older server without /facets — the filter panel just stays empty.
+    }
     if (seed && seed.trim()) query = seed.trim();
     await load();
   });
@@ -264,6 +329,16 @@
       {/if}
     </div>
     <div class="bh-controls">
+      {#if facetGroups.length > 0}
+        <button
+          class="cat-select filter-btn"
+          class:on={showFilters || filterCount > 0}
+          onclick={() => (showFilters = !showFilters)}
+          title="Filter by brand, theme, region, era…"
+        >
+          ⛃ Filters{filterCount > 0 ? ` (${filterCount})` : ""}
+        </button>
+      {/if}
       <select class="cat-select" bind:value={sort} onchange={() => load()} title="Sort">
         <option value="popular">Popular</option>
         <option value="downloads">Most downloaded</option>
@@ -288,6 +363,56 @@
       />
     </div>
   </div>
+
+  {#if showFilters && facetGroups.length > 0}
+    <div class="facet-panel">
+      {#each facetGroups as ns (ns)}
+        <div class="facet-group">
+          <div class="facet-label">{FACET_LABEL[ns] ?? ns}</div>
+          <div class="facet-chips">
+            {#each facets!.facets[ns].slice(0, 16) as fv (fv.value)}
+              <button
+                class="facet-chip"
+                class:on={activeTags.includes(`${ns}:${fv.value}`)}
+                onclick={() => toggleTag(ns, fv.value)}
+              >
+                {fv.value}<span class="fc-n">{fv.count.toLocaleString()}</span>
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/each}
+      <div class="facet-group">
+        <div class="facet-label">Available by year</div>
+        <div class="facet-year">
+          <input
+            class="year-in"
+            type="number"
+            min="1900"
+            max="2100"
+            placeholder="e.g. 1985"
+            value={availableBy ?? ""}
+            onchange={(e) => setAvailableBy(e.currentTarget.value)}
+          />
+          <span class="facet-hint">
+            Period-correct — only machines that existed by this year (dated mods only).
+          </span>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if filterCount > 0}
+    <div class="active-filters">
+      {#each activeTags as t (t)}
+        <button class="active-chip" onclick={() => removeTag(t)}>{t.replace(":", " · ")} ✕</button>
+      {/each}
+      {#if availableBy != null}
+        <button class="active-chip" onclick={() => setAvailableBy("")}>available by {availableBy} ✕</button>
+      {/if}
+      <button class="clear-filters" onclick={clearFilters}>Clear all</button>
+    </div>
+  {/if}
 
   <div class="bh-status">
     {#if results.length > 0}
@@ -411,6 +536,118 @@
     font-size: 0.85rem;
     max-width: 220px;
     cursor: pointer;
+  }
+  .filter-btn {
+    font-weight: 600;
+  }
+  .filter-btn.on {
+    color: var(--primary);
+    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
+  }
+  .facet-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+    margin: 4px 0 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+  }
+  .facet-group {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .facet-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    font-weight: 700;
+  }
+  .facet-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .facet-chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.8rem;
+    text-transform: capitalize;
+    cursor: pointer;
+  }
+  .facet-chip:hover {
+    border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+  }
+  .facet-chip.on {
+    background: color-mix(in srgb, var(--primary) 15%, transparent);
+    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+    color: var(--primary);
+    font-weight: 600;
+  }
+  .fc-n {
+    font-size: 0.68rem;
+    opacity: 0.6;
+    font-variant-numeric: tabular-nums;
+    font-family: var(--font-mono, monospace);
+  }
+  .facet-year {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .year-in {
+    width: 120px;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.85rem;
+  }
+  .facet-hint {
+    font-size: 0.76rem;
+    color: var(--text-muted);
+  }
+  .active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 10px;
+  }
+  .active-chip {
+    padding: 3px 9px;
+    border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--border));
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--primary);
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    cursor: pointer;
+  }
+  .clear-filters {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 0.76rem;
+    cursor: pointer;
+    text-decoration: underline;
   }
   .search {
     flex: 1;
