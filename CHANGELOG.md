@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Silo now detects which mods have settings by looking inside them** — not just the ones
+  that have already been run. It scans each mod for a shipped settings XML or Lua that
+  persists to `modSettings/`, lifting detection from ~1 mod (only what had a runtime folder)
+  to well over a hundred. Two new Library filters use it: **⚙ Has settings** and
+  **⬆ Needs update** (join the ⚙/⟳ toggles next to Favorites / Flagged / In-conflict). The
+  detail drawer badges a detected-but-not-yet-editable mod as "has settings — launch once
+  to configure."
+
 ## [0.6.0] - 2026-08-06
 
 ### Fixed

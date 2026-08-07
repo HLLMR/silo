@@ -15,6 +15,8 @@
     showHidden = $bindable(),
     flaggedOnly = $bindable(),
     conflictedOnly = $bindable(),
+    hasSettingsOnly = $bindable(),
+    needsUpdateOnly = $bindable(),
     statFilter = $bindable(),
     query = $bindable(),
     onOpenStats,
@@ -39,7 +41,9 @@
     showHidden: boolean;
     flaggedOnly: boolean;
     conflictedOnly: boolean;
-    statFilter: "" | "maps" | "scripts" | "unique" | "active" | "updates";
+    hasSettingsOnly: boolean;
+    needsUpdateOnly: boolean;
+    statFilter: "" | "maps" | "scripts" | "unique" | "active";
     query: string;
     onOpenStats: () => void;
     onOpenConflicts: () => void;
@@ -110,17 +114,6 @@
     <span class="stat-num tnum">{healthCount}</span>
     <span class="stat-label">need attention</span>
   </button>
-  {#if updatesCount > 0}
-    <button
-      class="stat statbtn upd"
-      class:sel={statFilter === "updates"}
-      title="Filter to mods with an available update"
-      onclick={() => (statFilter = statFilter === "updates" ? "" : "updates")}
-    >
-      <span class="stat-num tnum">{updatesCount}</span>
-      <span class="stat-label">update{updatesCount === 1 ? "" : "s"}</span>
-    </button>
-  {/if}
   <button
     class="stat statbtn"
     title="Crash & log triage: did the last run crash, and which mod is at fault?"
@@ -184,6 +177,25 @@
   >
     ⚠ In conflict{conflictedCount > 0 ? ` (${conflictedCount})` : ""}
   </button>
+  <button
+    class="toggle"
+    class:on={hasSettingsOnly}
+    title="Show only mods that expose in-game settings"
+    onclick={() => (hasSettingsOnly = !hasSettingsOnly)}
+  >
+    ⚙ Has settings
+  </button>
+  <button
+    class="toggle upd-toggle"
+    class:on={needsUpdateOnly}
+    title={updatesCount === 0
+      ? "Run ⟳ Updates first to check for available updates"
+      : "Show only mods with an available update"}
+    onclick={() => (needsUpdateOnly = !needsUpdateOnly)}
+    disabled={updatesCount === 0}
+  >
+    ⬆ Needs update{updatesCount > 0 ? ` (${updatesCount})` : ""}
+  </button>
 
   <input
     class="search"
@@ -241,14 +253,6 @@
     text-decoration: underline;
     text-underline-offset: 2px;
   }
-  /* Updates are actionable — tint them gold like the topbar update button. */
-  .upd .stat-num,
-  .upd .stat-label {
-    color: var(--gold-700);
-  }
-  .upd.sel .stat-label {
-    color: var(--gold-700);
-  }
   .statbtn.flag .stat-num {
     color: var(--warn);
   }
@@ -277,6 +281,16 @@
     background: color-mix(in srgb, var(--accent) 16%, transparent);
     border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
     color: var(--accent);
+  }
+  .toggle:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+  /* Updates are actionable — tint the toggle gold like the topbar update button. */
+  .upd-toggle.on {
+    background: color-mix(in srgb, var(--gold-700) 15%, transparent);
+    border-color: color-mix(in srgb, var(--gold-700) 45%, var(--border));
+    color: var(--gold-700);
   }
   .search {
     flex: 0 0 280px;
