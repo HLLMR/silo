@@ -65,11 +65,52 @@
   refreshGh();
 
   let query = $state("");
+  // `category` is the API filter param, derived from the parent/child dropdowns below.
   let category = $state("");
+  let parentCategory = $state("");
+  let childCategory = $state("");
   let sort = $state<"popular" | "newest" | "name" | "downloads" | "rating">(
-    "popular",
+    "newest",
   );
+  // Sort direction. The catalog API sorts are fixed-direction today (see silo-api), so on
+  // Browse this arrow is disabled until the server honors it; the Library wires it client-side.
+  let sortDir = $state<"desc" | "asc">("desc");
   let categories = $state<CategoryCount[]>([]);
+  // Split the flat "Parent - Child" catalog categories into a parent → children tree so the
+  // bar can show two dropdowns. A single-level category (e.g. "Gameplay") is a childless parent.
+  const catTree = $derived.by(() => {
+    const map = new Map<
+      string,
+      { name: string; count: number; children: { name: string; count: number; full: string }[] }
+    >();
+    for (const c of categories) {
+      const i = c.category.indexOf(" - ");
+      const parent = i >= 0 ? c.category.slice(0, i) : c.category;
+      const child = i >= 0 ? c.category.slice(i + 3) : null;
+      let node = map.get(parent);
+      if (!node) {
+        node = { name: parent, count: 0, children: [] };
+        map.set(parent, node);
+      }
+      node.count += c.count;
+      if (child) node.children.push({ name: child, count: c.count, full: c.category });
+    }
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+  });
+  const childList = $derived(catTree.find((n) => n.name === parentCategory)?.children ?? []);
+  // Picking a parent resets the child; the API param becomes the parent (single-level works
+  // now; a multi-child parent's "All" needs server parent-matching — silo-api#8).
+  function setParent(p: string) {
+    parentCategory = p;
+    childCategory = "";
+    category = p;
+    load();
+  }
+  function setChild(full: string) {
+    childCategory = full;
+    category = full || parentCategory;
+    load();
+  }
   // Semantic facet filters (silo-api #4). activeTags are "namespace:value" strings, ANDed by
   // the server; availableBy is the period-correct year filter. facets drives a compact
   // dropdown row — one value per facet (picking a new value replaces the prior one).
@@ -77,7 +118,7 @@
   let activeTags = $state<string[]>([]);
   let availableBy = $state<number | null>(null);
   // Render facets in a sensible order; anything else the server adds falls in after.
-  const FACET_ORDER = ["theme", "brand", "region", "realism", "era"];
+  const FACET_ORDER = ["region", "era", "theme", "brand", "realism"];
   const FACET_LABEL: Record<string, string> = {
     theme: "Theme",
     brand: "Brand",
@@ -96,7 +137,9 @@
           .filter((ns) => facets!.facets[ns].length > 0)
       : [],
   );
-  const filterCount = $derived(activeTags.length + (availableBy != null ? 1 : 0));
+  const filterCount = $derived(
+    activeTags.length + (availableBy != null ? 1 : 0) + (parentCategory ? 1 : 0),
+  );
 
   function prettify(v: string): string {
     return v.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -113,6 +156,9 @@
   function clearFilters() {
     activeTags = [];
     availableBy = null;
+    parentCategory = "";
+    childCategory = "";
+    category = "";
     load();
   }
   function setAvailableBy(v: string) {
@@ -336,65 +382,102 @@
         </span>
       {/if}
     </div>
-    <div class="bh-controls">
-      {#if categories.length > 0}
-        <select class="cat-select" bind:value={category} onchange={() => load()}>
+  </div>
+
+  <!-- Unified filter bar. Top line: category (parent · child) · search · sort · direction.
+       Bottom line: the semantic facets · year · clear-all. -->
+  <div class="filterbar">
+    <div class="fb-row fb-top">
+      {#if catTree.length > 0}
+        <select
+          class="fb-sel"
+          class:on={parentCategory !== ""}
+          value={parentCategory}
+          onchange={(e) => setParent(e.currentTarget.value)}
+          aria-label="Category"
+        >
           <option value="">All categories</option>
-          {#each categories as c (c.category)}
-            <option value={c.category}>{c.category} ({c.count})</option>
+          {#each catTree as n (n.name)}
+            <option value={n.name}>{n.name} ({n.count.toLocaleString()})</option>
           {/each}
         </select>
+        {#if childList.length > 0}
+          <select
+            class="fb-sel"
+            class:on={childCategory !== ""}
+            value={childCategory}
+            onchange={(e) => setChild(e.currentTarget.value)}
+            aria-label="Subcategory"
+          >
+            <option value="">All {parentCategory}</option>
+            {#each childList as c (c.full)}
+              <option value={c.full}>{c.name} ({c.count.toLocaleString()})</option>
+            {/each}
+          </select>
+        {/if}
       {/if}
       <input
-        class="search"
+        class="fb-search"
         type="search"
-        placeholder="Search the catalog by title…"
+        placeholder="Search the catalog…"
         bind:value={query}
         oninput={onSearch}
       />
-      <!-- Sort is ordering, not filtering — its own contrasting style, pushed right by the search's flex. -->
-      <select class="cat-select sortsel" bind:value={sort} onchange={() => load()} title="Sort order">
+      <select
+        class="fb-sel fb-sort"
+        bind:value={sort}
+        onchange={() => load()}
+        title="Sort order"
+      >
+        <option value="newest">Recently added / updated</option>
         <option value="popular">Popular</option>
         <option value="downloads">Most downloaded</option>
         <option value="rating">Top rated</option>
-        <option value="newest">Newest</option>
         <option value="name">Name (A–Z)</option>
       </select>
+      <button
+        class="fb-dir"
+        disabled
+        title="Sort direction — coming with a catalog update (silo-api)"
+        aria-label="Sort direction (unavailable)"
+      >
+        {sortDir === "desc" ? "↓" : "↑"}
+      </button>
     </div>
-  </div>
 
-  {#if facetGroups.length > 0}
-    <div class="facet-row">
-      {#each facetGroups as ns (ns)}
-        <select
-          class="facet-sel"
-          class:on={selectedFor(ns) !== ""}
-          value={selectedFor(ns)}
-          onchange={(e) => setFacet(ns, e.currentTarget.value)}
-          aria-label="Filter by {FACET_LABEL[ns] ?? ns}"
-        >
-          <option value="">{FACET_LABEL[ns] ?? ns}: all</option>
-          {#each facets!.facets[ns] as fv (fv.value)}
-            <option value="{ns}:{fv.value}">{prettify(fv.value)} ({fv.count.toLocaleString()})</option>
-          {/each}
-        </select>
-      {/each}
-      <input
-        class="facet-sel year-in"
-        class:on={availableBy != null}
-        type="number"
-        min="1900"
-        max="2100"
-        placeholder="Available by year"
-        title="Period-correct — only machines that existed by this year (dated mods only)."
-        value={availableBy ?? ""}
-        onchange={(e) => setAvailableBy(e.currentTarget.value)}
-      />
-      {#if filterCount > 0}
-        <button class="clear-filters" onclick={clearFilters}>Clear ✕</button>
-      {/if}
-    </div>
-  {/if}
+    {#if facetGroups.length > 0}
+      <div class="fb-row fb-bottom">
+        {#each facetGroups as ns (ns)}
+          <select
+            class="fb-sel"
+            class:on={selectedFor(ns) !== ""}
+            value={selectedFor(ns)}
+            onchange={(e) => setFacet(ns, e.currentTarget.value)}
+            aria-label="Filter by {FACET_LABEL[ns] ?? ns}"
+          >
+            <option value="">{FACET_LABEL[ns] ?? ns}: all</option>
+            {#each facets!.facets[ns] as fv (fv.value)}
+              <option value="{ns}:{fv.value}">{prettify(fv.value)} ({fv.count.toLocaleString()})</option>
+            {/each}
+          </select>
+        {/each}
+        <input
+          class="fb-sel year-in"
+          class:on={availableBy != null}
+          type="number"
+          min="1900"
+          max="2100"
+          placeholder="Year"
+          title="Period-correct — only machines that existed by this year (dated mods only)."
+          value={availableBy ?? ""}
+          onchange={(e) => setAvailableBy(e.currentTarget.value)}
+        />
+        {#if filterCount > 0}
+          <button class="clear-filters" onclick={clearFilters}>Clear all ✕</button>
+        {/if}
+      </div>
+    {/if}
+  </div>
 
   <div class="bh-status">
     {#if results.length > 0}
@@ -500,15 +583,20 @@
     color: var(--text-muted);
     font-size: 0.85rem;
   }
-  .bh-controls {
+  /* ── Unified filter bar: top (category · search · sort · direction), bottom (facets · year · clear) ── */
+  .filterbar {
     display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 6px 0 10px;
+  }
+  .fb-row {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
-    flex: 1;
-    justify-content: flex-end;
-    flex-wrap: wrap;
   }
-  .cat-select {
+  .fb-sel {
     padding: 9px 10px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
@@ -519,48 +607,63 @@
     max-width: 220px;
     cursor: pointer;
   }
-  .cat-select.sortsel {
-    border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
-    background: color-mix(in srgb, var(--primary) 14%, var(--surface-raised));
-    color: var(--primary);
-    font-weight: 700;
-  }
-  .cat-select.sortsel:hover {
-    border-color: var(--primary);
-  }
-  /* ── Facets — a single compact row of dropdowns (one value per facet, ANDed server-side) ── */
-  .facet-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 7px;
-    margin: 4px 0 10px;
-  }
-  .facet-sel {
-    padding: 8px 10px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface-raised);
-    color: var(--text);
-    font: inherit;
-    font-size: 0.82rem;
-    max-width: 200px;
-    cursor: pointer;
-  }
-  .facet-sel.on {
+  .fb-sel.on {
     color: var(--primary);
     border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
     background: color-mix(in srgb, var(--primary) 10%, transparent);
     font-weight: 600;
   }
+  .fb-search {
+    flex: 1;
+    min-width: 200px;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.85rem;
+  }
+  .fb-search:focus {
+    outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent);
+    outline-offset: 1px;
+  }
+  /* Sort is ordering, not filtering — contrasting tint (matches the app's primary accent). */
+  .fb-sort {
+    border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+    background: color-mix(in srgb, var(--primary) 14%, var(--surface-raised));
+    color: var(--primary);
+    font-weight: 700;
+  }
+  .fb-sort:hover {
+    border-color: var(--primary);
+  }
+  .fb-dir {
+    width: 34px;
+    padding: 9px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.95rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .fb-dir:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
   .year-in {
-    width: 158px;
+    width: 110px;
+    max-width: 110px;
     cursor: text;
   }
   .year-in::placeholder {
     color: var(--text-muted);
   }
   .clear-filters {
+    margin-left: auto;
     border: none;
     background: transparent;
     color: var(--text-muted);
@@ -573,17 +676,6 @@
   .clear-filters:hover {
     color: var(--primary);
     text-decoration: underline;
-  }
-  .search {
-    flex: 1;
-    min-width: 220px;
-    max-width: 420px;
-    padding: 9px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface-raised);
-    color: var(--text);
-    font: inherit;
   }
   .bh-status {
     display: flex;
