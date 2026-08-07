@@ -43,6 +43,10 @@
     facetLabels?: Record<string, string>;
     activeTags?: string[];
     availableBy?: number | null;
+    /** The "available by year" input needs catalog year data; the Library hides it. */
+    showYear?: boolean;
+    /** The Library keeps its own Clear-all in its toggle row, so it hides this one. */
+    showClear?: boolean;
     // Meta
     filterCount?: number;
     /** Called after a discrete change (category / sort / facet / year / direction). */
@@ -67,6 +71,8 @@
     facetLabels = {},
     activeTags = $bindable([]),
     availableBy = $bindable(null),
+    showYear = true,
+    showClear = true,
     filterCount = 0,
     onChange,
     onSearchInput,
@@ -178,18 +184,20 @@
           {/each}
         </select>
       {/each}
-      <input
-        class="fb-sel year-in"
-        class:on={availableBy != null}
-        type="number"
-        min="1900"
-        max="2100"
-        placeholder="Year"
-        title="Period-correct — only machines that existed by this year (dated mods only)."
-        value={availableBy ?? ""}
-        onchange={(e) => setAvailableBy(e.currentTarget.value)}
-      />
-      {#if filterCount > 0}
+      {#if showYear}
+        <input
+          class="fb-sel year-in"
+          class:on={availableBy != null}
+          type="number"
+          min="1900"
+          max="2100"
+          placeholder="Year"
+          title="Period-correct — only machines that existed by this year (dated mods only)."
+          value={availableBy ?? ""}
+          onchange={(e) => setAvailableBy(e.currentTarget.value)}
+        />
+      {/if}
+      {#if showClear && filterCount > 0}
         <button class="clear-filters" onclick={() => onClear?.()}>Clear all ✕</button>
       {/if}
     </div>

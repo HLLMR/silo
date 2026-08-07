@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The Library's filter bar now has the same facet dropdowns as Browse** — **region · era ·
+  theme · brand · realism** — built from your installed mods' catalog tags (fetched in one batch
+  on scan) and filtered entirely client-side. Combined with the parent/subcategory category
+  dropdowns (whose "all of a parent" option now works catalog-side too), the Library and Browse
+  filter the same way.
 - **A landscape tile view for the Library** (now the default; toggle back to the compact list
   from the toolbar). Two widescreen tiles per row: a square icon, the title / author / version /
   size / verified / update flag with favorite-hidden-flagged actions, and a pill footer for the

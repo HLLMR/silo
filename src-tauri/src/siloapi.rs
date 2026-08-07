@@ -192,6 +192,9 @@ pub struct LookupResult {
     pub latest_version: Option<String>,
     #[serde(default)]
     pub download: Option<Download>,
+    /// Semantic tags (silo-api#9) — same shape as `/mods/:id`. Empty on older servers.
+    #[serde(default)]
+    pub tags: Vec<Tag>,
 }
 
 #[derive(Debug, Deserialize)]

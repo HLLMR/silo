@@ -31,6 +31,7 @@ import type {
   DeviceCode,
   PollResult,
   BrowseMod,
+  ModTag,
   BrowsePage,
   SiloStats,
   InstallProgress,
@@ -389,6 +390,14 @@ export function catalogCheckUpdates(
   return invoke<CatalogUpdate[]>("catalog_check_updates", {
     mods: mods.map((m) => ({ techName: m.techName, version: m.version ?? null })),
   });
+}
+
+/** Batch-fetch catalog semantic tags for the installed library (silo-api#9), so the Library
+ *  can build the same facet dropdowns as Browse. Only tagged mods come back. */
+export function catalogLibraryTags(
+  techNames: string[],
+): Promise<{ techName: string; tags: ModTag[] }[]> {
+  return invoke<{ techName: string; tags: ModTag[] }[]>("catalog_library_tags", { techNames });
 }
 
 /** Parse FS25's log.txt: did the last run crash, and which mods are at fault. */
