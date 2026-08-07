@@ -334,13 +334,6 @@
       {/if}
     </div>
     <div class="bh-controls">
-      <select class="cat-select" bind:value={sort} onchange={() => load()} title="Sort">
-        <option value="popular">Popular</option>
-        <option value="downloads">Most downloaded</option>
-        <option value="rating">Top rated</option>
-        <option value="newest">Newest</option>
-        <option value="name">Name (A–Z)</option>
-      </select>
       {#if categories.length > 0}
         <select class="cat-select" bind:value={category} onchange={() => load()}>
           <option value="">All categories</option>
@@ -356,6 +349,14 @@
         bind:value={query}
         oninput={onSearch}
       />
+      <!-- Sort is ordering, not filtering — its own contrasting style, pushed right by the search's flex. -->
+      <select class="cat-select sortsel" bind:value={sort} onchange={() => load()} title="Sort order">
+        <option value="popular">Popular</option>
+        <option value="downloads">Most downloaded</option>
+        <option value="rating">Top rated</option>
+        <option value="newest">Newest</option>
+        <option value="name">Name (A–Z)</option>
+      </select>
     </div>
   </div>
 
@@ -514,6 +515,15 @@
     font-size: 0.85rem;
     max-width: 220px;
     cursor: pointer;
+  }
+  .cat-select.sortsel {
+    border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+    background: color-mix(in srgb, var(--primary) 14%, var(--surface-raised));
+    color: var(--primary);
+    font-weight: 700;
+  }
+  .cat-select.sortsel:hover {
+    border-color: var(--primary);
   }
   /* ── Facets — a single compact row of dropdowns (one value per facet, ANDed server-side) ── */
   .facet-row {

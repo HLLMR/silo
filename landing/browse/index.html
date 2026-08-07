@@ -136,18 +136,18 @@
     padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius);
     background: var(--raised); color: var(--text); font-size: 14px; font-family: inherit; font-weight: 600;
   }
-  .cats { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-  .chip {
-    border: 1px solid var(--border); background: var(--surface); color: var(--muted);
-    padding: 5px 13px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap;
-    transition: all 0.13s;
-  }
-  .chip:hover { color: var(--text); border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); }
-  .chip.on { background: color-mix(in srgb, var(--primary) 15%, transparent); color: var(--primary); border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
-  .chip .n { opacity: 0.6; font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-size: 11px; margin-left: 5px; }
-  /* ── Facets — a single compact row of dropdowns (one value per facet, ANDed server-side) ── */
-  .facetrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+  /* ── Filter/sort bar — one dropdown group: category + facets + year + clear, with sort
+       pulled to the right in its own contrasting style (it's ordering, not filtering). ── */
+  .filterbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+  .facetrow { display: contents; }  /* its injected <select>s flow straight into .filterbar */
   .facet-sel { max-width: 200px; }
+  .sel.sortsel {
+    margin-left: auto;
+    border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+    background: color-mix(in srgb, var(--primary) 14%, var(--raised));
+    color: var(--primary); font-weight: 700;
+  }
+  .sel.sortsel:hover { border-color: var(--primary); }
   .year-in { width: 172px; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--raised); color: var(--text); font: inherit; font-size: 14px; font-weight: 600; }
   .year-in:focus { outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent); outline-offset: 1px; border-color: var(--primary); }
   .year-in::placeholder { font-weight: 500; color: var(--muted); }
@@ -262,10 +262,16 @@
           <span class="sr-only">Search mods</span>
           <input id="q" type="search" placeholder="Search mods by name…" autocomplete="off" />
         </label>
+      </div>
+      <!-- One dropdown group: category + facets + year on the left; sort (own contrasting
+           style, it's ordering not filtering) pushed to the right. -->
+      <div class="filterbar">
         <select class="sel" id="cat" aria-label="Category">
           <option value="">All categories</option>
         </select>
-        <select class="sel" id="sort" aria-label="Sort">
+        <span class="facetrow" id="facetrow"></span>
+        <button class="clear-f" id="clearF" type="button" hidden>Clear ✕</button>
+        <select class="sel sortsel" id="sort" aria-label="Sort order">
           <option value="popular">Most popular</option>
           <option value="newest">Newest</option>
           <option value="rating">Highest rated</option>
@@ -273,8 +279,6 @@
           <option value="name">Name (A–Z)</option>
         </select>
       </div>
-      <div class="cats" id="cats"></div>
-      <div class="facetrow" id="facetrow" hidden></div>
     </div>
   </div>
 
@@ -413,37 +417,15 @@
     try {
       var c = await (await fetch(API + "/categories")).json();
       var rows = c.categories || [];
-      var el = document.getElementById("cats");
       var catSel = document.getElementById("cat");
 
-      // The dropdown is the complete, authoritative filter (every category + count);
-      // the chips are quick-picks for the top categories. Both stay in sync.
+      // The dropdown is the complete, authoritative category filter (every category + count).
       var opts = ['<option value="">All categories</option>'];
       rows.forEach(function (row) {
         opts.push('<option value="' + esc(row.category) + '">' + esc(row.category) + " (" + fmt(row.count) + ")</option>");
       });
       catSel.innerHTML = opts.join("");
-
-      var chips = ['<button class="chip on" data-cat="" type="button">All</button>'];
-      rows.slice(0, 10).forEach(function (row) {
-        chips.push('<button class="chip" data-cat="' + esc(row.category) + '" type="button">' + esc(row.category) + '<span class="n">' + fmt(row.count) + "</span></button>");
-      });
-      el.innerHTML = chips.join("");
-
-      function setCategory(cat) {
-        state.category = cat || "";
-        el.querySelectorAll(".chip").forEach(function (x) {
-          x.classList.toggle("on", (x.getAttribute("data-cat") || "") === state.category);
-        });
-        catSel.value = state.category;
-        load(true);
-      }
-
-      el.addEventListener("click", function (ev) {
-        var b = ev.target.closest(".chip"); if (!b) return;
-        setCategory(b.getAttribute("data-cat") || "");
-      });
-      catSel.addEventListener("change", function () { setCategory(catSel.value); });
+      catSel.addEventListener("change", function () { state.category = catSel.value; load(true); });
     } catch (e) { /* categories are optional chrome */ }
 
     // ── Facets (brand/theme/region/realism/era + availableBy year) — a compact dropdown row, mirrors the in-app filters ──
@@ -472,9 +454,7 @@
           return '<select class="sel facet-sel" data-ns="' + esc(ns) + '" aria-label="Filter by ' + esc(FACET_LABEL[ns] || ns) + '">' + opts.join("") + "</select>";
         }).join("");
         html += '<input class="sel year-in" id="availBy" type="number" min="1900" max="2100" placeholder="Available by year" title="Period-correct — only machines that existed by this year (dated mods only).">';
-        html += '<button class="clear-f" id="clearF" type="button" hidden>Clear ✕</button>';
-        facetRow.innerHTML = html;
-        facetRow.hidden = false;
+        facetRow.innerHTML = html;  // #clearF + #sort are static siblings in the filterbar
 
         facetRow.addEventListener("change", function (ev) {
           var sel = ev.target.closest(".facet-sel");
