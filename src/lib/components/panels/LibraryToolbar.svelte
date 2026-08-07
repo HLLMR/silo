@@ -7,6 +7,7 @@
     allActive,
     activeInFilter,
     disabled,
+    libView = $bindable(),
     onSelectAll,
     onClearTag,
   }: {
@@ -15,6 +16,7 @@
     allActive: boolean;
     activeInFilter: number;
     disabled: boolean;
+    libView: "tiles" | "rows";
     onSelectAll: (checked: boolean) => void;
     onClearTag: () => void;
   } = $props();
@@ -46,6 +48,26 @@
   {/if}
   <span class="tb-spacer"></span>
   <span class="crumb-count tnum">{shownCount} shown</span>
+  <div class="viewtog" role="group" aria-label="View">
+    <button
+      class="vt"
+      class:on={libView === "tiles"}
+      title="Tile view"
+      aria-pressed={libView === "tiles"}
+      onclick={() => (libView = "tiles")}
+    >
+      ▦
+    </button>
+    <button
+      class="vt"
+      class:on={libView === "rows"}
+      title="List view"
+      aria-pressed={libView === "rows"}
+      onclick={() => (libView = "rows")}
+    >
+      ☰
+    </button>
+  </div>
 </div>
 
 <style>
@@ -89,5 +111,30 @@
   }
   .tb-spacer {
     flex: 1 1 auto;
+  }
+  .viewtog {
+    display: flex;
+    gap: 2px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+  }
+  .vt {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    width: 26px;
+    height: 22px;
+    border-radius: 5px;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .vt:hover {
+    color: var(--text);
+  }
+  .vt.on {
+    background: color-mix(in srgb, var(--primary) 16%, transparent);
+    color: var(--primary);
   }
 </style>

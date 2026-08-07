@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A landscape tile view for the Library** (now the default; toggle back to the compact list
+  from the toolbar). Two widescreen tiles per row: a square icon, the title / author / version /
+  size / verified / update flag with favorite-hidden-flagged actions, and a pill footer for the
+  category and type. Click anywhere on a tile to open its drawer (no more Details button), it
+  lifts on hover, and an **active mod gets a bright-green border and a green on/off switch** in
+  its header that parks or activates it.
+
 ### Changed
 
 - **The Library uses the same search/filter bar as Browse.** Category (now a parent +

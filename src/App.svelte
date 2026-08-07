@@ -82,6 +82,7 @@
   ];
   import VirtualList from "./lib/components/VirtualList.svelte";
   import ModRow from "./lib/components/ModRow.svelte";
+  import ModTile from "./lib/components/ModTile.svelte";
   import FilterBar from "./lib/components/FilterBar.svelte";
   import ModSettings from "./lib/components/ModSettings.svelte";
   import ModDetail from "./lib/components/ModDetail.svelte";
@@ -1051,6 +1052,9 @@
   type SortKey = "name" | "category" | "size" | "added" | "version" | "rating";
   let sortBy = $state<SortKey>("added");
   let sortDir = $state<"asc" | "desc">("desc");
+  // Library view: landscape tiles (default) or compact rows.
+  let libView = $state<"tiles" | "rows">("tiles");
+  const TILE_ROW_H = 216;
 
   const visible = $derived.by(() => {
     const arr = [...filtered];
@@ -1085,6 +1089,12 @@
       return r * mul || name(a).localeCompare(name(b));
     });
     return arr;
+  });
+  // Two tiles per virtualized row for the landscape grid.
+  const visiblePairs = $derived.by(() => {
+    const out: ModEntry[][] = [];
+    for (let i = 0; i < visible.length; i += 2) out.push(visible.slice(i, i + 2));
+    return out;
   });
 
   // Select-all checkbox state over the filtered view.
@@ -1619,6 +1629,7 @@
         allActive={allFilteredActive}
         activeInFilter={filteredActiveCount}
         disabled={!!busy || filtered.length === 0}
+        bind:libView
         onSelectAll={setActiveForFiltered}
         onClearTag={() => (selectedTag = null)}
       />
@@ -1631,6 +1642,36 @@
                 ? "No mods found yet. Point Silo at your mods folder and rescan."
                 : "No mods match your filter."}
             </div>
+          {:else if libView === "tiles"}
+            <VirtualList items={visiblePairs} rowHeight={TILE_ROW_H} bottomPad={62}>
+              {#snippet row(pair)}
+                <div class="tile-pair">
+                  {#each pair as mod (mod.techName)}
+                    <ModTile
+                      {mod}
+                      curation={cur(mod.techName)}
+                      overridden={!!overrideMap[mod.techName]}
+                      organized={mod.organized}
+                      active={activeSet.has(mod.techName)}
+                      hasSettings={settingsModsSet.has(mod.techName)}
+                      hasUpdate={updatesSet.has(mod.techName)}
+                      tags={tagsOf(mod.techName)}
+                      onToggle={(flag) => toggleCuration(mod.techName, flag)}
+                      onToggleActive={() => toggleActive(mod.techName)}
+                      onEditCategory={(ev) => openEditor(mod.techName, ev)}
+                      onOpenSettings={() =>
+                        (settingsMod = { techName: mod.techName, title: mod.title ?? mod.techName })}
+                      onOpenDetail={() => (detailMod = mod)}
+                      onFindInBrowse={() => openInBrowse(mod)}
+                      onContextMenu={(ev) => {
+                        ev.preventDefault();
+                        rowMenu = { mod, ev };
+                      }}
+                    />
+                  {/each}
+                </div>
+              {/snippet}
+            </VirtualList>
           {:else}
             <VirtualList items={visible} rowHeight={76} bottomPad={62}>
               {#snippet row(mod)}
@@ -1873,6 +1914,18 @@
     position: relative;
     flex: 1 1 auto;
     min-height: 0;
+  }
+  .tile-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    height: 100%;
+    padding-bottom: 16px;
+  }
+  @media (max-width: 720px) {
+    .tile-pair {
+      grid-template-columns: 1fr;
+    }
   }
   .statbar-footer {
     position: absolute;
