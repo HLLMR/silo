@@ -30,6 +30,7 @@
   import BrowseDrawer from "./BrowseDrawer.svelte";
   import { parseNexusId } from "../browse";
   import { browseCacheKey, getBrowseView, setBrowseView } from "../browseCache";
+  import FilterBar from "./FilterBar.svelte";
 
   interface Props {
     /** Tech names already in the local library, to flag "in library". */
@@ -82,7 +83,7 @@
   const catTree = $derived.by(() => {
     const map = new Map<
       string,
-      { name: string; count: number; children: { name: string; count: number; full: string }[] }
+      { name: string; count: number; children: { name: string; count: number; value: string }[] }
     >();
     for (const c of categories) {
       const i = c.category.indexOf(" - ");
@@ -94,22 +95,15 @@
         map.set(parent, node);
       }
       node.count += c.count;
-      if (child) node.children.push({ name: child, count: c.count, full: c.category });
+      if (child) node.children.push({ name: child, count: c.count, value: c.category });
     }
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
   });
-  const childList = $derived(catTree.find((n) => n.name === parentCategory)?.children ?? []);
-  // Picking a parent resets the child; the API param becomes the parent (single-level works
-  // now; a multi-child parent's "All" needs server parent-matching — silo-api#8).
-  function setParent(p: string) {
-    parentCategory = p;
-    childCategory = "";
-    category = p;
-    load();
-  }
-  function setChild(full: string) {
-    childCategory = full;
-    category = full || parentCategory;
+  // Category / sort / facets / year live in the shared <FilterBar>. When any of them change it
+  // calls back here to recompute the API `category` param (parent-only, or the child's full
+  // "Parent - Child" string) and re-query.
+  function onFilterChange() {
+    category = childCategory || parentCategory;
     load();
   }
   // Semantic facet filters (silo-api #4). activeTags are "namespace:value" strings, ANDed by
@@ -127,44 +121,16 @@
     realism: "Realism",
     era: "Era",
   };
-  const facetGroups = $derived(
-    facets
-      ? Object.keys(facets.facets)
-          .sort((a, b) => {
-            const ia = FACET_ORDER.indexOf(a);
-            const ib = FACET_ORDER.indexOf(b);
-            return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
-          })
-          .filter((ns) => facets!.facets[ns].length > 0)
-      : [],
-  );
   const filterCount = $derived(
     activeTags.length + (availableBy != null ? 1 : 0) + (parentCategory ? 1 : 0),
   );
 
-  function prettify(v: string): string {
-    return v.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-  }
-  // The currently-selected "ns:value" for a facet dropdown, or "" (= all) when none is picked.
-  function selectedFor(ns: string): string {
-    return activeTags.find((t) => t.split(":")[0] === ns) ?? "";
-  }
-  // Pick one value per facet; picking replaces any prior value for that namespace.
-  function setFacet(ns: string, tag: string) {
-    activeTags = [...activeTags.filter((t) => t.split(":")[0] !== ns), ...(tag ? [tag] : [])];
-    load();
-  }
   function clearFilters() {
     activeTags = [];
     availableBy = null;
     parentCategory = "";
     childCategory = "";
     category = "";
-    load();
-  }
-  function setAvailableBy(v: string) {
-    const n = parseInt(v, 10);
-    availableBy = Number.isFinite(n) && n >= 1900 && n <= 2100 ? n : null;
     load();
   }
   let results = $state<BrowseMod[]>([]);
@@ -404,100 +370,32 @@
     </div>
   </div>
 
-  <!-- Unified filter bar. Top line: category (parent · child) · search · sort · direction.
-       Bottom line: the semantic facets · year · clear-all. -->
-  <div class="filterbar">
-    <div class="fb-row fb-top">
-      {#if catTree.length > 0}
-        <select
-          class="fb-sel"
-          class:on={parentCategory !== ""}
-          value={parentCategory}
-          onchange={(e) => setParent(e.currentTarget.value)}
-          aria-label="Category"
-        >
-          <option value="">All categories</option>
-          {#each catTree as n (n.name)}
-            <option value={n.name}>{n.name} ({n.count.toLocaleString()})</option>
-          {/each}
-        </select>
-        {#if childList.length > 0}
-          <select
-            class="fb-sel"
-            class:on={childCategory !== ""}
-            value={childCategory}
-            onchange={(e) => setChild(e.currentTarget.value)}
-            aria-label="Subcategory"
-          >
-            <option value="">All {parentCategory}</option>
-            {#each childList as c (c.full)}
-              <option value={c.full}>{c.name} ({c.count.toLocaleString()})</option>
-            {/each}
-          </select>
-        {/if}
-      {/if}
-      <input
-        class="fb-search"
-        type="search"
-        placeholder="Search the catalog…"
-        bind:value={query}
-        oninput={onSearch}
-      />
-      <select
-        class="fb-sel fb-sort"
-        bind:value={sort}
-        onchange={() => load()}
-        title="Sort order"
-      >
-        <option value="newest">Recently added / updated</option>
-        <option value="popular">Popular</option>
-        <option value="downloads">Most downloaded</option>
-        <option value="rating">Top rated</option>
-        <option value="name">Name (A–Z)</option>
-      </select>
-      <button
-        class="fb-dir"
-        disabled
-        title="Sort direction — coming with a catalog update (silo-api)"
-        aria-label="Sort direction (unavailable)"
-      >
-        {sortDir === "desc" ? "↓" : "↑"}
-      </button>
-    </div>
-
-    {#if facetGroups.length > 0}
-      <div class="fb-row fb-bottom">
-        {#each facetGroups as ns (ns)}
-          <select
-            class="fb-sel"
-            class:on={selectedFor(ns) !== ""}
-            value={selectedFor(ns)}
-            onchange={(e) => setFacet(ns, e.currentTarget.value)}
-            aria-label="Filter by {FACET_LABEL[ns] ?? ns}"
-          >
-            <option value="">{FACET_LABEL[ns] ?? ns}: all</option>
-            {#each facets!.facets[ns] as fv (fv.value)}
-              <option value="{ns}:{fv.value}">{prettify(fv.value)} ({fv.count.toLocaleString()})</option>
-            {/each}
-          </select>
-        {/each}
-        <input
-          class="fb-sel year-in"
-          class:on={availableBy != null}
-          type="number"
-          min="1900"
-          max="2100"
-          placeholder="Year"
-          title="Period-correct — only machines that existed by this year (dated mods only)."
-          value={availableBy ?? ""}
-          onchange={(e) => setAvailableBy(e.currentTarget.value)}
-        />
-        {#if filterCount > 0}
-          <button class="clear-filters" onclick={clearFilters}>Clear all ✕</button>
-        {/if}
-      </div>
-    {/if}
-  </div>
+  <FilterBar
+    {catTree}
+    bind:parentCategory
+    bind:childCategory
+    bind:query
+    searchPlaceholder="Search the catalog…"
+    bind:sort
+    sortOptions={[
+      { value: "newest", label: "Recently added / updated" },
+      { value: "popular", label: "Popular" },
+      { value: "downloads", label: "Most downloaded" },
+      { value: "rating", label: "Top rated" },
+      { value: "name", label: "Name (A–Z)" },
+    ]}
+    bind:sortDir
+    dirEnabled={false}
+    facetOrder={FACET_ORDER}
+    facetData={facets?.facets ?? {}}
+    facetLabels={FACET_LABEL}
+    bind:activeTags
+    bind:availableBy
+    {filterCount}
+    onChange={onFilterChange}
+    onSearchInput={onSearch}
+    onClear={clearFilters}
+  />
 
   <div class="bh-status">
     {#if results.length > 0}
@@ -602,100 +500,6 @@
   .catalog-count {
     color: var(--text-muted);
     font-size: 0.85rem;
-  }
-  /* ── Unified filter bar: top (category · search · sort · direction), bottom (facets · year · clear) ── */
-  .filterbar {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin: 6px 0 10px;
-  }
-  .fb-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-  }
-  .fb-sel {
-    padding: 9px 10px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface-raised);
-    color: var(--text);
-    font: inherit;
-    font-size: 0.85rem;
-    max-width: 220px;
-    cursor: pointer;
-  }
-  .fb-sel.on {
-    color: var(--primary);
-    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
-    background: color-mix(in srgb, var(--primary) 10%, transparent);
-    font-weight: 600;
-  }
-  .fb-search {
-    flex: 1;
-    min-width: 200px;
-    padding: 9px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface-raised);
-    color: var(--text);
-    font: inherit;
-    font-size: 0.85rem;
-  }
-  .fb-search:focus {
-    outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent);
-    outline-offset: 1px;
-  }
-  /* Sort is ordering, not filtering — contrasting tint (matches the app's primary accent). */
-  .fb-sort {
-    border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
-    background: color-mix(in srgb, var(--primary) 14%, var(--surface-raised));
-    color: var(--primary);
-    font-weight: 700;
-  }
-  .fb-sort:hover {
-    border-color: var(--primary);
-  }
-  .fb-dir {
-    width: 34px;
-    padding: 9px 0;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface-raised);
-    color: var(--text);
-    font: inherit;
-    font-size: 0.95rem;
-    line-height: 1;
-    cursor: pointer;
-  }
-  .fb-dir:disabled {
-    opacity: 0.45;
-    cursor: default;
-  }
-  .year-in {
-    width: 110px;
-    max-width: 110px;
-    cursor: text;
-  }
-  .year-in::placeholder {
-    color: var(--text-muted);
-  }
-  .clear-filters {
-    margin-left: auto;
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    font: inherit;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 6px;
-  }
-  .clear-filters:hover {
-    color: var(--primary);
-    text-decoration: underline;
   }
   .bh-status {
     display: flex;
