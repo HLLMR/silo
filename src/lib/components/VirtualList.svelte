@@ -5,10 +5,12 @@
     items: T[];
     rowHeight?: number;
     overscan?: number;
+    /** Extra scrollable space below the last row, so a floating footer doesn't hide it. */
+    bottomPad?: number;
     row: Snippet<[T, number]>;
   }
 
-  let { items, rowHeight = 76, overscan = 8, row }: Props = $props();
+  let { items, rowHeight = 76, overscan = 8, bottomPad = 0, row }: Props = $props();
 
   let viewport = $state<HTMLDivElement>();
   let scrollTop = $state(0);
@@ -33,7 +35,7 @@
   bind:clientHeight={viewportH}
   onscroll={onScroll}
 >
-  <div class="sizer" style="height: {total * rowHeight}px">
+  <div class="sizer" style="height: {total * rowHeight + bottomPad}px">
     <div class="window" style="transform: translateY({start * rowHeight}px)">
       {#each slice as item, i (start + i)}
         <div class="cell" style="height: {rowHeight}px">
