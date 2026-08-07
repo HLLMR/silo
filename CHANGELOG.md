@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Browse has a unified two-line filter bar.** The controls are now one organized bar: top
+  line is **category (parent · subcategory) · search · sort · direction**, bottom line is the
+  semantic facets (**region · era · theme · brand · realism**) · **year** · **Clear all**.
+  Category is split into a parent dropdown and a subcategory dropdown (shown when the parent
+  has children), and the header spans the full content width instead of stopping mid-page.
+
 ### Added
 
 - **Silo now detects which mods have settings by looking inside them** — not just the ones
