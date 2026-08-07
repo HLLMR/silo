@@ -29,6 +29,11 @@ export interface ModEntry {
 
   ignoredDigitPrefix: boolean;
   error: string | null;
+
+  /** Detected by looking inside the mod (not just the runtime modSettings/ folder). */
+  hasSettings: boolean;
+  /** How settings were detected: "shipped" (editable now) · "runtime" (after first run) · "none". */
+  settingsSource: "none" | "shipped" | "runtime";
 }
 
 export interface ScanResult {

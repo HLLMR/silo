@@ -57,6 +57,29 @@ pub struct ModEntry {
     pub ignored_digit_prefix: bool,
     /// Populated when the mod couldn't be read/parsed (still listed, flagged).
     pub error: Option<String>,
+
+    /// Whether the mod exposes user-configurable settings, detected by looking inside the
+    /// archive/dir (not just the runtime `modSettings/` folder). See `detect_settings`.
+    /// `serde(default)` so scan-cache rows written before this field deserialize cleanly.
+    #[serde(default)]
+    pub has_settings: bool,
+    /// How the settings were detected — governs whether Silo can edit them right now.
+    #[serde(default)]
+    pub settings_source: SettingsSource,
+}
+
+/// How a mod's settings were detected, which decides whether Silo can edit them now.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum SettingsSource {
+    /// No settings detected.
+    #[default]
+    None,
+    /// Ships a settings XML in the archive (Tier A) — defaults are readable statically.
+    Shipped,
+    /// Lua persists settings under `modSettings/` at runtime (Tier B) — values appear
+    /// only after the game has run the mod once.
+    Runtime,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -254,6 +277,8 @@ fn build_entry(c: &Candidate) -> ModEntry {
         active: false,
         ignored_digit_prefix,
         error: None,
+        has_settings: false,
+        settings_source: SettingsSource::None,
     };
 
     let xml = match c.kind {
@@ -300,7 +325,130 @@ fn build_entry(c: &Candidate) -> ModEntry {
         }
     }
 
+    let (has_settings, settings_source) = detect_settings(&c.path, c.kind);
+    entry.has_settings = has_settings;
+    entry.settings_source = settings_source;
+
     entry
+}
+
+/// Budget for the Tier-B Lua grep so a huge script mod can't stall the scan. The whole
+/// scan of one mod stays cheap: Tier A is a name-list check (no decompression), Tier B
+/// decompresses Lua only until a hit or this budget is spent.
+const LUA_SCAN_BUDGET: u64 = 8 * 1024 * 1024;
+const LUA_MEMBER_CAP: u64 = 4 * 1024 * 1024;
+
+/// Detect whether a mod exposes user-configurable settings by looking inside it.
+///
+/// Two tiers (see the settings-detection research): **Shipped** (Tier A) — the archive
+/// carries a `*settings*.xml` whose defaults we can read now — beats **Runtime** (Tier B) —
+/// Lua that persists to a `modSettings/` path, whose values only exist after a run.
+/// `modDesc.xml` declares nothing useful here, so we never consult it. Best-effort: any
+/// read error just yields "no settings" rather than failing the scan.
+pub fn detect_settings(path: &Path, kind: &str) -> (bool, SettingsSource) {
+    match kind {
+        "zip" => detect_settings_zip(path),
+        _ => detect_settings_dir(path),
+    }
+}
+
+/// Tier A: an XML whose basename says "settings" — but not a translation/l10n file, which
+/// often ship a `settings` string in a different sense.
+fn is_settings_xml(name_lower: &str) -> bool {
+    if !name_lower.ends_with(".xml") {
+        return false;
+    }
+    if name_lower.contains("translation") || name_lower.contains("l10n") {
+        return false;
+    }
+    let base = name_lower.rsplit(['/', '\\']).next().unwrap_or(name_lower);
+    base.contains("settings")
+}
+
+/// Tier B: Lua that references a `modSettings/` path (also the seen-in-the-wild
+/// `modsSettings` typo, and the `g_*ModSettingsDirectory` globals — all lowercase to
+/// `modsettings`). This is the strongest static predictor of runtime-persisted settings.
+fn lua_has_settings_signature(bytes: &[u8]) -> bool {
+    let lower = String::from_utf8_lossy(bytes).to_ascii_lowercase();
+    lower.contains("modsettings") || lower.contains("modssettings")
+}
+
+fn detect_settings_zip(path: &Path) -> (bool, SettingsSource) {
+    let Ok(file) = fs::File::open(path) else {
+        return (false, SettingsSource::None);
+    };
+    let Ok(mut archive) = zip::ZipArchive::new(file) else {
+        return (false, SettingsSource::None);
+    };
+    // Cheap first pass over just the name list (no decompression): Tier A wins outright,
+    // and we note the Lua members for the bounded Tier-B grep.
+    let names: Vec<String> = archive.file_names().map(|s| s.to_string()).collect();
+    let mut lua: Vec<String> = Vec::new();
+    for name in &names {
+        let lower = name.to_ascii_lowercase();
+        if is_settings_xml(&lower) {
+            return (true, SettingsSource::Shipped);
+        }
+        if lower.ends_with(".lua") {
+            lua.push(name.clone());
+        }
+    }
+    let mut budget = LUA_SCAN_BUDGET;
+    for name in lua {
+        if budget == 0 {
+            break;
+        }
+        let Ok(f) = archive.by_name(&name) else {
+            continue;
+        };
+        let cap = budget.min(LUA_MEMBER_CAP);
+        let Ok(bytes) = read_capped(f, cap, "lua") else {
+            continue; // over the per-member cap — skip it, keep scanning the rest
+        };
+        budget = budget.saturating_sub(bytes.len() as u64);
+        if lua_has_settings_signature(&bytes) {
+            return (true, SettingsSource::Runtime);
+        }
+    }
+    (false, SettingsSource::None)
+}
+
+fn detect_settings_dir(path: &Path) -> (bool, SettingsSource) {
+    let mut lua: Vec<PathBuf> = Vec::new();
+    for entry in walkdir::WalkDir::new(path)
+        .max_depth(8)
+        .into_iter()
+        .flatten()
+    {
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        let lower = entry.path().to_string_lossy().to_ascii_lowercase();
+        if is_settings_xml(&lower) {
+            return (true, SettingsSource::Shipped);
+        }
+        if lower.ends_with(".lua") {
+            lua.push(entry.path().to_path_buf());
+        }
+    }
+    let mut budget = LUA_SCAN_BUDGET;
+    for p in lua {
+        if budget == 0 {
+            break;
+        }
+        let Ok(file) = fs::File::open(&p) else {
+            continue;
+        };
+        let cap = budget.min(LUA_MEMBER_CAP);
+        let Ok(bytes) = read_capped(file, cap, "lua") else {
+            continue;
+        };
+        budget = budget.saturating_sub(bytes.len() as u64);
+        if lua_has_settings_signature(&bytes) {
+            return (true, SettingsSource::Runtime);
+        }
+    }
+    (false, SettingsSource::None)
 }
 
 /// Resolve one candidate: reuse the cached entry when mtime+size are unchanged
@@ -483,5 +631,78 @@ mod symlink_tests {
         );
 
         let _ = std::fs::remove_dir_all(&base);
+    }
+}
+
+#[cfg(test)]
+mod settings_detect_tests {
+    use super::{detect_settings, is_settings_xml, lua_has_settings_signature, SettingsSource};
+
+    #[test]
+    fn is_settings_xml_matches_value_and_gui_files_only() {
+        assert!(is_settings_xml("shared/defaultusersettings.xml"));
+        assert!(is_settings_xml("config/realisticeconomysettings.xml"));
+        assert!(is_settings_xml("gui/settingspage.xml"));
+        // not settings files
+        assert!(!is_settings_xml("moddesc.xml"));
+        assert!(!is_settings_xml("data/vehicle.xml"));
+        assert!(!is_settings_xml("shared/defaultusersettings.lua"));
+        // translation/l10n files that merely contain "settings" are excluded
+        assert!(!is_settings_xml("translations/translation_settings_en.xml"));
+        assert!(!is_settings_xml("l10n/settings_de.xml"));
+    }
+
+    #[test]
+    fn lua_signature_catches_modsettings_paths_not_savegame_hooks() {
+        assert!(lua_has_settings_signature(
+            b"local p = getUserProfileAppPath() .. \"modSettings/Foo.xml\""
+        ));
+        assert!(lua_has_settings_signature(b"g_currentModSettingsDirectory"));
+        assert!(lua_has_settings_signature(b"\"modsSettings/typo.xml\"")); // known typo
+                                                                           // the standard savegame persistence hook is NOT a settings signal
+        assert!(!lua_has_settings_signature(
+            b"function foo:saveToXMLFile(xml) end"
+        ));
+    }
+
+    fn tmp(tag: &str) -> std::path::PathBuf {
+        let d = std::env::temp_dir().join(format!("silo_settings_{}_{}", tag, std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(&d).unwrap();
+        d
+    }
+
+    #[test]
+    fn dir_shipped_beats_runtime() {
+        let d = tmp("shipped");
+        std::fs::write(d.join("modDesc.xml"), b"<modDesc/>").unwrap();
+        std::fs::create_dir_all(d.join("scripts")).unwrap();
+        std::fs::write(
+            d.join("scripts/main.lua"),
+            b"getUserProfileAppPath()..\"modSettings/X.xml\"",
+        )
+        .unwrap();
+        std::fs::write(d.join("mysettings.xml"), b"<settings/>").unwrap();
+        assert_eq!(detect_settings(&d, "dir"), (true, SettingsSource::Shipped));
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
+    #[test]
+    fn dir_runtime_when_only_lua_signature() {
+        let d = tmp("runtime");
+        std::fs::write(d.join("modDesc.xml"), b"<modDesc/>").unwrap();
+        std::fs::create_dir_all(d.join("scripts")).unwrap();
+        std::fs::write(d.join("scripts/s.lua"), b"local d = g_modSettingsDirectory").unwrap();
+        assert_eq!(detect_settings(&d, "dir"), (true, SettingsSource::Runtime));
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
+    #[test]
+    fn dir_none_when_no_signal() {
+        let d = tmp("none");
+        std::fs::write(d.join("modDesc.xml"), b"<modDesc/>").unwrap();
+        std::fs::write(d.join("v.lua"), b"function v:saveToXMLFile() end").unwrap();
+        assert_eq!(detect_settings(&d, "dir"), (false, SettingsSource::None));
+        let _ = std::fs::remove_dir_all(&d);
     }
 }

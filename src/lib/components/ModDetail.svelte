@@ -149,6 +149,14 @@
     </button>
     {#if hasSettings}
       <button class="d-act" onclick={onOpenSettings}>⚙ Settings</button>
+    {:else if mod.hasSettings}
+      <button
+        class="d-act"
+        disabled
+        title="Silo edits these once they're written to modSettings/ — usually after you launch the mod once."
+      >
+        ⚙ Has settings
+      </button>
     {/if}
     <button class="d-act" onclick={() => revealInFolder(mod.path).catch(() => {})}>
       📂 Reveal
@@ -374,6 +382,13 @@
     color: var(--primary);
     border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
     background: color-mix(in srgb, var(--primary) 10%, transparent);
+  }
+  .d-act:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .d-act:disabled:hover {
+    color: var(--text-muted);
   }
   .d-cat-info {
     padding: 12px 0;
