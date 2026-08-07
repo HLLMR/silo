@@ -416,7 +416,10 @@
 
     try {
       var c = await (await fetch(API + "/categories")).json();
-      var rows = c.categories || [];
+      // Sort alphabetically (the API returns them by mod count).
+      var rows = (c.categories || []).slice().sort(function (a, b) {
+        return a.category.localeCompare(b.category, undefined, { sensitivity: "base" });
+      });
       var catSel = document.getElementById("cat");
 
       // The dropdown is the complete, authoritative category filter (every category + count).

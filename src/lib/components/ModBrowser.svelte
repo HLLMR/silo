@@ -307,7 +307,10 @@
       /* stats/base are best-effort */
     }
     try {
-      categories = await siloapiCategories();
+      // Sort alphabetically (the API returns them by mod count).
+      categories = (await siloapiCategories()).sort((a, b) =>
+        a.category.localeCompare(b.category, undefined, { sensitivity: "base" }),
+      );
     } catch {
       // Older server without /categories — the filter just stays hidden.
     }
