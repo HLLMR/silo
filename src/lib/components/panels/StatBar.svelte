@@ -8,17 +8,8 @@
     conflictCount,
     criticalCount,
     healthCount,
-    conflictedCount,
-    updatesCount,
     tookMs,
-    favoritesOnly = $bindable(),
-    showHidden = $bindable(),
-    flaggedOnly = $bindable(),
-    conflictedOnly = $bindable(),
-    hasSettingsOnly = $bindable(),
-    needsUpdateOnly = $bindable(),
     statFilter = $bindable(),
-    query = $bindable(),
     onOpenStats,
     onOpenConflicts,
     onOpenHealth,
@@ -34,17 +25,8 @@
     conflictCount: number;
     criticalCount: number;
     healthCount: number;
-    conflictedCount: number;
-    updatesCount: number;
     tookMs: number | null;
-    favoritesOnly: boolean;
-    showHidden: boolean;
-    flaggedOnly: boolean;
-    conflictedOnly: boolean;
-    hasSettingsOnly: boolean;
-    needsUpdateOnly: boolean;
     statFilter: "" | "maps" | "scripts" | "unique" | "active";
-    query: string;
     onOpenStats: () => void;
     onOpenConflicts: () => void;
     onOpenHealth: () => void;
@@ -143,79 +125,19 @@
       scanned in {tookMs} ms
     </div>
   {/if}
-
-  <button
-    class="toggle"
-    class:on={favoritesOnly}
-    title="Show favorites only"
-    onclick={() => (favoritesOnly = !favoritesOnly)}
-  >
-    {favoritesOnly ? "★" : "☆"} Favorites
-  </button>
-  <button
-    class="toggle"
-    class:on={showHidden}
-    title="Show hidden mods"
-    onclick={() => (showHidden = !showHidden)}
-  >
-    Hidden
-  </button>
-  <button
-    class="toggle"
-    class:on={flaggedOnly}
-    title="Show only mods you've flagged as broken"
-    onclick={() => (flaggedOnly = !flaggedOnly)}
-  >
-    ⚑ Flagged
-  </button>
-  <button
-    class="toggle"
-    class:on={conflictedOnly}
-    title="Show only mods involved in a conflict"
-    onclick={() => (conflictedOnly = !conflictedOnly)}
-    disabled={conflictedCount === 0}
-  >
-    ⚠ In conflict{conflictedCount > 0 ? ` (${conflictedCount})` : ""}
-  </button>
-  <button
-    class="toggle"
-    class:on={hasSettingsOnly}
-    title="Show only mods that expose in-game settings"
-    onclick={() => (hasSettingsOnly = !hasSettingsOnly)}
-  >
-    ⚙ Has settings
-  </button>
-  <button
-    class="toggle upd-toggle"
-    class:on={needsUpdateOnly}
-    title={updatesCount === 0
-      ? "Run ⟳ Updates first to check for available updates"
-      : "Show only mods with an available update"}
-    onclick={() => (needsUpdateOnly = !needsUpdateOnly)}
-    disabled={updatesCount === 0}
-  >
-    ⬆ Needs update{updatesCount > 0 ? ` (${updatesCount})` : ""}
-  </button>
-
-  <input
-    class="search"
-    type="search"
-    placeholder="Filter by title, author, or tech name…"
-    bind:value={query}
-  />
 </div>
 
 <style>
+  /* Rendered as a content-width footer that floats over the scrolling library (see App). */
   .statbar {
     display: flex;
     align-items: center;
-    gap: 12px 20px;
+    gap: 10px 18px;
     flex-wrap: wrap;
-    /* Reserve room on the right for an open detail drawer (the subheader tucks left
-       of it instead of being clipped). */
-    padding: 12px calc(20px + var(--drawer-w, 0px)) 12px 20px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
+    padding: 10px 18px;
+    border-top: 1px solid var(--border);
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    backdrop-filter: saturate(1.3) blur(8px);
   }
   .stat {
     display: flex;
@@ -263,47 +185,5 @@
     font-size: 11px;
     color: var(--text-muted);
     margin-left: auto;
-  }
-  .toggle {
-    flex: 0 0 auto;
-    border: 1px solid var(--border);
-    background: var(--bg);
-    color: var(--text-muted);
-    padding: 8px 12px;
-    border-radius: var(--radius);
-    font-size: 12.5px;
-    font-weight: 600;
-  }
-  .toggle:hover {
-    color: var(--text);
-  }
-  .toggle.on {
-    background: color-mix(in srgb, var(--accent) 16%, transparent);
-    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-    color: var(--accent);
-  }
-  .toggle:disabled {
-    opacity: 0.45;
-    cursor: default;
-  }
-  /* Updates are actionable — tint the toggle gold like the topbar update button. */
-  .upd-toggle.on {
-    background: color-mix(in srgb, var(--gold-700) 15%, transparent);
-    border-color: color-mix(in srgb, var(--gold-700) 45%, var(--border));
-    color: var(--gold-700);
-  }
-  .search {
-    flex: 0 0 280px;
-    padding: 9px 14px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--bg);
-    color: var(--text);
-    font-family: inherit;
-    font-size: 13px;
-  }
-  .search:focus {
-    outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
-    outline-offset: 1px;
   }
 </style>

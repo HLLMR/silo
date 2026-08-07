@@ -82,7 +82,7 @@
   ];
   import VirtualList from "./lib/components/VirtualList.svelte";
   import ModRow from "./lib/components/ModRow.svelte";
-  import CategoryRail from "./lib/components/CategoryRail.svelte";
+  import FilterBar from "./lib/components/FilterBar.svelte";
   import ModSettings from "./lib/components/ModSettings.svelte";
   import ModDetail from "./lib/components/ModDetail.svelte";
   import ConfigEditor from "./lib/components/ConfigEditor.svelte";
@@ -118,10 +118,10 @@
   let result = $state<ScanResult | null>(null);
   let query = $state("");
   let errorMsg = $state<string | null>(null);
-  let selected = $state<{ category: string | null; subcategory: string | null }>({
-    category: null,
-    subcategory: null,
-  });
+  // Library category filter, driven by the shared FilterBar's parent/child dropdowns
+  // ("" = all). Replaces the old category rail + `selected`.
+  let libCat = $state("");
+  let libSub = $state("");
   let curationMap = $state<Record<string, CurationRow>>({});
   let overrideMap = $state<
     Record<string, { category: string; subcategory: string | null }>
@@ -954,13 +954,55 @@
   }
 
   const q = $derived(query.trim().toLowerCase());
+  // Library category tree for the FilterBar's parent/child dropdowns, built from the scan
+  // (ModEntry.category + subcategory). Local counts, sorted A–Z. Shape matches FilterBar's CatNode.
+  const libCatTree = $derived.by(() => {
+    const map = new Map<string, { count: number; children: Map<string, number> }>();
+    for (const m of effectiveMods) {
+      let node = map.get(m.category);
+      if (!node) {
+        node = { count: 0, children: new Map() };
+        map.set(m.category, node);
+      }
+      node.count++;
+      if (m.subcategory)
+        node.children.set(m.subcategory, (node.children.get(m.subcategory) ?? 0) + 1);
+    }
+    return [...map.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([name, n]) => ({
+        name,
+        count: n.count,
+        children: [...n.children.entries()]
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([cname, ccount]) => ({ name: cname, count: ccount, value: cname })),
+      }));
+  });
+  const libFilterCount = $derived(
+    (libCat ? 1 : 0) +
+      (favoritesOnly ? 1 : 0) +
+      (showHidden ? 1 : 0) +
+      (flaggedOnly ? 1 : 0) +
+      (conflictedOnly ? 1 : 0) +
+      (hasSettingsOnly ? 1 : 0) +
+      (needsUpdateOnly ? 1 : 0),
+  );
+  function clearLibFilters() {
+    libCat = "";
+    libSub = "";
+    favoritesOnly = false;
+    showHidden = false;
+    flaggedOnly = false;
+    conflictedOnly = false;
+    hasSettingsOnly = false;
+    needsUpdateOnly = false;
+    selectedTag = null;
+  }
   const filtered = $derived.by(() => {
     let list = effectiveMods;
-    if (selected.category) {
+    if (libCat) {
       list = list.filter(
-        (m) =>
-          m.category === selected.category &&
-          (!selected.subcategory || m.subcategory === selected.subcategory),
+        (m) => m.category === libCat && (!libSub || m.subcategory === libSub),
       );
     }
     if (!showHidden) {
@@ -1007,8 +1049,8 @@
   });
 
   type SortKey = "name" | "category" | "size" | "added" | "version" | "rating";
-  let sortBy = $state<SortKey>("name");
-  let sortDir = $state<"asc" | "desc">("asc");
+  let sortBy = $state<SortKey>("added");
+  let sortDir = $state<"asc" | "desc">("desc");
 
   const visible = $derived.by(() => {
     const arr = [...filtered];
@@ -1513,89 +1555,132 @@
       />
     </div>
   {:else}
-  <StatBar
-    modCount={mods.length}
-    mapsCount={stats.maps}
-    scriptsCount={stats.scripts}
-    uniqueCount={stats.unique}
-    activeCount={activeSet.size}
-    conflictCount={conflicts.length}
-    {criticalCount}
-    {healthCount}
-    conflictedCount={conflictedSet.size}
-    updatesCount={availableUpdates.length}
-    tookMs={result ? result.tookMs : null}
-    bind:favoritesOnly
-    bind:showHidden
-    bind:flaggedOnly
-    bind:conflictedOnly
-    bind:hasSettingsOnly
-    bind:needsUpdateOnly
-    bind:statFilter
-    bind:query
-    onOpenStats={() => (statsOpen = !statsOpen)}
-    onOpenConflicts={() => (conflictsOpen = !conflictsOpen)}
-    onOpenHealth={() => (healthOpen = !healthOpen)}
-    onOpenLog={() => (logOpen = true)}
-    onOpenBindings={() => (bindingsOpen = true)}
-    onOpenBridge={() => (bridgeOpen = true)}
-  />
+  <div class="lib">
+    <div class="lib-inner">
+      <FilterBar
+        catTree={libCatTree}
+        bind:parentCategory={libCat}
+        bind:childCategory={libSub}
+        bind:query
+        searchPlaceholder="Filter by title, author, or tech name…"
+        bind:sort={sortBy}
+        sortOptions={[
+          { value: "added", label: "Recently added" },
+          { value: "name", label: "Name" },
+          { value: "category", label: "Category" },
+          { value: "size", label: "Size" },
+          { value: "version", label: "Version" },
+          { value: "rating", label: "My rating" },
+        ]}
+        bind:sortDir
+        dirEnabled={true}
+        filterCount={libFilterCount}
+        onClear={clearLibFilters}
+      />
 
-  <div class="body">
-    <CategoryRail
-      items={effectiveMods}
-      {selected}
-      onSelect={(category, subcategory) => (selected = { category, subcategory })}
-    />
+      <!-- Library-only filters (they have no Browse equivalent). -->
+      <div class="lib-toggles">
+        <button class="lib-tog" class:on={favoritesOnly} onclick={() => (favoritesOnly = !favoritesOnly)}>
+          {favoritesOnly ? "★" : "☆"} Favorites
+        </button>
+        <button class="lib-tog" class:on={showHidden} onclick={() => (showHidden = !showHidden)}>
+          Hidden
+        </button>
+        <button class="lib-tog" class:on={flaggedOnly} onclick={() => (flaggedOnly = !flaggedOnly)}>
+          ⚑ Flagged
+        </button>
+        <button
+          class="lib-tog"
+          class:on={conflictedOnly}
+          disabled={conflictedSet.size === 0}
+          onclick={() => (conflictedOnly = !conflictedOnly)}
+        >
+          ⚠ In conflict{conflictedSet.size > 0 ? ` (${conflictedSet.size})` : ""}
+        </button>
+        <button class="lib-tog" class:on={hasSettingsOnly} onclick={() => (hasSettingsOnly = !hasSettingsOnly)}>
+          ⚙ Has settings
+        </button>
+        <button
+          class="lib-tog lib-upd"
+          class:on={needsUpdateOnly}
+          disabled={availableUpdates.length === 0}
+          onclick={() => (needsUpdateOnly = !needsUpdateOnly)}
+        >
+          ⬆ Needs update{availableUpdates.length > 0 ? ` (${availableUpdates.length})` : ""}
+        </button>
+        {#if libFilterCount > 0}
+          <button class="lib-clear" onclick={clearLibFilters}>Clear all ✕</button>
+        {/if}
+      </div>
 
-    <main class="list">
       <LibraryToolbar
-        {selected}
         {selectedTag}
         shownCount={filtered.length}
         allActive={allFilteredActive}
         activeInFilter={filteredActiveCount}
         disabled={!!busy || filtered.length === 0}
-        bind:sortBy
-        bind:sortDir
         onSelectAll={setActiveForFiltered}
         onClearTag={() => (selectedTag = null)}
       />
 
-      <div class="list-body">
-        {#if filtered.length === 0 && !scanning}
-          <div class="empty">
-            {mods.length === 0
-              ? "No mods found yet. Point Silo at your mods folder and rescan."
-              : "No mods match your filter."}
-          </div>
-        {:else}
-          <VirtualList items={visible} rowHeight={76}>
-            {#snippet row(mod)}
-              <ModRow
-                {mod}
-                curation={cur(mod.techName)}
-                overridden={!!overrideMap[mod.techName]}
-                organized={mod.organized}
-                active={activeSet.has(mod.techName)}
-                hasSettings={settingsModsSet.has(mod.techName)}
-                tags={tagsOf(mod.techName)}
-                onToggle={(flag) => toggleCuration(mod.techName, flag)}
-                onToggleActive={() => toggleActive(mod.techName)}
-                onEditCategory={(ev) => openEditor(mod.techName, ev)}
-                onOpenSettings={() =>
-                  (settingsMod = { techName: mod.techName, title: mod.title ?? mod.techName })}
-                onOpenDetail={() => (detailMod = mod)}
-                onContextMenu={(ev) => {
-                  ev.preventDefault();
-                  rowMenu = { mod, ev };
-                }}
-              />
-            {/snippet}
-          </VirtualList>
-        {/if}
+      <div class="list-wrap">
+        <div class="list-body">
+          {#if filtered.length === 0 && !scanning}
+            <div class="empty">
+              {mods.length === 0
+                ? "No mods found yet. Point Silo at your mods folder and rescan."
+                : "No mods match your filter."}
+            </div>
+          {:else}
+            <VirtualList items={visible} rowHeight={76} bottomPad={62}>
+              {#snippet row(mod)}
+                <ModRow
+                  {mod}
+                  curation={cur(mod.techName)}
+                  overridden={!!overrideMap[mod.techName]}
+                  organized={mod.organized}
+                  active={activeSet.has(mod.techName)}
+                  hasSettings={settingsModsSet.has(mod.techName)}
+                  tags={tagsOf(mod.techName)}
+                  onToggle={(flag) => toggleCuration(mod.techName, flag)}
+                  onToggleActive={() => toggleActive(mod.techName)}
+                  onEditCategory={(ev) => openEditor(mod.techName, ev)}
+                  onOpenSettings={() =>
+                    (settingsMod = { techName: mod.techName, title: mod.title ?? mod.techName })}
+                  onOpenDetail={() => (detailMod = mod)}
+                  onContextMenu={(ev) => {
+                    ev.preventDefault();
+                    rowMenu = { mod, ev };
+                  }}
+                />
+              {/snippet}
+            </VirtualList>
+          {/if}
+        </div>
+
+        <!-- Stats + tools as a content-width footer that floats over the scrolling list. -->
+        <div class="statbar-footer">
+          <StatBar
+            modCount={mods.length}
+            mapsCount={stats.maps}
+            scriptsCount={stats.scripts}
+            uniqueCount={stats.unique}
+            activeCount={activeSet.size}
+            conflictCount={conflicts.length}
+            {criticalCount}
+            {healthCount}
+            tookMs={result ? result.tookMs : null}
+            bind:statFilter
+            onOpenStats={() => (statsOpen = !statsOpen)}
+            onOpenConflicts={() => (conflictsOpen = !conflictsOpen)}
+            onOpenHealth={() => (healthOpen = !healthOpen)}
+            onOpenLog={() => (logOpen = true)}
+            onOpenBindings={() => (bindingsOpen = true)}
+            onOpenBridge={() => (bridgeOpen = true)}
+          />
+        </div>
       </div>
-    </main>
+    </div>
   </div>
   {/if}
 
@@ -1716,12 +1801,88 @@
     box-shadow: var(--shadow-2);
     scrollbar-width: thin;
   }
-  .body {
+  /* ── Library view: content-width column, a floating footer stat bar over the list ── */
+  .lib {
     flex: 1 1 auto;
     min-height: 0;
     display: flex;
-    /* Reserve room for an open detail drawer so the list tucks left of it. */
+    /* Reserve room for an open detail drawer so content tucks left of it. */
     padding-right: var(--drawer-w, 0px);
+  }
+  .lib-inner {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+  }
+  .lib-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 8px;
+  }
+  .lib-tog {
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-muted);
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .lib-tog:hover {
+    color: var(--text);
+  }
+  .lib-tog:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+  .lib-tog.on {
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    color: var(--accent);
+  }
+  .lib-upd.on {
+    background: color-mix(in srgb, var(--gold-700) 15%, transparent);
+    border-color: color-mix(in srgb, var(--gold-700) 45%, var(--border));
+    color: var(--gold-700);
+  }
+  .lib-clear {
+    margin-left: auto;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px;
+  }
+  .lib-clear:hover {
+    color: var(--primary);
+    text-decoration: underline;
+  }
+  .list-wrap {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .statbar-footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    border-radius: var(--radius) var(--radius) 0 0;
+    overflow: hidden;
+    box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.14);
   }
   .browse-scroll {
     flex: 1 1 auto;
@@ -1731,15 +1892,8 @@
        shifts it left of the drawer instead of hiding under it). */
     padding-right: var(--drawer-w, 0px);
   }
-  .list {
-    flex: 1 1 auto;
-    min-width: 0;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
   .list-body {
-    flex: 1 1 auto;
+    height: 100%;
     min-height: 0;
   }
   .backdrop {

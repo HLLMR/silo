@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The Library uses the same search/filter bar as Browse.** Category (now a parent +
+  subcategory pair), search, and sort — with a working ascending/descending toggle and a
+  "recently added" default — live in one shared bar, with a second row for the library-only
+  filters (Favorites · Hidden · Flagged · In-conflict · Has-settings · Needs-update). The old
+  left category rail is gone (folded into the category dropdowns), the list now matches Browse's
+  content width, and the stats + tools (diagnose / bindings / bridge) sit in a content-width
+  footer that floats over the scrolling list.
+
 - **Browse caches each view, so going back to one is instant.** Revisiting a filter/sort combo
   you've already loaded no longer re-polls the catalog — results (and everything you'd paged in)
   come straight from an in-session cache.
