@@ -564,6 +564,8 @@ fn siloapi_set_base(app: tauri::AppHandle, base: String) -> Result<(), String> {
     )
 }
 
+// Mirrors siloapi::browse's filter set; flat args keep the invoke() call shape simple.
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 async fn browse_mods(
     app: tauri::AppHandle,

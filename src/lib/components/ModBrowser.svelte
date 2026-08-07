@@ -71,11 +71,11 @@
   );
   let categories = $state<CategoryCount[]>([]);
   // Semantic facet filters (silo-api #4). activeTags are "namespace:value" strings, ANDed by
-  // the server; availableBy is the period-correct year filter. facets drives the chip UI.
+  // the server; availableBy is the period-correct year filter. facets drives a compact
+  // dropdown row — one value per facet (picking a new value replaces the prior one).
   let facets = $state<Facets | null>(null);
   let activeTags = $state<string[]>([]);
   let availableBy = $state<number | null>(null);
-  let showFilters = $state(false);
   // Render facets in a sensible order; anything else the server adds falls in after.
   const FACET_ORDER = ["theme", "brand", "region", "realism", "era"];
   const FACET_LABEL: Record<string, string> = {
@@ -87,22 +87,27 @@
   };
   const facetGroups = $derived(
     facets
-      ? Object.keys(facets.facets).sort((a, b) => {
-          const ia = FACET_ORDER.indexOf(a);
-          const ib = FACET_ORDER.indexOf(b);
-          return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
-        })
+      ? Object.keys(facets.facets)
+          .sort((a, b) => {
+            const ia = FACET_ORDER.indexOf(a);
+            const ib = FACET_ORDER.indexOf(b);
+            return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+          })
+          .filter((ns) => facets!.facets[ns].length > 0)
       : [],
   );
   const filterCount = $derived(activeTags.length + (availableBy != null ? 1 : 0));
 
-  function toggleTag(ns: string, value: string) {
-    const t = `${ns}:${value}`;
-    activeTags = activeTags.includes(t) ? activeTags.filter((x) => x !== t) : [...activeTags, t];
-    load();
+  function prettify(v: string): string {
+    return v.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   }
-  function removeTag(t: string) {
-    activeTags = activeTags.filter((x) => x !== t);
+  // The currently-selected "ns:value" for a facet dropdown, or "" (= all) when none is picked.
+  function selectedFor(ns: string): string {
+    return activeTags.find((t) => t.split(":")[0] === ns) ?? "";
+  }
+  // Pick one value per facet; picking replaces any prior value for that namespace.
+  function setFacet(ns: string, tag: string) {
+    activeTags = [...activeTags.filter((t) => t.split(":")[0] !== ns), ...(tag ? [tag] : [])];
     load();
   }
   function clearFilters() {
@@ -329,23 +334,6 @@
       {/if}
     </div>
     <div class="bh-controls">
-      {#if facetGroups.length > 0}
-        <button
-          class="cat-select filter-btn"
-          class:on={showFilters || filterCount > 0}
-          onclick={() => (showFilters = !showFilters)}
-          title="Filter by brand, theme, region, era…"
-        >
-          ⛃ Filters{filterCount > 0 ? ` (${filterCount})` : ""}
-        </button>
-      {/if}
-      <select class="cat-select" bind:value={sort} onchange={() => load()} title="Sort">
-        <option value="popular">Popular</option>
-        <option value="downloads">Most downloaded</option>
-        <option value="rating">Top rated</option>
-        <option value="newest">Newest</option>
-        <option value="name">Name (A–Z)</option>
-      </select>
       {#if categories.length > 0}
         <select class="cat-select" bind:value={category} onchange={() => load()}>
           <option value="">All categories</option>
@@ -361,56 +349,47 @@
         bind:value={query}
         oninput={onSearch}
       />
+      <!-- Sort is ordering, not filtering — its own contrasting style, pushed right by the search's flex. -->
+      <select class="cat-select sortsel" bind:value={sort} onchange={() => load()} title="Sort order">
+        <option value="popular">Popular</option>
+        <option value="downloads">Most downloaded</option>
+        <option value="rating">Top rated</option>
+        <option value="newest">Newest</option>
+        <option value="name">Name (A–Z)</option>
+      </select>
     </div>
   </div>
 
-  {#if showFilters && facetGroups.length > 0}
-    <div class="facet-panel">
+  {#if facetGroups.length > 0}
+    <div class="facet-row">
       {#each facetGroups as ns (ns)}
-        <div class="facet-group">
-          <div class="facet-label">{FACET_LABEL[ns] ?? ns}</div>
-          <div class="facet-chips">
-            {#each facets!.facets[ns].slice(0, 16) as fv (fv.value)}
-              <button
-                class="facet-chip"
-                class:on={activeTags.includes(`${ns}:${fv.value}`)}
-                onclick={() => toggleTag(ns, fv.value)}
-              >
-                {fv.value}<span class="fc-n">{fv.count.toLocaleString()}</span>
-              </button>
-            {/each}
-          </div>
-        </div>
+        <select
+          class="facet-sel"
+          class:on={selectedFor(ns) !== ""}
+          value={selectedFor(ns)}
+          onchange={(e) => setFacet(ns, e.currentTarget.value)}
+          aria-label="Filter by {FACET_LABEL[ns] ?? ns}"
+        >
+          <option value="">{FACET_LABEL[ns] ?? ns}: all</option>
+          {#each facets!.facets[ns] as fv (fv.value)}
+            <option value="{ns}:{fv.value}">{prettify(fv.value)} ({fv.count.toLocaleString()})</option>
+          {/each}
+        </select>
       {/each}
-      <div class="facet-group">
-        <div class="facet-label">Available by year</div>
-        <div class="facet-year">
-          <input
-            class="year-in"
-            type="number"
-            min="1900"
-            max="2100"
-            placeholder="e.g. 1985"
-            value={availableBy ?? ""}
-            onchange={(e) => setAvailableBy(e.currentTarget.value)}
-          />
-          <span class="facet-hint">
-            Period-correct — only machines that existed by this year (dated mods only).
-          </span>
-        </div>
-      </div>
-    </div>
-  {/if}
-
-  {#if filterCount > 0}
-    <div class="active-filters">
-      {#each activeTags as t (t)}
-        <button class="active-chip" onclick={() => removeTag(t)}>{t.replace(":", " · ")} ✕</button>
-      {/each}
-      {#if availableBy != null}
-        <button class="active-chip" onclick={() => setAvailableBy("")}>available by {availableBy} ✕</button>
+      <input
+        class="facet-sel year-in"
+        class:on={availableBy != null}
+        type="number"
+        min="1900"
+        max="2100"
+        placeholder="Available by year"
+        title="Period-correct — only machines that existed by this year (dated mods only)."
+        value={availableBy ?? ""}
+        onchange={(e) => setAvailableBy(e.currentTarget.value)}
+      />
+      {#if filterCount > 0}
+        <button class="clear-filters" onclick={clearFilters}>Clear ✕</button>
       {/if}
-      <button class="clear-filters" onclick={clearFilters}>Clear all</button>
     </div>
   {/if}
 
@@ -537,116 +516,59 @@
     max-width: 220px;
     cursor: pointer;
   }
-  .filter-btn {
-    font-weight: 600;
+  .cat-select.sortsel {
+    border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+    background: color-mix(in srgb, var(--primary) 14%, var(--surface-raised));
+    color: var(--primary);
+    font-weight: 700;
   }
-  .filter-btn.on {
+  .cat-select.sortsel:hover {
+    border-color: var(--primary);
+  }
+  /* ── Facets — a single compact row of dropdowns (one value per facet, ANDed server-side) ── */
+  .facet-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    margin: 4px 0 10px;
+  }
+  .facet-sel {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.82rem;
+    max-width: 200px;
+    cursor: pointer;
+  }
+  .facet-sel.on {
     color: var(--primary);
     border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
     background: color-mix(in srgb, var(--primary) 10%, transparent);
-  }
-  .facet-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 14px;
-    margin: 4px 0 10px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--surface-raised);
-  }
-  .facet-group {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-  }
-  .facet-label {
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-    font-weight: 700;
-  }
-  .facet-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .facet-chip {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 5px;
-    padding: 4px 10px;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    background: var(--surface);
-    color: var(--text);
-    font: inherit;
-    font-size: 0.8rem;
-    text-transform: capitalize;
-    cursor: pointer;
-  }
-  .facet-chip:hover {
-    border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
-  }
-  .facet-chip.on {
-    background: color-mix(in srgb, var(--primary) 15%, transparent);
-    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
-    color: var(--primary);
     font-weight: 600;
-  }
-  .fc-n {
-    font-size: 0.68rem;
-    opacity: 0.6;
-    font-variant-numeric: tabular-nums;
-    font-family: var(--font-mono, monospace);
-  }
-  .facet-year {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
   }
   .year-in {
-    width: 120px;
-    padding: 7px 10px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface);
-    color: var(--text);
-    font: inherit;
-    font-size: 0.85rem;
+    width: 158px;
+    cursor: text;
   }
-  .facet-hint {
-    font-size: 0.76rem;
+  .year-in::placeholder {
     color: var(--text-muted);
-  }
-  .active-filters {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    margin: 0 0 10px;
-  }
-  .active-chip {
-    padding: 3px 9px;
-    border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--border));
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--primary) 12%, transparent);
-    color: var(--primary);
-    font: inherit;
-    font-size: 0.76rem;
-    font-weight: 600;
-    text-transform: capitalize;
-    cursor: pointer;
   }
   .clear-filters {
     border: none;
     background: transparent;
     color: var(--text-muted);
     font: inherit;
-    font-size: 0.76rem;
+    font-size: 0.8rem;
+    font-weight: 600;
     cursor: pointer;
+    padding: 6px;
+  }
+  .clear-filters:hover {
+    color: var(--primary);
     text-decoration: underline;
   }
   .search {

@@ -211,6 +211,9 @@ fn get(url: &str) -> Result<ureq::Response, String> {
 }
 
 /// Search/list the catalog. `query`/`category` are optional filters.
+// Many optional query filters (search / category / sort / tags / year / paging) that each map
+// straight to a URL param; a params struct would only add indirection over this URL builder.
+#[allow(clippy::too_many_arguments)]
 pub fn browse(
     base: &str,
     query: Option<&str>,

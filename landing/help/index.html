@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Help & documentation — Silo</title>
+<script src="/nav.js"></script>
 <meta name="description" content="How to use Silo, the free open-source Farming Simulator 25 mod manager: organizing your library, loadouts, conflict and crash diagnosis, mod integrity verification, savegame tools, multiplayer sync, and more." />
 <meta property="og:title" content="Help & documentation — Silo" />
 <meta property="og:description" content="Full user documentation for Silo, the FS25 mod manager: library, loadouts, diagnosis, provenance, and every tool." />
@@ -106,22 +107,6 @@
 </style>
 </head>
 <body>
-<header class="top">
-  <div class="wrap top-in">
-    <a class="brand" href="/" aria-label="Silo home">
-      <span class="logo">S</span>
-      <span><h1>Silo</h1><span class="sub">Help &amp; documentation</span></span>
-    </a>
-    <div class="top-spacer"></div>
-    <nav class="nav-links" aria-label="Site">
-      <a href="/browse/">Browse mods</a>
-      <a href="https://github.com/HLLMR/silo" rel="noopener">Source</a>
-    </nav>
-    <button class="btn icon-btn" id="themeBtn" type="button" aria-label="Toggle light / dark theme" title="Toggle theme">◐</button>
-    <a class="btn primary" href="/#download">Get the app</a>
-  </div>
-</header>
-
 <section class="hero">
   <div class="wrap">
     <p class="eyebrow">User guide</p>
@@ -638,31 +623,8 @@
   </div>
 </div>
 
-<footer>
-  <div class="wrap">
-    <p>Silo is a free, open-source mod manager for Farming Simulator 25. Not affiliated with GIANTS Software.</p>
-    <div class="links">
-      <a href="/">Home</a>
-      <a href="/browse/">Browse mods</a>
-      <a href="/trust/">Trust</a>
-      <a href="https://github.com/HLLMR/silo" rel="noopener">Source &amp; issues</a>
-      <a href="/#download">Download</a>
-      <a href="/legal/">Legal</a>
-    </div>
-  </div>
-</footer>
-
 <script>
   "use strict";
-  // Theme toggle (OS default, persists explicit choice).
-  (function(){var s=null;try{s=localStorage.getItem("silo-theme");}catch(e){}
-    if(s)document.documentElement.setAttribute("data-theme",s);
-    document.getElementById("themeBtn").addEventListener("click",function(){
-      var c=document.documentElement.getAttribute("data-theme");
-      if(!c)c=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";
-      var n=c==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);
-      try{localStorage.setItem("silo-theme",n);}catch(e){}});})();
-
   // Scrollspy: highlight the section currently in view.
   (function(){
     var links={};document.querySelectorAll("#toc a[data-slug]").forEach(function(a){links[a.getAttribute("data-slug")]=a;});
