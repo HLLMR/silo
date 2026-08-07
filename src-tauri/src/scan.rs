@@ -361,10 +361,7 @@ fn is_settings_xml(name_lower: &str) -> bool {
     if name_lower.contains("translation") || name_lower.contains("l10n") {
         return false;
     }
-    let base = name_lower
-        .rsplit(['/', '\\'])
-        .next()
-        .unwrap_or(name_lower);
+    let base = name_lower.rsplit(['/', '\\']).next().unwrap_or(name_lower);
     base.contains("settings")
 }
 
@@ -662,7 +659,7 @@ mod settings_detect_tests {
         ));
         assert!(lua_has_settings_signature(b"g_currentModSettingsDirectory"));
         assert!(lua_has_settings_signature(b"\"modsSettings/typo.xml\"")); // known typo
-        // the standard savegame persistence hook is NOT a settings signal
+                                                                           // the standard savegame persistence hook is NOT a settings signal
         assert!(!lua_has_settings_signature(
             b"function foo:saveToXMLFile(xml) end"
         ));
