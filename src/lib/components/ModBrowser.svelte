@@ -29,6 +29,7 @@
   import DescModal from "./DescModal.svelte";
   import BrowseDrawer from "./BrowseDrawer.svelte";
   import { parseNexusId } from "../browse";
+  import { browseCacheKey, getBrowseView, setBrowseView } from "../browseCache";
 
   interface Props {
     /** Tech names already in the local library, to flag "in library". */
@@ -255,10 +256,20 @@
   const knowsTotal = $derived(total > 0);
   const hasMore = $derived(knowsTotal ? results.length < total : lastPageFull);
 
-  /** Fetch the first page for the current filters, replacing what's shown. */
+  /** Fetch the first page for the current filters, replacing what's shown. Served from the
+   *  cross-mount view cache when we've seen this exact filter+sort combo before (no re-poll). */
   async function load() {
-    loading = true;
     error = null;
+    const key = browseCacheKey({ category, tags: activeTags, availableBy, query, sort });
+    const cached = getBrowseView(key);
+    if (cached) {
+      results = cached.results;
+      total = cached.total;
+      lastPageFull = cached.lastPageFull;
+      loading = false;
+      return;
+    }
+    loading = true;
     try {
       const page = await browseMods({
         query: query.trim() || undefined,
@@ -272,6 +283,7 @@
       results = page.mods;
       total = page.total;
       lastPageFull = page.mods.length === PAGE;
+      setBrowseView(key, { results, total, lastPageFull });
     } catch (e) {
       error = String(e);
       results = [];
@@ -291,6 +303,7 @@
     const forCategory = category;
     const forTags = activeTags.join("|");
     const forAvail = availableBy;
+    const forSort = sort;
     try {
       const page = await browseMods({
         query: forQuery.trim() || undefined,
@@ -306,12 +319,19 @@
         forQuery !== query ||
         forCategory !== category ||
         forTags !== activeTags.join("|") ||
-        forAvail !== availableBy
+        forAvail !== availableBy ||
+        forSort !== sort
       )
         return;
       results = [...results, ...page.mods];
       total = page.total;
       lastPageFull = page.mods.length === PAGE;
+      // Grow the cached view so the next revisit restores everything we've paged in.
+      setBrowseView(browseCacheKey({ category, tags: activeTags, availableBy, query, sort }), {
+        results,
+        total,
+        lastPageFull,
+      });
     } catch (e) {
       error = String(e);
     } finally {
