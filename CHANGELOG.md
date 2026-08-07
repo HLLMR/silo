@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Browse caches each view, so going back to one is instant.** Revisiting a filter/sort combo
+  you've already loaded no longer re-polls the catalog — results (and everything you'd paged in)
+  come straight from an in-session cache.
 - **Browse has a unified two-line filter bar.** The controls are now one organized bar: top
   line is **category (parent · subcategory) · search · sort · direction**, bottom line is the
   semantic facets (**region · era · theme · brand · realism**) · **year** · **Clear all**.
