@@ -883,10 +883,11 @@
   let updatesOpen = $state(false);
   let updateChecking = $state(false);
   let updateResults = $state<UpdateRow[]>([]);
+  let updatesAutoChecked = false;
   const linkedCount = $derived(Object.keys(repoMap).length);
 
-  async function checkAllUpdates() {
-    updatesOpen = true;
+  async function checkAllUpdates(quiet = false) {
+    if (!quiet) updatesOpen = true;
     updateChecking = true;
     updateResults = [];
     const byTech = new Map(mods.map((m) => [m.techName, m]));
@@ -1218,6 +1219,12 @@
       // Catalog facet tags for the library (silo-api#9) — powers the facet dropdowns.
       // Fire-and-forget; the bar just shows no facets until it lands.
       void loadCatalogTags(r.mods.map((m) => m.techName));
+      // Populate the "Needs update" filter automatically on first load (quiet — no panel), so
+      // it isn't perpetually greyed until the user manually runs ⟳ Updates.
+      if (!updatesAutoChecked) {
+        updatesAutoChecked = true;
+        void checkAllUpdates(true);
+      }
       // Re-read savegames too, so a Rescan picks up a save created since launch (they're
       // otherwise only loaded once on startup). Fire-and-forget; it handles its own errors.
       void loadSavegames();
@@ -1490,6 +1497,7 @@
       onToggleActive={() => toggleActive(dm.techName)}
       onOpenSettings={() =>
         (settingsMod = { techName: dm.techName, title: dm.title ?? dm.techName })}
+      onFindInBrowse={() => openInBrowse(dm)}
       onCurationChange={(row) => (curationMap = { ...curationMap, [dm.techName]: row })}
       onTagsChange={(t) => (tagMap = { ...tagMap, [dm.techName]: t })}
       onFilterTag={(t) => {
