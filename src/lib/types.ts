@@ -201,21 +201,6 @@ export interface GhStatus {
   canGist: boolean;
 }
 
-/** Nexus connection state (personal API key). */
-export interface NexusStatus {
-  user: string | null;
-}
-
-/** Live signals for a Nexus source card. Counts are keyless; `youEndorsed` is null
- *  unless an API key is connected (and readable). */
-export interface NexusModStats {
-  modId: number;
-  name: string | null;
-  endorsements: number;
-  downloads: number;
-  youEndorsed: boolean | null;
-}
-
 /** Live public signals for a GitHub source card. `youStarred`/`youWatching` are
  *  null unless a token is connected. */
 export interface RepoStats {

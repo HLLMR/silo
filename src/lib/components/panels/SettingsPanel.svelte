@@ -3,7 +3,6 @@
   import type { GameInfo } from "../../types";
   import { openFolder, secretStorageSecure } from "../../api";
   import GitHubAuth from "../GitHubAuth.svelte";
-  import NexusAuth from "../NexusAuth.svelte";
 
   // When the OS keychain is unavailable, connecting an account falls back to storing the
   // token in the local DB unencrypted — warn before the user connects rather than silently.
@@ -124,7 +123,7 @@
   {#if !keychainOk}
     <div class="set-section">
       <div class="keychain-warn">
-        ⚠ No OS keychain is available on this machine, so a connected GitHub or Nexus token
+        ⚠ No OS keychain is available on this machine, so a connected GitHub token
         would be stored <strong>unencrypted</strong> in Silo's local database. Connect an account
         only if you're comfortable with that; disconnecting removes the stored token.
       </div>
@@ -134,11 +133,6 @@
   <div class="set-section">
     <div class="set-label">GitHub account</div>
     <GitHubAuth />
-  </div>
-
-  <div class="set-section">
-    <div class="set-label">Nexus Mods account</div>
-    <NexusAuth />
   </div>
 
   <div class="set-section">

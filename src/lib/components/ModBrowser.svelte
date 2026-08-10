@@ -13,8 +13,6 @@
     onInstallProgress,
     openExternal,
     ghStatus,
-    nexusStatus,
-    nexusModDescription,
     type Facets,
   } from "../api";
   import type {
@@ -28,7 +26,6 @@
   import ModCard from "./ModCard.svelte";
   import DescModal from "./DescModal.svelte";
   import BrowseDrawer from "./BrowseDrawer.svelte";
-  import { parseNexusId } from "../browse";
   import { browseCacheKey, getBrowseView, setBrowseView } from "../browseCache";
   import FilterBar from "./FilterBar.svelte";
 
@@ -50,18 +47,12 @@
     connected: false,
     canWrite: false,
   });
-  let nexusConnected = $state(false);
   async function refreshGh() {
     try {
       const s = await ghStatus();
       gh = { connected: !!s.user, canWrite: s.canWrite };
     } catch {
       gh = { connected: false, canWrite: false };
-    }
-    try {
-      nexusConnected = !!(await nexusStatus()).user;
-    } catch {
-      nexusConnected = false;
     }
   }
   refreshGh();
@@ -156,35 +147,18 @@
     text: string;
     url: string | null;
     loading: boolean;
-    source: "catalog" | "nexus" | "summary";
+    source: "catalog" | "summary";
   } | null>(null);
 
-  /** Open the description modal, filling it with the best body available: the ingested
-   *  full text if the catalog has it, else a live Nexus fetch, else the short summary. */
-  async function openDesc(d: CatalogModDetail) {
+  /** Open the description modal with the best body the catalog has: the ingested full text
+   *  if present, else the short summary. (Silo makes no live Nexus call — the index provides
+   *  Nexus metadata; the deep-link still gets the user the full page.) */
+  function openDesc(d: CatalogModDetail) {
     const summary = d.description ?? "";
     if (d.descriptionFull) {
       descModal = { title: d.title, text: d.descriptionFull, url: d.pageUrl, loading: false, source: "catalog" };
-      return;
-    }
-    const nx = d.sources.find((s) => s.source === "nexus" && parseNexusId(s.sourceUrl));
-    if (!nx) {
+    } else {
       descModal = { title: d.title, text: summary, url: d.pageUrl, loading: false, source: "summary" };
-      return;
-    }
-    // Show the summary immediately, then upgrade to the full Nexus body when it arrives.
-    descModal = { title: d.title, text: summary, url: d.pageUrl, loading: true, source: "summary" };
-    const id = parseNexusId(nx.sourceUrl)!;
-    try {
-      const full = await nexusModDescription(id);
-      if (descModal && full && full.length > summary.length) {
-        descModal.text = full;
-        descModal.source = "nexus";
-      }
-    } catch {
-      // Keep the summary; the deep-link still gets them the full page.
-    } finally {
-      if (descModal) descModal.loading = false;
     }
   }
 
@@ -458,7 +432,6 @@
       {detailLoading}
       installingId={installing}
       {gh}
-      {nexusConnected}
       {installed}
       onClose={() => (detail = null)}
       onUseSource={(d, s) => useSource(d, s)}
