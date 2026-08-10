@@ -526,6 +526,17 @@ pub struct ForeignFile {
     pub tech_name: String,
     pub file_name: String,
     pub kind: String, // "zip" | "dir"
+    /// Version of the file currently in the mods folder (what "adopt" would keep).
+    pub flat_version: Option<String>,
+    /// Version of Silo's managed/archived copy (what "restore" would put back).
+    pub managed_version: Option<String>,
+}
+
+/// Best-effort mod version from a mod's `modDesc.xml`, for showing which build is which.
+fn mod_version(path: &Path, kind: &str) -> Option<String> {
+    crate::scan::read_moddesc_xml(path, kind)
+        .ok()
+        .and_then(|xml| crate::moddesc::parse(&xml).version)
 }
 
 /// Scan the flat root for foreign/mismatched files sitting at organized mods' names. Cheap:
@@ -578,6 +589,8 @@ pub fn detect_foreign_projections(root: &Path) -> Vec<ForeignFile> {
                 tech_name,
                 file_name,
                 kind: kind.to_string(),
+                flat_version: mod_version(&link, kind),
+                managed_version: mod_version(src, kind),
             });
         }
     }
@@ -789,5 +802,92 @@ mod tests {
         assert_eq!(detect_foreign_projections(&root).len(), 1);
 
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn adopt_promotes_the_mods_folder_file_and_backs_up_the_managed_copy() {
+        let base = std::env::temp_dir().join(format!("silo_adopt_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).unwrap();
+        let conn = db::open(&base.join("silo.db")).unwrap();
+        let cat = base.join(ARCHIVE).join("Vehicles");
+        std::fs::create_dir_all(&cat).unwrap();
+        std::fs::write(cat.join("FS25_Foo.zip"), b"OLD archived build").unwrap();
+        db::upsert_organized(
+            &conn,
+            &OrganizedRow {
+                tech_name: "FS25_Foo".into(),
+                file_name: "FS25_Foo.zip".into(),
+                kind: "zip".into(),
+                category: "Vehicles".into(),
+                subcategory: None,
+                active: false,
+            },
+        )
+        .unwrap();
+        std::fs::write(base.join("FS25_Foo.zip"), b"NEWER mods-folder build").unwrap();
+
+        adopt_foreign(&conn, &base, "FS25_Foo.zip").unwrap();
+
+        assert_eq!(
+            std::fs::read(cat.join("FS25_Foo.zip")).unwrap(),
+            b"NEWER mods-folder build",
+            "the mods-folder build becomes the managed copy"
+        );
+        assert!(
+            !base.join("FS25_Foo.zip").exists(),
+            "parked → the flat slot is emptied"
+        );
+        let baks: Vec<_> = std::fs::read_dir(base.join("backups"))
+            .unwrap()
+            .flatten()
+            .collect();
+        assert_eq!(baks.len(), 1, "the old managed copy is backed up");
+        assert_eq!(std::fs::read(baks[0].path()).unwrap(), b"OLD archived build");
+
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn restore_puts_silos_copy_back_and_backs_up_the_swap() {
+        let base = std::env::temp_dir().join(format!("silo_restore_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).unwrap();
+        let conn = db::open(&base.join("silo.db")).unwrap();
+        let cat = base.join(ARCHIVE).join("Vehicles");
+        std::fs::create_dir_all(&cat).unwrap();
+        std::fs::write(cat.join("FS25_Foo.zip"), b"MANAGED build").unwrap();
+        db::upsert_organized(
+            &conn,
+            &OrganizedRow {
+                tech_name: "FS25_Foo".into(),
+                file_name: "FS25_Foo.zip".into(),
+                kind: "zip".into(),
+                category: "Vehicles".into(),
+                subcategory: None,
+                active: true,
+            },
+        )
+        .unwrap();
+        std::fs::write(base.join("FS25_Foo.zip"), b"the user's swapped-in build").unwrap();
+
+        restore_projection(&conn, &base, "FS25_Foo.zip").unwrap();
+
+        assert_eq!(
+            std::fs::read(base.join("FS25_Foo.zip")).unwrap(),
+            b"MANAGED build",
+            "the flat slot is re-projected from the managed copy"
+        );
+        let baks: Vec<_> = std::fs::read_dir(base.join("backups"))
+            .unwrap()
+            .flatten()
+            .collect();
+        assert_eq!(baks.len(), 1, "the swapped-in build is backed up");
+        assert_eq!(
+            std::fs::read(baks[0].path()).unwrap(),
+            b"the user's swapped-in build"
+        );
+
+        let _ = std::fs::remove_dir_all(&base);
     }
 }
