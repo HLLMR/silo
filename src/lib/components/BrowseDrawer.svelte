@@ -266,12 +266,15 @@
     margin-bottom: 12px;
     display: block;
   }
+  /* Match the Library drawer's .d-meta spec sheet: label left, value right. */
   .facts {
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: 4px 12px;
+    gap: 6px 12px;
     margin: 0 0 12px;
-    font-size: 0.85rem;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+    font-size: 12.5px;
   }
   .facts dt {
     color: var(--text-muted);
@@ -279,6 +282,7 @@
   .facts dd {
     margin: 0;
     color: var(--text);
+    text-align: right;
   }
   .drawer-desc {
     color: var(--text);

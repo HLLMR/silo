@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ModEntry, CurationRow, Conflict, CatalogModDetail } from "../types";
   import { getModIcon, revealInFolder, catalogDetailByTech, openExternal } from "../api";
-  import { label as sourceLabel } from "../browse";
+  import { label as sourceLabel, loadCatalogImage } from "../browse";
   import { resizable } from "../resize";
   import ModStatus from "./ModStatus.svelte";
   import ModCuration from "./ModCuration.svelte";
@@ -107,6 +107,13 @@
       })
       .catch(() => {});
   });
+  // Catalog cover image, loaded the same way Browse does — so the two drawers share a header.
+  let cover = $state("");
+  $effect(() => {
+    const url = catalog?.imageUrl;
+    cover = "";
+    if (url) loadCatalogImage(url).then((u) => { if (catalog?.imageUrl === url) cover = u; });
+  });
   // True only when `latest` is *strictly newer* than `current` (segment-wise numeric compare,
   // same rule as the Rust `github::is_newer`). A merely-different — or older — catalog version
   // is NOT an update, so a locally-newer mod no longer reads as "update available".
@@ -137,11 +144,6 @@
 <div class="backdrop" style="top: var(--topbar-h, 0px)" onclick={onClose}></div>
 <aside class="drawer" use:resizable>
   <div class="d-top">
-    {#if icon}
-      <img class="d-icon" src={icon} alt="" />
-    {:else}
-      <div class="d-icon ph">{label.charAt(0).toUpperCase()}</div>
-    {/if}
     <div class="d-head">
       <div class="d-title">{label}</div>
       <div class="d-sub">
@@ -151,6 +153,12 @@
     </div>
     <button class="d-x" onclick={onClose} aria-label="Close">✕</button>
   </div>
+
+  {#if cover}
+    <img class="d-cover" src={cover} alt="" />
+  {:else if icon}
+    <img class="d-cover d-cover-sq" src={icon} alt="" />
+  {/if}
 
   <div class="d-actions">
     <button class="d-act" class:on={active} onclick={onToggleActive}>
@@ -328,21 +336,18 @@
     gap: 12px;
     align-items: flex-start;
   }
-  .d-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: var(--radius);
-    object-fit: cover;
-    flex: 0 0 auto;
-    background: var(--surface);
+  /* Cover image — matches the Browse drawer's .drawer-img so both drawers share a header. */
+  .d-cover {
+    width: 100%;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    margin-top: 12px;
+    display: block;
   }
-  .d-icon.ph {
-    display: grid;
-    place-items: center;
-    font-family: var(--font-display);
-    font-size: 24px;
-    color: var(--on-primary);
-    background: linear-gradient(135deg, var(--green-500), var(--green-700));
+  .d-cover-sq {
+    height: 120px;
+    object-fit: contain;
+    background: var(--surface-raised);
   }
   .d-head {
     flex: 1 1 auto;
