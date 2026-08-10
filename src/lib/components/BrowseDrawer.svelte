@@ -49,7 +49,16 @@
   {:else if detail}
     {@const d = detail}
     <div class="drawer-head">
-      <h3>{d.title}</h3>
+      <div class="dh-info">
+        <div class="dh-title">{d.title}</div>
+        {#if d.author || d.latestVersion}
+          <div class="dh-sub">
+            {#if d.author}{d.author}{/if}{#if d.author && d.latestVersion}
+              · {/if}{#if d.latestVersion}v{d.latestVersion.replace(/^v/i, "")}{/if}
+          </div>
+        {/if}
+        {#if d.techName}<div class="dh-tech tnum">{d.techName}</div>{/if}
+      </div>
       <button class="drawer-x" title="Close" onclick={onClose}>✕</button>
     </div>
     <div class="drawer-body">
@@ -57,10 +66,7 @@
         <img class="drawer-img" src={cover} alt="" />
       {/if}
       <dl class="facts">
-        {#if d.author}<dt>Author</dt><dd>{d.author}</dd>{/if}
-        {#if d.latestVersion}<dt>Version</dt><dd class="tnum">{d.latestVersion}</dd>{/if}
         {#if d.category}<dt>Category</dt><dd>{d.category}</dd>{/if}
-        {#if d.techName}<dt>Tech name</dt><dd class="mono">{d.techName}</dd>{/if}
         {#if d.trustScore != null}<dt>Trust</dt><dd class="tnum">{d.trustScore}/100</dd>{/if}
         {#if d.rating != null}
           <dt>Rating</dt>
@@ -209,18 +215,32 @@
   }
   .drawer-head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
     padding: 14px 16px;
     border-bottom: 1px solid var(--border);
   }
-  .drawer-head h3 {
-    margin: 0;
+  .dh-info {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .dh-title {
     font-family: var(--font-display);
-    font-size: 1.15rem;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.2;
     color: var(--text);
-    flex: 1;
-    line-height: 1.25;
+  }
+  .dh-sub {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .dh-tech {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    opacity: 0.75;
+    margin-top: 2px;
   }
   .drawer-x {
     border: none;
@@ -260,10 +280,6 @@
     margin: 0;
     color: var(--text);
   }
-  .mono {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.8rem;
-  }
   .drawer-desc {
     color: var(--text);
     font-size: 0.88rem;
@@ -290,12 +306,14 @@
   .read-more:hover {
     text-decoration: underline;
   }
+  /* Match the Library drawer's section labels so both read as one system. */
   .drawer-sec {
-    font-size: 0.72rem;
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
+    font-weight: 700;
     color: var(--text-muted);
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
   .drawer-tags {
     display: flex;
