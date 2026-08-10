@@ -11,7 +11,13 @@
       missingDeps: { mod: ModEntry; missing: string[] }[];
       corrupt: ModEntry[];
       ignored: ModEntry[];
-      foreign: { techName: string; fileName: string; kind: string }[];
+      foreign: {
+        techName: string;
+        fileName: string;
+        kind: string;
+        flatVersion: string | null;
+        managedVersion: string | null;
+      }[];
     };
     healthCount: number;
     onResolveForeign: (fileName: string, action: "adopt" | "restore") => Promise<void>;
@@ -82,25 +88,29 @@
       <div class="hz-row">
         <div class="hz-name tnum">{f.fileName}</div>
         <div class="hz-detail">
-          A file sits at this managed name that Silo didn't create — a build you swapped in, or a
-          leftover. Silo won't touch it, but the mod that loads here may not be the one you expect.
+          The file in your mods folder isn't the one Silo manages. Pick which build to keep —
+          the other is moved to <span class="tnum">backups/</span>, so nothing is lost.
+        </div>
+        <div class="hz-vers">
+          <span class="hz-ver">Mods folder: <b class="tnum">{f.flatVersion ? `v${f.flatVersion}` : "unknown"}</b></span>
+          <span class="hz-ver">Silo's copy: <b class="tnum">{f.managedVersion ? `v${f.managedVersion}` : "unknown"}</b></span>
         </div>
         <div class="hz-actions">
           <button
-            class="hz-btn primary"
+            class="hz-btn"
             disabled={busy === f.fileName}
-            title="Make the swapped-in file the mod's managed version (old copy kept in backups/)"
+            title="Adopt the file in your mods folder as the mod's managed version"
             onclick={() => resolve(f.fileName, "adopt")}
           >
-            Use this version
+            Keep the mods-folder file{f.flatVersion ? ` (v${f.flatVersion})` : ""}
           </button>
           <button
             class="hz-btn"
             disabled={busy === f.fileName}
-            title="Put Silo's managed copy back (your file kept in backups/)"
+            title="Restore Silo's managed copy over the file in your mods folder"
             onclick={() => resolve(f.fileName, "restore")}
           >
-            Restore Silo's copy
+            Keep Silo's copy{f.managedVersion ? ` (v${f.managedVersion})` : ""}
           </button>
         </div>
       </div>
@@ -178,6 +188,17 @@
     color: var(--warn);
     font-weight: 600;
   }
+  .hz-vers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .hz-ver b {
+    color: var(--text);
+  }
   .hz-actions {
     display: flex;
     gap: 8px;
@@ -196,11 +217,6 @@
   }
   .hz-btn:hover:not(:disabled) {
     border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
-  }
-  .hz-btn.primary {
-    border-color: var(--primary);
-    background: color-mix(in srgb, var(--primary) 14%, transparent);
-    color: var(--primary);
   }
   .hz-btn:disabled {
     opacity: 0.55;

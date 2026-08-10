@@ -68,6 +68,10 @@ export interface ForeignFile {
   techName: string;
   fileName: string;
   kind: string;
+  /** Version of the file in the mods folder (what "adopt" keeps). */
+  flatVersion: string | null;
+  /** Version of Silo's managed copy (what "restore" puts back). */
+  managedVersion: string | null;
 }
 
 /** Detect files squatting at an organized mod's name that Silo didn't create. */
