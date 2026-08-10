@@ -33,7 +33,9 @@
   });
 </script>
 
-<div class="card" class:owned={here}>
+<!-- Whole card opens the drawer (like the Library tiles); the source buttons stop propagation. -->
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+<div class="card" class:owned={here} onclick={onOpenDetail} title="Open details">
   <div class="thumb">
     {#if thumb}
       <img src={thumb} alt="" loading="lazy" />
@@ -97,7 +99,10 @@
             : s.installable
               ? `Install from ${label(s.source)}`
               : gatedReason(s.source)}
-          onclick={() => onUseSource(s)}
+          onclick={(e) => {
+            e.stopPropagation();
+            onUseSource(s);
+          }}
         >
           <span class="srcbtn-name">{shortLabel(s.source)}</span>
           {#if s.version}<span class="srcbtn-ver tnum">{s.version}</span>{/if}
@@ -106,12 +111,6 @@
       {:else}
         <span class="srcbar-none">No sources</span>
       {/each}
-    </div>
-    <div class="card-actions">
-      {#if here}<span class="card-owned">In library</span>{/if}
-      <button class="btn ghost" title="Show details and sources" onclick={onOpenDetail}>
-        Details
-      </button>
     </div>
   </div>
 </div>
@@ -125,6 +124,7 @@
     display: flex;
     flex-direction: column;
     box-shadow: var(--shadow-1);
+    cursor: pointer;
     transition: box-shadow 0.15s, transform 0.15s;
   }
   .card:hover {
@@ -308,36 +308,5 @@
   .srcbtn-icon {
     opacity: 0.7;
     font-size: 0.7rem;
-  }
-  .card-owned {
-    font-size: 0.75rem;
-    color: var(--primary);
-    font-weight: 600;
-    align-self: center;
-  }
-  .card-actions {
-    display: flex;
-    gap: 8px;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: 8px;
-  }
-  .btn {
-    flex: 1;
-    padding: 7px 10px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--text);
-    font: inherit;
-    font-size: 0.85rem;
-    cursor: pointer;
-  }
-  .btn.ghost {
-    flex: 0 0 auto;
-  }
-  .btn:disabled {
-    opacity: 0.55;
-    cursor: default;
   }
 </style>

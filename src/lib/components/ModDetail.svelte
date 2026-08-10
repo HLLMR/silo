@@ -107,9 +107,27 @@
       })
       .catch(() => {});
   });
-  const norm = (v: string) => v.replace(/^v/i, "").trim();
+  // True only when `latest` is *strictly newer* than `current` (segment-wise numeric compare,
+  // same rule as the Rust `github::is_newer`). A merely-different — or older — catalog version
+  // is NOT an update, so a locally-newer mod no longer reads as "update available".
+  function versionNewer(latest: string, current: string): boolean {
+    const seg = (s: string) =>
+      s
+        .replace(/^v/i, "")
+        .split(/[.\-+_]/)
+        .map((p) => parseInt(p, 10))
+        .filter((n) => Number.isFinite(n));
+    const a = seg(latest);
+    const b = seg(current);
+    for (let i = 0; i < Math.max(a.length, b.length); i++) {
+      const x = a[i] ?? 0;
+      const y = b[i] ?? 0;
+      if (x !== y) return x > y;
+    }
+    return false;
+  }
   const catalogNewer = $derived(
-    !!(catalog?.latestVersion && mod.version && norm(catalog.latestVersion) !== norm(mod.version)),
+    !!(catalog?.latestVersion && mod.version && versionNewer(catalog.latestVersion, mod.version)),
   );
   const summaryText = $derived((catalog?.descriptionFull || catalog?.description || "").trim());
   const summaryHasMore = $derived(summaryText.length > 420);
