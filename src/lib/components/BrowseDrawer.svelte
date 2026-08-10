@@ -11,7 +11,6 @@
     detailLoading,
     installingId,
     gh,
-    nexusConnected,
     installed,
     onClose,
     onUseSource,
@@ -22,7 +21,6 @@
     detailLoading: boolean;
     installingId: string | null;
     gh: { connected: boolean; canWrite: boolean };
-    nexusConnected: boolean;
     installed: Set<string>;
     onClose: () => void;
     onUseSource: (d: CatalogModDetail, s: ModSourceOption) => void;
@@ -146,14 +144,12 @@
             {/if}
           {/each}
           {#each nxSrcs as s (s.sourceUrl)}
-            {@const id = parseNexusId(s.sourceUrl)}
-            {#if id != null}
+            {#if parseNexusId(s.sourceUrl) != null}
               <NexusCard
-                modId={id}
                 version={s.version}
                 sourceUrl={s.sourceUrl}
-                connected={nexusConnected}
-                onConnect={() => onNeedAuth?.()}
+                downloads={s.downloads}
+                endorsements={s.endorsements}
               />
             {/if}
           {/each}

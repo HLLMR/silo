@@ -26,8 +26,6 @@ import type {
   UpdateInfo,
   GhStatus,
   RepoStats,
-  NexusStatus,
-  NexusModStats,
   DeviceCode,
   PollResult,
   BrowseMod,
@@ -39,6 +37,7 @@ import type {
   CatalogModDetail,
   CategoryCount,
   LogReport,
+  // (Nexus status/stats types removed with the API-key flow)
   BisectStep,
   BindingReport,
   MpModRef,
@@ -273,32 +272,8 @@ export function ghWatch(owner: string, repo: string, on: boolean): Promise<boole
   return invoke<boolean>("gh_watch", { owner, repo, on });
 }
 
-// ── Nexus source card (keyless reads + endorse via the user's own API key) ──
-export function nexusStatus(): Promise<NexusStatus> {
-  return invoke<NexusStatus>("nexus_status");
-}
-/** Verify + store a Nexus personal API key. Returns the account name. */
-export function nexusSetKey(key: string): Promise<string> {
-  return invoke<string>("nexus_set_key", { key });
-}
-export function nexusLogout(): Promise<void> {
-  return invoke("nexus_logout");
-}
-export function nexusModStats(modId: number): Promise<NexusModStats> {
-  return invoke<NexusModStats>("nexus_mod", { modId });
-}
-/** Full Nexus mod body (keyless), cleaned to readable text — for the description modal. */
-export function nexusModDescription(modId: number): Promise<string> {
-  return invoke<string>("nexus_description", { modId });
-}
-/** Endorse (on=true) / abstain the mod through the user's own Nexus account. */
-export function nexusEndorse(
-  modId: number,
-  on: boolean,
-  version?: string | null,
-): Promise<boolean> {
-  return invoke<boolean>("nexus_endorse", { modId, on, version: version ?? null });
-}
+// Nexus is index-only: the catalog (silo-api) provides its metadata and Silo links back to
+// the mod page for downloads. No live Nexus API calls, no personal API keys — per Nexus's AUP.
 
 /** Download a release .zip and install it in place (backs up the old file). */
 export function downloadUpdate(path: string, assetUrl: string): Promise<void> {

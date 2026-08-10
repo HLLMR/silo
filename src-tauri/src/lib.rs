@@ -16,7 +16,6 @@ pub mod logscan;
 pub mod moddesc;
 pub mod mpsync;
 pub mod net;
-pub mod nexus;
 pub mod organize;
 pub mod paths;
 pub mod provenance;
@@ -432,84 +431,9 @@ async fn gh_watch(
 
 // ── Nexus source card (keyless reads + endorse via the user's own API key) ──
 
-#[derive(serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-struct NexusStatus {
-    user: Option<String>,
-}
-
-#[tauri::command]
-fn nexus_status(app: tauri::AppHandle) -> Result<NexusStatus, String> {
-    let conn = db::open(&db_path(&app)?)?;
-    Ok(NexusStatus {
-        user: db::get_app_setting(&conn, "nexus_user"),
-    })
-}
-
-/// Verify + store a Nexus personal API key. Returns the account name.
-#[tauri::command]
-async fn nexus_set_key(app: tauri::AppHandle, key: String) -> Result<String, String> {
-    let db = db_path(&app)?;
-    tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
-        let key = key.trim().to_string();
-        if key.is_empty() {
-            return Err("Empty key".into());
-        }
-        let user = nexus::validate_key(&key)?;
-        let conn = db::open(&db)?;
-        secrets::set(&conn, "nexus_key", Some(&key))?;
-        db::set_app_setting(&conn, "nexus_user", Some(&user))?;
-        Ok(user)
-    })
-    .await
-    .map_err(|e| e.to_string())?
-}
-
-#[tauri::command]
-fn nexus_logout(app: tauri::AppHandle) -> Result<(), String> {
-    let conn = db::open(&db_path(&app)?)?;
-    secrets::set(&conn, "nexus_key", None)?;
-    db::set_app_setting(&conn, "nexus_user", None)?;
-    Ok(())
-}
-
-#[tauri::command]
-async fn nexus_mod(app: tauri::AppHandle, mod_id: u64) -> Result<nexus::NexusMod, String> {
-    let db = db_path(&app)?;
-    tauri::async_runtime::spawn_blocking(move || -> Result<nexus::NexusMod, String> {
-        let conn = db::open(&db)?;
-        let key = secrets::get(&conn, "nexus_key");
-        nexus::mod_stats(mod_id, key.as_deref())
-    })
-    .await
-    .map_err(|e| e.to_string())?
-}
-
-#[tauri::command]
-async fn nexus_endorse(
-    app: tauri::AppHandle,
-    mod_id: u64,
-    on: bool,
-    version: Option<String>,
-) -> Result<bool, String> {
-    let db = db_path(&app)?;
-    tauri::async_runtime::spawn_blocking(move || -> Result<bool, String> {
-        let conn = db::open(&db)?;
-        let key = secrets::get(&conn, "nexus_key")
-            .ok_or_else(|| "Add your Nexus API key first".to_string())?;
-        nexus::set_endorse(mod_id, &key, on, version.as_deref())
-    })
-    .await
-    .map_err(|e| e.to_string())?
-}
-
-/// Full Nexus mod body (keyless), cleaned to readable text — for the description modal.
-#[tauri::command]
-async fn nexus_description(mod_id: u64) -> Result<String, String> {
-    tauri::async_runtime::spawn_blocking(move || nexus::mod_description(mod_id))
-        .await
-        .map_err(|e| e.to_string())?
-}
+// Nexus is index-only (per its AUP): the silo-api catalog provides Nexus metadata and Silo
+// links back to the mod page. No live Nexus API calls and no personal API keys live in the
+// app anymore — the previous key-based connect/endorse commands were removed for compliance.
 
 #[tauri::command]
 async fn download_update(
@@ -2089,12 +2013,6 @@ pub fn run() {
             gh_star,
             gh_watch,
             gh_logout,
-            nexus_status,
-            nexus_set_key,
-            nexus_logout,
-            nexus_mod,
-            nexus_endorse,
-            nexus_description,
             download_update,
             siloapi_status,
             siloapi_set_base,

@@ -10,7 +10,7 @@
       text: string;
       url: string | null;
       loading: boolean;
-      source: "catalog" | "nexus" | "summary";
+      source: "catalog" | "summary";
     };
     onClose: () => void;
   } = $props();
@@ -35,9 +35,7 @@
   </div>
   <div class="modal-foot">
     <span class="modal-note">
-      {#if modal.source === "nexus"}
-        Full body from Nexus. Formatting, tables and images are on the mod page.
-      {:else if modal.source === "catalog"}
+      {#if modal.source === "catalog"}
         Full body from the catalog. The source page has the original formatting.
       {:else}
         Catalog summary — the full write-up lives on the mod's page.

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Nexus Mods is now strictly index-only, per Nexus's Acceptable Use Policy.** Removed the
+  "connect your Nexus account" flow, the personal-API-key storage, and mod endorsing, along with
+  every live Nexus API call the app made. Nexus metadata (downloads, endorsements, version) now
+  comes from the catalog, and Silo links back to the mod page for the download — it never queries
+  Nexus directly or handles a Nexus key. (Per-user features like endorsing will return later via
+  the sanctioned OAuth2 flow.)
+
 ### Added
 
 - **The Library's filter bar now has the same facet dropdowns as Browse** — **region · era ·

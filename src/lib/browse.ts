@@ -75,12 +75,8 @@ export function parseNexusId(url: string): number | null {
   return m ? Number(m[1]) : null;
 }
 
-/** Whether a "Read more" affordance is worth showing: a long summary, an ingested
- *  full body, or a Nexus source we can pull the full body from live. */
+/** Whether a "Read more" affordance is worth showing: an ingested full body, or a
+ *  summary long enough that a dedicated modal helps. */
 export function canExpand(d: CatalogModDetail): boolean {
-  return (
-    !!d.descriptionFull ||
-    (d.description != null && d.description.length > 160) ||
-    d.sources.some((s) => s.source === "nexus" && parseNexusId(s.sourceUrl))
-  );
+  return !!d.descriptionFull || (d.description != null && d.description.length > 160);
 }
