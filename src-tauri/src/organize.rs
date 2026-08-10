@@ -218,6 +218,72 @@ pub fn set_active(conn: &Connection, root: &Path, active: &HashSet<String>) -> R
     rep
 }
 
+/// Adopt the file the user swapped into the mods folder as the new canonical version: back
+/// up the old archived copy, promote the flat file into the archive, and (if the mod is
+/// active) re-project it so it's Silo-managed again. Reversible — the old copy is kept under
+/// `backups/`.
+pub fn adopt_foreign(conn: &Connection, root: &Path, file_name: &str) -> Result<(), String> {
+    crate::paths::safe_file_name(file_name).map_err(|e| e.to_string())?;
+    let row = db::load_organized(conn)
+        .into_iter()
+        .find(|r| r.file_name == file_name)
+        .ok_or_else(|| "Not a Silo-managed mod".to_string())?;
+    let flat = root.join(file_name);
+    if flat.symlink_metadata().is_err() {
+        return Err("No file in the mods folder to adopt".into());
+    }
+    let archive = archive_path(root, &row.category, file_name);
+    // Back up the old archived copy before replacing it.
+    if archive.exists() {
+        let bak = backup_path(root, file_name)?;
+        move_path(&archive, &bak).map_err(|e| format!("backup: {e}"))?;
+    } else if let Some(parent) = archive.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    // Promote the swapped-in file into the archive, then re-project it back into the root.
+    move_path(&flat, &archive).map_err(|e| format!("promote: {e}"))?;
+    if row.active {
+        make_link(&archive, &flat, &row.kind).map_err(|e| format!("re-project: {e}"))?;
+    }
+    Ok(())
+}
+
+/// Restore Silo's managed copy over a file the user swapped in: back up their file, then
+/// re-project the archived original (if the mod is active). Reversible — their file is kept
+/// under `backups/`.
+pub fn restore_projection(conn: &Connection, root: &Path, file_name: &str) -> Result<(), String> {
+    crate::paths::safe_file_name(file_name).map_err(|e| e.to_string())?;
+    let row = db::load_organized(conn)
+        .into_iter()
+        .find(|r| r.file_name == file_name)
+        .ok_or_else(|| "Not a Silo-managed mod".to_string())?;
+    let archive = archive_path(root, &row.category, file_name);
+    if !archive.exists() {
+        return Err("No archived copy to restore from".into());
+    }
+    let flat = root.join(file_name);
+    // Back up the user's file, then free the slot.
+    if flat.symlink_metadata().is_ok() {
+        let bak = backup_path(root, file_name)?;
+        move_path(&flat, &bak).map_err(|e| format!("backup: {e}"))?;
+    }
+    if row.active {
+        make_link(&archive, &flat, &row.kind).map_err(|e| format!("re-project: {e}"))?;
+    }
+    Ok(())
+}
+
+/// A timestamped, non-clobbering location under `backups/` for a file we're about to replace.
+fn backup_path(root: &Path, file_name: &str) -> Result<PathBuf, String> {
+    let dir = root.join("backups");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    Ok(dir.join(format!("{file_name}.{secs}.bak")))
+}
+
 /// Restore a vanilla flat `mods/`: remove every Silo link, move archived files back
 /// to the root, remove only empty archive directories (never an unrecognized file), and
 /// clear the manifest.
