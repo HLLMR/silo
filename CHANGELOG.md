@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The update check no longer runs automatically on launch.** On a large library the burst
+  of scan + catalog-tags + a whole-library update pass all completing at once, right as the
+  window opened, could make it briefly stop responding. The **“Needs update” filter now checks
+  on demand** — it's always clickable, and the first time you switch it on it runs a quiet
+  check and then filters (or tells you everything's current). Nothing surprising happens on open.
 - **Activating/deactivating a large library no longer looks like a crash.** A mod that was
   projected into the mods folder as a full **copy** (instead of a hardlink) forced every
   later activate/deactivate to `sha256` the whole file — on a big library that's gigabytes of

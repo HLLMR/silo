@@ -885,8 +885,23 @@
   let updatesOpen = $state(false);
   let updateChecking = $state(false);
   let updateResults = $state<UpdateRow[]>([]);
-  let updatesAutoChecked = false;
   const linkedCount = $derived(Object.keys(repoMap).length);
+
+  // "Needs update" is on-demand: the first time it's switched on it runs a quiet update check,
+  // then filters to whatever came back (or reports that everything's current). No launch-time work.
+  async function toggleNeedsUpdate() {
+    if (needsUpdateOnly) {
+      needsUpdateOnly = false;
+      return;
+    }
+    if (updateResults.length === 0 && !updateChecking) await checkAllUpdates(true);
+    if (availableUpdates.length > 0) {
+      needsUpdateOnly = true;
+    } else {
+      busy = "All mods are up to date";
+      setTimeout(() => (busy = null), 1600);
+    }
+  }
 
   async function checkAllUpdates(quiet = false) {
     if (!quiet) updatesOpen = true;
@@ -1264,12 +1279,9 @@
       // Catalog facet tags for the library (silo-api#9) — powers the facet dropdowns.
       // Fire-and-forget; the bar just shows no facets until it lands.
       void loadCatalogTags(r.mods.map((m) => m.techName));
-      // Populate the "Needs update" filter automatically on first load (quiet — no panel), so
-      // it isn't perpetually greyed until the user manually runs ⟳ Updates.
-      if (!updatesAutoChecked) {
-        updatesAutoChecked = true;
-        void checkAllUpdates(true);
-      }
+      // NOTE: the update check is NOT auto-run on launch — on a large library the burst of
+      // scan + catalog-tags + a whole-library update pass all landing at once could jank the
+      // window right after it opened. The "Needs update" toggle runs it on demand instead.
       // Re-read savegames too, so a Rescan picks up a save created since launch (they're
       // otherwise only loaded once on startup). Fire-and-forget; it handles its own errors.
       void loadSavegames();
@@ -1751,10 +1763,11 @@
         <button
           class="lib-tog lib-upd"
           class:on={needsUpdateOnly}
-          disabled={availableUpdates.length === 0}
-          onclick={() => (needsUpdateOnly = !needsUpdateOnly)}
+          disabled={updateChecking}
+          title="Show only mods with a newer version available — checks for updates the first time"
+          onclick={toggleNeedsUpdate}
         >
-          ⬆ Needs update{availableUpdates.length > 0 ? ` (${availableUpdates.length})` : ""}
+          {updateChecking ? "⬆ Checking…" : `⬆ Needs update${availableUpdates.length > 0 ? ` (${availableUpdates.length})` : ""}`}
         </button>
         {#if libFilterCount > 0}
           <button class="lib-clear" onclick={clearLibFilters}>Clear all ✕</button>
