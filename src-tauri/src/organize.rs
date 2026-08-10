@@ -843,7 +843,10 @@ mod tests {
             .flatten()
             .collect();
         assert_eq!(baks.len(), 1, "the old managed copy is backed up");
-        assert_eq!(std::fs::read(baks[0].path()).unwrap(), b"OLD archived build");
+        assert_eq!(
+            std::fs::read(baks[0].path()).unwrap(),
+            b"OLD archived build"
+        );
 
         let _ = std::fs::remove_dir_all(&base);
     }
