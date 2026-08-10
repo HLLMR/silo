@@ -909,6 +909,42 @@ async fn apply_organize(
     .map_err(|e| e.to_string())?
 }
 
+/// Adopt the file the user swapped into the mods folder as the mod's new canonical version
+/// (old copy kept under backups/). The caller should rescan afterward.
+#[tauri::command]
+async fn adopt_foreign_file(
+    app: tauri::AppHandle,
+    root: Option<String>,
+    file_name: String,
+) -> Result<(), String> {
+    let db = db_path(&app)?;
+    let root = primary_root(root)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
+        let conn = db::open(&db)?;
+        organize::adopt_foreign(&conn, &root, &file_name)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Restore Silo's managed copy over a file the user swapped in (their file kept under
+/// backups/). The caller should rescan afterward.
+#[tauri::command]
+async fn restore_foreign_file(
+    app: tauri::AppHandle,
+    root: Option<String>,
+    file_name: String,
+) -> Result<(), String> {
+    let db = db_path(&app)?;
+    let root = primary_root(root)?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
+        let conn = db::open(&db)?;
+        organize::restore_projection(&conn, &root, &file_name)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 async fn set_active(
     app: tauri::AppHandle,
@@ -2071,7 +2107,9 @@ pub fn run() {
             save_mod_settings_raw,
             app_version,
             secret_storage_secure,
-            detect_foreign_files
+            detect_foreign_files,
+            adopt_foreign_file,
+            restore_foreign_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running Silo");

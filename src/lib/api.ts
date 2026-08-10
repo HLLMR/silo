@@ -75,6 +75,17 @@ export function detectForeignFiles(root?: string): Promise<ForeignFile[]> {
   return invoke<ForeignFile[]>("detect_foreign_files", { root: root ?? null });
 }
 
+/** Adopt the file the user swapped into the mods folder as the mod's new canonical version
+ *  (old copy kept under backups/). Rescan afterward. */
+export function adoptForeignFile(fileName: string, root?: string): Promise<void> {
+  return invoke("adopt_foreign_file", { fileName, root: root ?? null });
+}
+
+/** Restore Silo's managed copy over a swapped-in file (their file kept under backups/). */
+export function restoreForeignFile(fileName: string, root?: string): Promise<void> {
+  return invoke("restore_foreign_file", { fileName, root: root ?? null });
+}
+
 export function scanMods(roots?: string[]): Promise<ScanResult> {
   return invoke<ScanResult>("scan_mods", { roots: roots ?? null });
 }

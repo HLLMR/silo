@@ -4,6 +4,7 @@
   let {
     health,
     healthCount,
+    onResolveForeign,
     onClose,
   }: {
     health: {
@@ -13,8 +14,19 @@
       foreign: { techName: string; fileName: string; kind: string }[];
     };
     healthCount: number;
+    onResolveForeign: (fileName: string, action: "adopt" | "restore") => Promise<void>;
     onClose: () => void;
   } = $props();
+
+  let busy = $state<string | null>(null);
+  async function resolve(fileName: string, action: "adopt" | "restore") {
+    busy = fileName;
+    try {
+      await onResolveForeign(fileName, action);
+    } finally {
+      busy = null;
+    }
+  }
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
@@ -72,6 +84,24 @@
         <div class="hz-detail">
           A file sits at this managed name that Silo didn't create — a build you swapped in, or a
           leftover. Silo won't touch it, but the mod that loads here may not be the one you expect.
+        </div>
+        <div class="hz-actions">
+          <button
+            class="hz-btn primary"
+            disabled={busy === f.fileName}
+            title="Make the swapped-in file the mod's managed version (old copy kept in backups/)"
+            onclick={() => resolve(f.fileName, "adopt")}
+          >
+            Use this version
+          </button>
+          <button
+            class="hz-btn"
+            disabled={busy === f.fileName}
+            title="Put Silo's managed copy back (your file kept in backups/)"
+            onclick={() => resolve(f.fileName, "restore")}
+          >
+            Restore Silo's copy
+          </button>
         </div>
       </div>
     {/each}
@@ -147,5 +177,33 @@
   .hz-dep {
     color: var(--warn);
     font-weight: 600;
+  }
+  .hz-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .hz-btn {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .hz-btn:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  }
+  .hz-btn.primary {
+    border-color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 14%, transparent);
+    color: var(--primary);
+  }
+  .hz-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
   }
 </style>

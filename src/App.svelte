@@ -38,6 +38,8 @@
     bisectSnapshotClear,
     appVersion,
     detectForeignFiles,
+    adoptForeignFile,
+    restoreForeignFile,
     type ForeignFile,
   } from "./lib/api";
   import { onOpenUrl, getCurrent } from "@tauri-apps/plugin-deep-link";
@@ -1531,7 +1533,21 @@
   {/if}
 
   {#if healthOpen}
-    <HealthPanel {health} {healthCount} onClose={() => (healthOpen = false)} />
+    <HealthPanel
+      {health}
+      {healthCount}
+      onResolveForeign={async (fileName, action) => {
+        try {
+          if (action === "adopt") await adoptForeignFile(fileName);
+          else await restoreForeignFile(fileName);
+          await runScan(false);
+          foreignFiles = await detectForeignFiles(roots[0]).catch(() => []);
+        } catch (e) {
+          errorMsg = String(e);
+        }
+      }}
+      onClose={() => (healthOpen = false)}
+    />
   {/if}
 
   {#if logOpen}
