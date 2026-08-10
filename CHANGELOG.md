@@ -7,57 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- **Nexus Mods is now strictly index-only, per Nexus's Acceptable Use Policy.** Removed the
-  "connect your Nexus account" flow, the personal-API-key storage, and mod endorsing, along with
-  every live Nexus API call the app made. Nexus metadata (downloads, endorsements, version) now
-  comes from the catalog, and Silo links back to the mod page for the download — it never queries
-  Nexus directly or handles a Nexus key. (Per-user features like endorsing will return later via
-  the sanctioned OAuth2 flow.)
+## [0.7.0] - 2026-08-10
 
 ### Added
 
-- **The Library's filter bar now has the same facet dropdowns as Browse** — **region · era ·
-  theme · brand · realism** — built from your installed mods' catalog tags (fetched in one batch
-  on scan) and filtered entirely client-side. Combined with the parent/subcategory category
-  dropdowns (whose "all of a parent" option now works catalog-side too), the Library and Browse
-  filter the same way.
 - **A landscape tile view for the Library** (now the default; toggle back to the compact list
   from the toolbar). Two widescreen tiles per row: a square icon, the title / author / version /
   size / verified / update flag with favorite-hidden-flagged actions, and a pill footer for the
   category and type. Click anywhere on a tile to open its drawer (no more Details button), it
   lifts on hover, and an **active mod gets a bright-green border and a green on/off switch** in
   its header that parks or activates it.
+- **Silo detects which mods have settings by looking inside them** — not just the ones that
+  have already been run. It scans each mod for a shipped settings XML or Lua that persists to
+  `modSettings/`, lifting detection from ~1 mod (only what had a runtime folder) to well over a
+  hundred. Two new Library filters use it: **⚙ Has settings** and **⬆ Needs update** (next to
+  Favorites / Flagged / In-conflict). The detail drawer badges a detected-but-not-yet-editable
+  mod as "has settings — launch once to configure."
+- **The Library's filter bar has the same facet dropdowns as Browse** — **region · era · theme
+  · brand · realism** — built from your installed mods' catalog tags (fetched in one batch on
+  scan) and filtered entirely client-side.
 
 ### Changed
 
-- **The Library uses the same search/filter bar as Browse.** Category (now a parent +
-  subcategory pair), search, and sort — with a working ascending/descending toggle and a
-  "recently added" default — live in one shared bar, with a second row for the library-only
-  filters (Favorites · Hidden · Flagged · In-conflict · Has-settings · Needs-update). The old
-  left category rail is gone (folded into the category dropdowns), the list now matches Browse's
-  content width, and the stats + tools (diagnose / bindings / bridge) sit in a content-width
-  footer that floats over the scrolling list.
-
+- **One unified search/filter bar across Browse and the Library.** Category (a parent +
+  subcategory pair, whose "all of a parent" option now works catalog-side), search, sort (with a
+  working ascending/descending toggle and a "recently added" default), and the semantic facets
+  all live in one shared two-line bar on both screens. On the Library it adds a second row for the
+  library-only filters (Favorites · Hidden · Flagged · In-conflict · Has-settings · Needs-update);
+  the old left category rail is gone, the list matches Browse's content width, and the stats +
+  tools (diagnose / bindings / bridge) now sit in a content-width footer that floats over the
+  scrolling list.
 - **Browse caches each view, so going back to one is instant.** Revisiting a filter/sort combo
   you've already loaded no longer re-polls the catalog — results (and everything you'd paged in)
   come straight from an in-session cache.
-- **Browse has a unified two-line filter bar.** The controls are now one organized bar: top
-  line is **category (parent · subcategory) · search · sort · direction**, bottom line is the
-  semantic facets (**region · era · theme · brand · realism**) · **year** · **Clear all**.
-  Category is split into a parent dropdown and a subcategory dropdown (shown when the parent
-  has children), and the header spans the full content width instead of stopping mid-page.
-
-### Added
-
-- **Silo now detects which mods have settings by looking inside them** — not just the ones
-  that have already been run. It scans each mod for a shipped settings XML or Lua that
-  persists to `modSettings/`, lifting detection from ~1 mod (only what had a runtime folder)
-  to well over a hundred. Two new Library filters use it: **⚙ Has settings** and
-  **⬆ Needs update** (join the ⚙/⟳ toggles next to Favorites / Flagged / In-conflict). The
-  detail drawer badges a detected-but-not-yet-editable mod as "has settings — launch once
-  to configure."
+- **Nexus Mods is now strictly index-only, per Nexus's Acceptable Use Policy.** Removed the
+  "connect your Nexus account" flow, the personal-API-key storage, and mod endorsing, along with
+  every live Nexus API call the app made. Nexus metadata now comes from the catalog, and Silo
+  links back to the mod page for the download — it never queries Nexus directly or handles a key.
+  (Per-user features like endorsing will return later via the sanctioned OAuth2 flow.)
 
 ## [0.6.0] - 2026-08-06
 
