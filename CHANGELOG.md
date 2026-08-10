@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Activating/deactivating a large library no longer looks like a crash.** A mod that was
+  projected into the mods folder as a full **copy** (instead of a hardlink) forced every
+  later activate/deactivate to `sha256` the whole file — on a big library that's gigabytes of
+  hashing with no progress bar, which read as a frozen app. The active-set now reconciles
+  against disk after a bulk change so the view can't drift out of sync with the folder.
+
+### Added
+
+- **Settings → “Optimize links (reclaim space)”** — collapses any active mod that was projected
+  as a byte-for-byte copy back into a hardlink to its archived copy. Reclaims the duplicated
+  space and makes future activate/deactivate instant. Progress-reported, and safe by
+  construction: it only touches a file byte-identical to the archived copy, never a build you
+  swapped in yourself.
+
 ## [0.7.0] - 2026-08-10
 
 ### Added

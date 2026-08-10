@@ -40,6 +40,8 @@
     detectForeignFiles,
     adoptForeignFile,
     restoreForeignFile,
+    relinkProjections,
+    onRelinkProgress,
     type ForeignFile,
   } from "./lib/api";
   import { onOpenUrl, getCurrent } from "@tauri-apps/plugin-deep-link";
@@ -1176,12 +1178,55 @@
     }
     activeSet = next;
     busy = active ? "Activating…" : "Deactivating…";
+    let problem: string | null = null;
     try {
-      await applyActive([...next]);
+      const rep = await applyActive([...next]);
+      if (rep.errors.length) problem = rep.errors.slice(0, 3).join("; ");
     } catch (e) {
-      errorMsg = String(e);
+      problem = String(e);
     }
     busy = null;
+    // Reconcile the optimistic set against what's actually on disk — a partial/failed projection
+    // (e.g. a file Silo couldn't prove was its own) leaves the two out of sync otherwise.
+    await runScan(false);
+    if (problem) errorMsg = problem; // runScan clears errorMsg — restore what the projection said
+  }
+
+  // Repair copy-projections into hardlinks: reclaims the duplicated space and makes future
+  // activate/deactivate O(1) instead of a full-library content hash. Progress-reported so a
+  // large one-time pass shows a bar instead of looking frozen.
+  async function optimizeLinks() {
+    settingsOpen = false;
+    let unlisten: (() => void) | null = null;
+    let done = "";
+    let problem: string | null = null;
+    try {
+      unlisten = await onRelinkProgress((d, total) => {
+        busy = `Optimizing links… ${d}/${total}`;
+      });
+      busy = "Optimizing links…";
+      const rep = await relinkProjections();
+      if (rep.errors.length) problem = rep.errors.slice(0, 3).join("; ");
+      const gb = rep.reclaimedBytes / 1024 ** 3;
+      const freed =
+        gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(rep.reclaimedBytes / 1024 ** 2)} MB`;
+      done =
+        rep.upgraded > 0
+          ? `Optimized ${rep.upgraded} mod${rep.upgraded === 1 ? "" : "s"} — reclaimed ${freed}`
+          : "Links already optimized — nothing to reclaim";
+    } catch (e) {
+      problem = String(e);
+    } finally {
+      unlisten?.();
+    }
+    await runScan(false); // reconcile + refresh sizes; also clears errorMsg
+    if (problem) errorMsg = problem;
+    if (done) {
+      busy = done;
+      setTimeout(() => (busy = null), 2600);
+    } else {
+      busy = null;
+    }
   }
 
   const stats = $derived.by(() => {
@@ -1454,6 +1499,7 @@
         settingsOpen = false;
         restoreVanilla();
       }}
+      onOptimizeLinks={optimizeLinks}
       onClose={() => (settingsOpen = false)}
     />
   {/if}

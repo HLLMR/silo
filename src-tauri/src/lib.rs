@@ -962,6 +962,27 @@ async fn set_active(
     .map_err(|e| e.to_string())?
 }
 
+/// Repair copy-projections into hardlinks (reclaims duplicated space, makes activate/deactivate
+/// O(1)). Emits `relink-progress` `(done, total)` events so the UI can show a bar during the
+/// one-time hash-and-relink of a large library.
+#[tauri::command]
+async fn relink_projections(
+    app: tauri::AppHandle,
+    root: Option<String>,
+) -> Result<organize::RelinkReport, String> {
+    let db = db_path(&app)?;
+    let root = primary_root(root)?;
+    let emitter = app.clone();
+    tauri::async_runtime::spawn_blocking(move || -> Result<organize::RelinkReport, String> {
+        let conn = db::open(&db)?;
+        Ok(organize::relink_projections(&conn, &root, |done, total| {
+            let _ = emitter.emit("relink-progress", (done, total));
+        }))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 async fn flatten(app: tauri::AppHandle, root: Option<String>) -> Result<organize::Report, String> {
     let db = db_path(&app)?;
@@ -2109,7 +2130,8 @@ pub fn run() {
             secret_storage_secure,
             detect_foreign_files,
             adopt_foreign_file,
-            restore_foreign_file
+            restore_foreign_file,
+            relink_projections
         ])
         .run(tauri::generate_context!())
         .expect("error while running Silo");

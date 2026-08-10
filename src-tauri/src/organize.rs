@@ -58,6 +58,21 @@ pub struct Report {
     pub errors: Vec<String>,
 }
 
+/// Result of the link-repair pass — how many copy-projections were deduped into hardlinks.
+#[derive(Debug, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RelinkReport {
+    /// Copy-projections converted to hardlinks.
+    pub upgraded: usize,
+    /// Already a hardlink/symlink to the archive — nothing to do.
+    pub already_linked: usize,
+    /// Left untouched: no archived twin, cross-volume, or the user's own (different) file.
+    pub skipped: usize,
+    /// Bytes reclaimed by collapsing duplicate copies into shared hardlinks.
+    pub reclaimed_bytes: u64,
+    pub errors: Vec<String>,
+}
+
 /// Windows-invalid path chars → underscore (spaces and `&` are fine in folder names).
 fn sanitize(category: &str) -> String {
     category
@@ -216,6 +231,104 @@ pub fn set_active(conn: &Connection, root: &Path, active: &HashSet<String>) -> R
         }
     }
     rep
+}
+
+/// Repair copy-projections into hardlinks. A projection that was written as a byte-for-byte
+/// **copy** (rather than a hardlink — e.g. the flat file pre-existed so `set_active` never
+/// linked it) wastes the mod's bytes twice and, worse, forces every later activate/deactivate
+/// to `sha256` the whole file to prove it's Silo's. Collapsing each such copy into a hardlink
+/// to its archived twin reclaims the space and makes identity checks O(1) forever after.
+///
+/// Only ever touches a flat file that is **byte-identical** to the archive copy on the same
+/// volume — never the user's own replacement build. Crash-safe: hardlink to a temp sibling,
+/// then atomically rename over the flat file (both the old copy and the new hardlink hold the
+/// same bytes, so an interruption at any point leaves a valid file). `progress(done, total)`
+/// is called once per active zip examined so a long pass can show a bar instead of a freeze.
+pub fn relink_projections(
+    conn: &Connection,
+    root: &Path,
+    mut progress: impl FnMut(usize, usize),
+) -> RelinkReport {
+    let mut rep = RelinkReport::default();
+    // Only active zips can be projected as a plain file; dir projections are marker-identified
+    // and cheap already, so they never need repair.
+    let rows: Vec<OrganizedRow> = db::load_organized(conn)
+        .into_iter()
+        .filter(|r| r.active && r.kind == "zip")
+        .collect();
+    let total = rows.len();
+    for (i, row) in rows.into_iter().enumerate() {
+        progress(i, total);
+        let flat = root.join(&row.file_name);
+        let src = archive_path(root, &row.category, &row.file_name);
+        let Ok(fmeta) = flat.symlink_metadata() else {
+            rep.skipped += 1;
+            continue;
+        };
+        if fmeta.file_type().is_symlink() || !src.exists() {
+            rep.skipped += 1;
+            continue;
+        }
+        // Already sharing the archive's file id → a hardlink, nothing to reclaim.
+        if let (Ok(a), Ok(b)) = (
+            same_file::Handle::from_path(&flat),
+            same_file::Handle::from_path(&src),
+        ) {
+            if a == b {
+                rep.already_linked += 1;
+                continue;
+            }
+        }
+        match same_bytes(&flat, &src) {
+            Ok(true) => match relink_over(&src, &flat) {
+                Ok(()) => {
+                    rep.upgraded += 1;
+                    rep.reclaimed_bytes += fmeta.len();
+                }
+                Err(e) => rep.errors.push(format!("{}: relink: {e}", row.tech_name)),
+            },
+            // Distinct bytes → the user swapped in their own build; leave it untouched.
+            Ok(false) => rep.skipped += 1,
+            Err(e) => rep.errors.push(format!("{}: compare: {e}", row.tech_name)),
+        }
+    }
+    progress(total, total);
+    rep
+}
+
+/// Byte-equal? Cheap size gate first, then a content hash of each.
+fn same_bytes(a: &Path, b: &Path) -> std::io::Result<bool> {
+    let (ma, mb) = (std::fs::metadata(a)?, std::fs::metadata(b)?);
+    if ma.len() != mb.len() {
+        return Ok(false);
+    }
+    Ok(
+        match (
+            crate::provenance::sha256_file(a),
+            crate::provenance::sha256_file(b),
+        ) {
+            (Ok(x), Ok(y)) => x == y,
+            _ => false,
+        },
+    )
+}
+
+/// Atomically replace `flat` with a hardlink to `src`. Hardlink to a temp sibling in the same
+/// directory (fails on a different volume, leaving `flat` untouched), then rename over `flat`.
+fn relink_over(src: &Path, flat: &Path) -> std::io::Result<()> {
+    let tmp = flat.with_file_name(format!(
+        "{}.silo-relink-tmp",
+        flat.file_name().and_then(|n| n.to_str()).unwrap_or("mod")
+    ));
+    let _ = std::fs::remove_file(&tmp);
+    std::fs::hard_link(src, &tmp)?;
+    match std::fs::rename(&tmp, flat) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            let _ = std::fs::remove_file(&tmp);
+            Err(e)
+        }
+    }
 }
 
 /// Adopt the file the user swapped into the mods folder as the new canonical version: back
@@ -889,6 +1002,92 @@ mod tests {
         assert_eq!(
             std::fs::read(baks[0].path()).unwrap(),
             b"the user's swapped-in build"
+        );
+
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn relink_collapses_a_byte_identical_copy_into_a_hardlink() {
+        let base = std::env::temp_dir().join(format!("silo_relink_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).unwrap();
+        let conn = db::open(&base.join("silo.db")).unwrap();
+        let cat = base.join(ARCHIVE).join("Vehicles");
+        std::fs::create_dir_all(&cat).unwrap();
+        let bytes = b"PK\x03\x04 the canonical archived mod";
+        std::fs::write(cat.join("FS25_Foo.zip"), bytes).unwrap();
+        db::upsert_organized(
+            &conn,
+            &OrganizedRow {
+                tech_name: "FS25_Foo".into(),
+                file_name: "FS25_Foo.zip".into(),
+                kind: "zip".into(),
+                category: "Vehicles".into(),
+                subcategory: None,
+                active: true,
+            },
+        )
+        .unwrap();
+        // A COPY projection: same bytes, distinct file id (what set_active leaves when the
+        // flat file pre-existed).
+        let flat = base.join("FS25_Foo.zip");
+        std::fs::write(&flat, bytes).unwrap();
+        assert_ne!(
+            same_file::Handle::from_path(&flat).unwrap(),
+            same_file::Handle::from_path(cat.join("FS25_Foo.zip")).unwrap(),
+            "precondition: the copy is a distinct file"
+        );
+
+        let rep = relink_projections(&conn, &base, |_, _| {});
+
+        assert_eq!(rep.upgraded, 1);
+        assert_eq!(rep.reclaimed_bytes, bytes.len() as u64);
+        assert!(rep.errors.is_empty(), "no errors: {:?}", rep.errors);
+        // Now provably Silo's hardlink → cheap to identify, and content preserved.
+        assert!(is_silo_projection(&flat, &cat.join("FS25_Foo.zip"), "zip"));
+        assert_eq!(std::fs::read(&flat).unwrap(), bytes);
+
+        // Idempotent: a second pass finds it already linked, changes nothing.
+        let rep2 = relink_projections(&conn, &base, |_, _| {});
+        assert_eq!(rep2.upgraded, 0);
+        assert_eq!(rep2.already_linked, 1);
+
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn relink_never_touches_the_users_own_replacement() {
+        let base = std::env::temp_dir().join(format!("silo_relink_skip_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).unwrap();
+        let conn = db::open(&base.join("silo.db")).unwrap();
+        let cat = base.join(ARCHIVE).join("Vehicles");
+        std::fs::create_dir_all(&cat).unwrap();
+        std::fs::write(cat.join("FS25_Foo.zip"), b"MANAGED build").unwrap();
+        db::upsert_organized(
+            &conn,
+            &OrganizedRow {
+                tech_name: "FS25_Foo".into(),
+                file_name: "FS25_Foo.zip".into(),
+                kind: "zip".into(),
+                category: "Vehicles".into(),
+                subcategory: None,
+                active: true,
+            },
+        )
+        .unwrap();
+        let flat = base.join("FS25_Foo.zip");
+        std::fs::write(&flat, b"the user's OWN different build").unwrap();
+
+        let rep = relink_projections(&conn, &base, |_, _| {});
+
+        assert_eq!(rep.upgraded, 0);
+        assert_eq!(rep.skipped, 1, "a different file is left untouched");
+        assert_eq!(
+            std::fs::read(&flat).unwrap(),
+            b"the user's OWN different build",
+            "the user's file must be preserved byte-for-byte"
         );
 
         let _ = std::fs::remove_dir_all(&base);

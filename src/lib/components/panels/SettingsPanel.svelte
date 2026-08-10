@@ -33,6 +33,7 @@
     onOrganize,
     onRebuild,
     onRestoreVanilla,
+    onOptimizeLinks,
     onClose,
   }: {
     theme: "system" | "light" | "dark";
@@ -52,6 +53,7 @@
     onOrganize: () => void;
     onRebuild: () => void;
     onRestoreVanilla: () => void;
+    onOptimizeLinks: () => void;
     onClose: () => void;
   } = $props();
 </script>
@@ -183,6 +185,21 @@
       Rebuild re-scans every mod from scratch — use it after a Silo update improves
       categorization, so existing mods pick up the better categories.
     </div>
+    {#if organizedCount > 0}
+      <button
+        class="set-btn"
+        style="margin-top:10px;width:100%"
+        onclick={onOptimizeLinks}
+        disabled={!!busy || scanning}
+      >
+        ⛓ Optimize links (reclaim space)
+      </button>
+      <div class="set-hint" style="margin-top:8px">
+        Collapses any active mod that was projected as a full copy (rather than a hardlink) back
+        into a hardlink — frees the duplicated space and makes activating/deactivating instant.
+        Safe: only touches files byte-identical to the archived copy, never a build you swapped in.
+      </div>
+    {/if}
     {#if organizedCount > 0}
       <button
         class="set-danger"
