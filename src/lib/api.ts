@@ -90,6 +90,30 @@ export function restoreForeignFile(fileName: string, root?: string): Promise<voi
   return invoke("restore_foreign_file", { fileName, root: root ?? null });
 }
 
+/** Outcome of a link-repair pass. */
+export interface RelinkReport {
+  /** Copy-projections collapsed into hardlinks. */
+  upgraded: number;
+  /** Already a hardlink — nothing to do. */
+  alreadyLinked: number;
+  /** Left untouched (no archive twin, cross-volume, or the user's own build). */
+  skipped: number;
+  /** Bytes reclaimed by deduping copies into shared hardlinks. */
+  reclaimedBytes: number;
+  errors: string[];
+}
+
+/** Repair active copy-projections into hardlinks — reclaims duplicated space and makes future
+ *  activate/deactivate instant. Emits `relink-progress` `[done, total]` events while it runs. */
+export function relinkProjections(root?: string): Promise<RelinkReport> {
+  return invoke<RelinkReport>("relink_projections", { root: root ?? null });
+}
+
+/** Subscribe to link-repair progress. Returns an unlisten fn. */
+export function onRelinkProgress(cb: (done: number, total: number) => void): Promise<UnlistenFn> {
+  return listen<[number, number]>("relink-progress", (e) => cb(e.payload[0], e.payload[1]));
+}
+
 export function scanMods(roots?: string[]): Promise<ScanResult> {
   return invoke<ScanResult>("scan_mods", { roots: roots ?? null });
 }
