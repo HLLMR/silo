@@ -2018,10 +2018,17 @@ fn secret_storage_secure() -> bool {
 /// Files in the flat mods root that occupy an organized mod's name but aren't Silo's projection
 /// (a build the user swapped in, a leftover, etc.). Silo never deletes them, but surfaces them
 /// so the user knows their intended mod isn't what will load from that name.
+// MUST be async + spawn_blocking: it hashes any flat file that isn't provably Silo's hardlink
+// (copy-projections force a full content hash), which on a large library is gigabytes of I/O.
+// A synchronous command runs on the main thread and would freeze the window ("Not Responding").
 #[tauri::command]
-fn detect_foreign_files(root: Option<String>) -> Result<Vec<organize::ForeignFile>, String> {
+async fn detect_foreign_files(root: Option<String>) -> Result<Vec<organize::ForeignFile>, String> {
     let root = primary_root(root)?;
-    Ok(organize::detect_foreign_projections(&root))
+    tauri::async_runtime::spawn_blocking(move || -> Result<Vec<organize::ForeignFile>, String> {
+        Ok(organize::detect_foreign_projections(&root))
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

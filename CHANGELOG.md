@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Foreign-file detection no longer freezes the window.** The `detect_foreign_files` command
+  was synchronous, so it ran on the UI thread — and to tell a swapped-in file from Silo's own
+  copy it content-hashes anything that isn't a provable hardlink. On a library projected as
+  copies that's gigabytes of hashing on the main thread, every scan, which showed as
+  "Not Responding" on launch. It now runs off-thread. (Running **Optimize links** removes the
+  hashing entirely, since hardlinks are identified instantly.)
 - **The update check no longer runs automatically on launch.** On a large library the burst
   of scan + catalog-tags + a whole-library update pass all completing at once, right as the
   window opened, could make it briefly stop responding. The **“Needs update” filter now checks
