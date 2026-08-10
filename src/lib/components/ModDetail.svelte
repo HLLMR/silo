@@ -26,6 +26,7 @@
     onToggle: (flag: Flag) => void;
     onToggleActive: () => void;
     onOpenSettings: () => void;
+    onFindInBrowse: () => void;
     onCurationChange: (row: CurationRow) => void;
     onTagsChange: (tags: string[]) => void;
     onFilterTag: (tag: string) => void;
@@ -50,6 +51,7 @@
     onToggle,
     onToggleActive,
     onOpenSettings,
+    onFindInBrowse,
     onCurationChange,
     onTagsChange,
     onFilterTag,
@@ -184,6 +186,7 @@
         ⚙ Has settings
       </button>
     {/if}
+    <button class="d-act" onclick={onFindInBrowse}>⌕ Find in Browse</button>
     <button class="d-act" onclick={() => revealInFolder(mod.path).catch(() => {})}>
       📂 Reveal
     </button>
