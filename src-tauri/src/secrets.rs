@@ -8,7 +8,7 @@
 //!   we fall back to the SQLite setting so the feature still works. That's no worse than
 //!   before; everywhere with a keychain (all Windows/macOS, most Linux) is now secure.
 //!
-//! Only genuine secrets (`gh_token`, `nexus_key`) go through here. Non-secret flags like
+//! Only genuine secrets (e.g. `gh_token`) go through here. Non-secret flags like
 //! `gh_write` stay in `app_setting`.
 
 use crate::db;
