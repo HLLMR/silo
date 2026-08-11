@@ -16,6 +16,7 @@
     onUseSource,
     onOpenDesc,
     onNeedAuth,
+    onFindInLibrary,
   }: {
     detail: CatalogModDetail | null;
     detailLoading: boolean;
@@ -26,11 +27,21 @@
     onUseSource: (d: CatalogModDetail, s: ModSourceOption) => void;
     onOpenDesc: (d: CatalogModDetail) => void;
     onNeedAuth?: () => void;
+    onFindInLibrary?: (techName: string) => void;
   } = $props();
 
   function hasLocally(d: CatalogModDetail): boolean {
     return d.techName != null && installed.has(d.techName);
   }
+
+  // The drawer is non-modal (clicks fall through to the grid), so Escape is the click-away close.
+  $effect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   // Cover loads through the Rust proxy (data: URL) — the CDN needs a referer.
   let cover = $state("");
@@ -179,7 +190,14 @@
         </p>
       {/if}
       {#if hasLocally(d)}
-        <div class="drawer-owned">Already in your library</div>
+        <div class="drawer-owned">
+          <span>Already in your library</span>
+          {#if d.techName && onFindInLibrary}
+            <button class="find-lib-btn" onclick={() => onFindInLibrary?.(d.techName!)}>
+              ⌕ Find in Library ↗
+            </button>
+          {/if}
+        </div>
       {/if}
     </div>
   {/if}
@@ -196,7 +214,10 @@
     position: fixed;
     inset: 0;
     top: var(--topbar-h, 0px);
-    background: rgba(0, 0, 0, 0.35);
+    background: rgba(0, 0, 0, 0.15);
+    /* Non-modal: let clicks fall through to the catalog grid so clicking another card switches
+       the drawer to that mod. Close via the ✕ or Escape instead of clicking away. */
+    pointer-events: none;
     z-index: 40;
   }
   .drawer {
@@ -416,9 +437,27 @@
     margin: 0 0 12px;
   }
   .drawer-owned {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
     text-align: center;
     color: var(--text-muted);
     font-size: 0.85rem;
     padding: 8px;
+  }
+  .find-lib-btn {
+    border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--border));
+    background: var(--surface);
+    color: var(--primary);
+    font: inherit;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .find-lib-btn:hover {
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    border-color: var(--primary);
   }
 </style>
