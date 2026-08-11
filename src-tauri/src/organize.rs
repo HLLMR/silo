@@ -70,7 +70,28 @@ pub struct RelinkReport {
     pub skipped: usize,
     /// Bytes reclaimed by collapsing duplicate copies into shared hardlinks.
     pub reclaimed_bytes: u64,
+    /// The mods folder's filesystem rejects hardlinks (a cloud-sync provider — OneDrive /
+    /// Google Drive / Proton Drive). Silo uses copies there; there's nothing to optimize.
+    pub hardlinks_unsupported: bool,
     pub errors: Vec<String>,
+}
+
+/// Whether the flat root supports hardlinks. Cloud-sync providers (OneDrive, Google Drive,
+/// Proton Drive) present `Documents` as on-demand placeholders and reject hardlinks with
+/// `ERROR_CLOUD_FILE_INCOMPATIBLE_HARDLINKS` (os error 396); Silo falls back to copy-projections
+/// there. Cheap probe: write a tiny temp file and try to hardlink it beside itself.
+pub fn supports_hardlinks(root: &Path) -> bool {
+    let a = root.join(".silo-hardlink-probe");
+    let b = root.join(".silo-hardlink-probe.link");
+    let _ = std::fs::remove_file(&a);
+    let _ = std::fs::remove_file(&b);
+    if std::fs::write(&a, b"silo").is_err() {
+        return false; // can't write a probe — don't attempt links we can't clean up
+    }
+    let ok = std::fs::hard_link(&a, &b).is_ok();
+    let _ = std::fs::remove_file(&a);
+    let _ = std::fs::remove_file(&b);
+    ok
 }
 
 /// Windows-invalid path chars → underscore (spaces and `&` are fine in folder names).
@@ -250,6 +271,12 @@ pub fn relink_projections(
     mut progress: impl FnMut(usize, usize),
 ) -> RelinkReport {
     let mut rep = RelinkReport::default();
+    // On a cloud-synced folder hardlinks are impossible — every attempt would error 396. Report
+    // the situation cleanly instead of grinding out one failure per mod.
+    if !supports_hardlinks(root) {
+        rep.hardlinks_unsupported = true;
+        return rep;
+    }
     // Only active zips can be projected as a plain file; dir projections are marker-identified
     // and cheap already, so they never need repair.
     let rows: Vec<OrganizedRow> = db::load_organized(conn)
@@ -1082,6 +1109,8 @@ mod tests {
 
         let rep = relink_projections(&conn, &base, |_, _| {});
 
+        // (This machine's temp dir supports hardlinks, so the cloud short-circuit is off here.)
+        assert!(!rep.hardlinks_unsupported);
         assert_eq!(rep.upgraded, 0);
         assert_eq!(rep.skipped, 1, "a different file is left untouched");
         assert_eq!(

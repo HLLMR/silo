@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Cloud-synced mods folders are now detected and handled.** OneDrive, Google Drive, and
+  Proton Drive present `Documents` as on-demand placeholders that reject hardlinks, so Silo
+  projects the active set as copies there. Silo now probes for hardlink support, shows a
+  one-time notice explaining the trade-off (more disk, slower bulk changes; exclude the folder
+  from cloud sync for best performance), and **“Optimize links” recognizes the situation** and
+  says so instead of throwing an error per mod.
+
 ### Fixed
 
 - **Foreign-file detection no longer freezes the window.** The `detect_foreign_files` command

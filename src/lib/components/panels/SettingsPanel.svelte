@@ -24,6 +24,7 @@
     autoFileNew,
     organizedCount,
     unorganizedCount,
+    cloudSynced,
     busy,
     scanning,
     onSetTheme,
@@ -44,6 +45,7 @@
     autoFileNew: boolean;
     organizedCount: number;
     unorganizedCount: number;
+    cloudSynced: boolean;
     busy: string | null;
     scanning: boolean;
     onSetTheme: (t: "system" | "light" | "dark") => void;
@@ -185,7 +187,14 @@
       Rebuild re-scans every mod from scratch — use it after a Silo update improves
       categorization, so existing mods pick up the better categories.
     </div>
-    {#if organizedCount > 0}
+    {#if organizedCount > 0 && cloudSynced}
+      <div class="set-hint" style="margin-top:10px">
+        ☁ Your mods folder is on a cloud-synced drive (OneDrive / Google Drive / Proton Drive),
+        which doesn't support hardlinks — so Silo projects active mods as <b>copies</b>. That works,
+        but uses more disk. Excluding this folder from cloud sync lets Silo use hardlinks instead
+        (no duplication).
+      </div>
+    {:else if organizedCount > 0}
       <button
         class="set-btn"
         style="margin-top:10px;width:100%"
