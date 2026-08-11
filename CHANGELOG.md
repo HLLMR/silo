@@ -7,8 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Deactivating a loose (unorganized) mod now works.** A mod sitting loose in the mods folder
+  (e.g. one you just downloaded) isn't a Silo projection, so turning its toggle off did nothing —
+  the file stayed and the toggle sprang back on the next scan. Parking a loose mod now files it
+  into the library (moves it into `archive/`, unprojected), so it leaves the live folder and stays
+  available. Reversible — toggling it back on re-projects it.
+- **"Find in Browse" now opens the mod.** It switched to Browse and filtered to the mod but left
+  it unselected; it now opens that mod's detail drawer once the results load.
+
 ### Changed
 
+- **The header's second row (Savegames · Loadouts · Collections · Multiplayer) is now centered.**
 - **The header bar now has an intentional two-row layout** instead of wrapping ad hoc as the
   window narrows. The view tabs and app actions (Updates, Rescan, Launch, Settings) stay on the
   main row; the panel toggles (Savegames, Loadouts, Collections, Multiplayer) sit on a dedicated

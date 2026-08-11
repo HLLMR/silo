@@ -625,6 +625,28 @@
   }
 
   async function toggleActive(techName: string) {
+    const turningOff = activeSet.has(techName);
+    const mod = effectiveMods.find((m) => m.techName === techName);
+    // A loose (unorganized) mod isn't a Silo projection — it's the user's own file sitting in the
+    // live folder, so set_active can't remove it (and would silently no-op, the toggle bouncing
+    // back on the next scan). To park it, file it into the library (flat→archive, no re-project):
+    // it leaves the live folder but stays in the library. Reversible — toggling it on re-projects.
+    if (turningOff && mod && isFileable(mod)) {
+      await applyLoose(
+        [
+          {
+            techName: mod.techName,
+            fileName: fileName(mod.path),
+            kind: mod.kind,
+            category: mod.category,
+            subcategory: mod.subcategory,
+          },
+        ],
+        [mod.techName],
+        false,
+      );
+      return;
+    }
     const next = new Set(activeSet);
     if (next.has(techName)) next.delete(techName);
     else next.add(techName);
@@ -766,9 +788,11 @@
   // Seeds ModBrowser's catalog search when "Find in Browse" is used. ModBrowser remounts
   // on every view switch, so setting this before switching views seeds the fresh mount.
   let browseSeed = $state<string | null>(null);
+  let browseSeedTech = $state<string | null>(null);
 
   function openInBrowse(mod: ModEntry) {
     browseSeed = mod.title ?? mod.techName;
+    browseSeedTech = mod.techName; // so Browse can open this exact mod's drawer, not just filter to it
     switchView("browse");
   }
 
@@ -1765,6 +1789,7 @@
         onInstalled={() => runScan(true)}
         onNeedAuth={() => (settingsOpen = true)}
         seed={browseSeed}
+        seedTech={browseSeedTech}
       />
     </div>
   {:else}

@@ -211,6 +211,7 @@
   .topbar-nav {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     flex-wrap: wrap;
     padding-top: 10px;
