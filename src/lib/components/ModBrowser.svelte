@@ -39,8 +39,11 @@
     /** Pre-seed the catalog search (e.g. from a library row's "Find in Browse").
      *  Applied on mount; Browse remounts on every view switch, so this seeds each entry. */
     seed?: string | null;
+    /** techName to auto-open once results land, so "Find in Browse" lands on the mod's drawer
+     *  rather than just filtering to it. */
+    seedTech?: string | null;
   }
-  let { installed, onInstalled, onNeedAuth, seed = null }: Props = $props();
+  let { installed, onInstalled, onNeedAuth, seed = null, seedTech = null }: Props = $props();
 
   // Source connection state, for the interactive cards in the drawer.
   let gh = $state<{ connected: boolean; canWrite: boolean }>({
@@ -327,6 +330,11 @@
     }
     if (seed && seed.trim()) query = seed.trim();
     await load();
+    // "Find in Browse" targets a specific mod — open its drawer once the seeded search lands it.
+    if (seedTech) {
+      const hit = results.find((m) => m.techName === seedTech);
+      if (hit) await openDetail(hit);
+    }
   });
 
   onDestroy(() => unlisten?.());
