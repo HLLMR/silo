@@ -131,6 +131,15 @@ pub fn open(db_path: &Path) -> Result<Connection, String> {
          CREATE TABLE IF NOT EXISTS app_setting (
              key   TEXT PRIMARY KEY,
              value TEXT NOT NULL
+         );
+         -- Provenance for projected files: when Silo writes a mod into the flat root it records
+         -- the file's (size, mtime). If those still match, the file is provably Silo's own
+         -- untouched projection — so it can be removed without a full content-hash. A file the
+         -- user swapped in has a different mtime and won't match, so it's never wrongly deleted.
+         CREATE TABLE IF NOT EXISTS projection (
+             file_name TEXT PRIMARY KEY,
+             size      INTEGER NOT NULL,
+             mtime_ms  INTEGER NOT NULL
          );",
     )
     .map_err(|e| e.to_string())?;
@@ -369,6 +378,31 @@ pub fn delete_organized(conn: &Connection, tech_name: &str) -> Result<(), String
     conn.execute("DELETE FROM organized WHERE tech_name = ?1", [tech_name])
         .map_err(|e| e.to_string())?;
     Ok(())
+}
+
+/// Record a projected file's identity (size + mtime) so a later remove can confirm it's Silo's
+/// own untouched copy without hashing it.
+pub fn record_projection(conn: &Connection, file_name: &str, size: u64, mtime_ms: i64) {
+    let _ = conn.execute(
+        "INSERT INTO projection(file_name, size, mtime_ms) VALUES(?1, ?2, ?3)
+         ON CONFLICT(file_name) DO UPDATE SET size = excluded.size, mtime_ms = excluded.mtime_ms",
+        rusqlite::params![file_name, size as i64, mtime_ms],
+    );
+}
+
+/// The recorded (size, mtime_ms) for a projected file, if any.
+pub fn projection_stats(conn: &Connection, file_name: &str) -> Option<(u64, i64)> {
+    conn.query_row(
+        "SELECT size, mtime_ms FROM projection WHERE file_name = ?1",
+        [file_name],
+        |r| Ok((r.get::<_, i64>(0)? as u64, r.get::<_, i64>(1)?)),
+    )
+    .ok()
+}
+
+/// Drop a projection's provenance (it's been removed from the flat root).
+pub fn forget_projection(conn: &Connection, file_name: &str) {
+    let _ = conn.execute("DELETE FROM projection WHERE file_name = ?1", [file_name]);
 }
 
 /// Make the `organized` manifest match what's physically in `archive/`. Upserts a row for

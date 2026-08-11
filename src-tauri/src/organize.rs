@@ -210,6 +210,14 @@ pub fn set_active(conn: &Connection, root: &Path, active: &HashSet<String>) -> R
         if want && !linked {
             match make_link(&src, &link, &row.kind) {
                 Ok(()) => {
+                    // Record the projection's identity so a later deactivate can confirm it's
+                    // ours (and skip the content hash). Zips only — dir projections are
+                    // identified structurally (junction / marker), cheaply.
+                    if row.kind == "zip" {
+                        if let Some((size, mtime)) = file_stats(&link) {
+                            db::record_projection(conn, &row.file_name, size, mtime);
+                        }
+                    }
                     if let Err(e) = db::set_organized_active(conn, &row.tech_name, true) {
                         rep.errors.push(format!("{}: manifest: {e}", row.tech_name));
                     }
@@ -221,16 +229,19 @@ pub fn set_active(conn: &Connection, root: &Path, active: &HashSet<String>) -> R
             // Two guards before removing anything from the root:
             //  1. The archived copy must exist behind it — a root entry with no archive is the
             //     only copy (e.g. a crash between manifest-write and move), never delete it.
-            //  2. The entry must PROVABLY be Silo's projection (our hardlink / our symlink /
-            //     our marked copy). If the user swapped in their own file at that name, it is
-            //     not ours to delete — leave it and say so.
+            //  2. The entry must PROVABLY be Silo's projection. FAST path: its (size, mtime)
+            //     still match what we recorded when we wrote it → our own untouched copy, no
+            //     hash needed. Otherwise fall back to the careful structural/content check.
+            //     If the user swapped in their own file at that name, neither matches — leave it.
             if !src.exists() {
                 rep.errors.push(format!(
                     "{}: no archived copy behind the root file — kept it (won't delete the only copy)",
                     row.tech_name
                 ));
                 rep.skipped += 1;
-            } else if !is_silo_projection(&link, &src, &row.kind) {
+            } else if !(matches_provenance(conn, &link, &row.file_name)
+                || is_silo_projection(&link, &src, &row.kind))
+            {
                 rep.errors.push(format!(
                     "{}: the file in the mods folder isn't the one Silo projected (did you replace it?) — left it untouched",
                     row.tech_name
@@ -239,6 +250,7 @@ pub fn set_active(conn: &Connection, root: &Path, active: &HashSet<String>) -> R
             } else {
                 match remove_link(&link) {
                     Ok(()) => {
+                        db::forget_projection(conn, &row.file_name);
                         if let Err(e) = db::set_organized_active(conn, &row.tech_name, false) {
                             rep.errors.push(format!("{}: manifest: {e}", row.tech_name));
                         }
@@ -252,6 +264,32 @@ pub fn set_active(conn: &Connection, root: &Path, active: &HashSet<String>) -> R
         }
     }
     rep
+}
+
+/// A plain file's `(size, mtime_ms)`, or `None` for a symlink/junction (identified structurally,
+/// not by provenance) or an unreadable path.
+fn file_stats(path: &Path) -> Option<(u64, i64)> {
+    let m = std::fs::symlink_metadata(path).ok()?;
+    if m.file_type().is_symlink() {
+        return None;
+    }
+    let mtime = m
+        .modified()
+        .ok()?
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_millis() as i64;
+    Some((m.len(), mtime))
+}
+
+/// Fast, hash-free ownership check: the flat file is provably Silo's own untouched projection if
+/// its current `(size, mtime)` still match what we recorded when we wrote it. A file the user
+/// swapped in has a different mtime and won't match — so it's never wrongly treated as ours.
+fn matches_provenance(conn: &Connection, link: &Path, file_name: &str) -> bool {
+    let Some((size, mtime)) = db::projection_stats(conn, file_name) else {
+        return false;
+    };
+    matches!(file_stats(link), Some((s, m)) if s == size && m == mtime)
 }
 
 /// Repair copy-projections into hardlinks. A projection that was written as a byte-for-byte
@@ -683,7 +721,7 @@ fn mod_version(path: &Path, kind: &str) -> Option<String> {
 /// parked mods leave the flat root empty, so it only identity-checks the handful of entries
 /// actually present against their archived source. Reuses [`is_silo_projection`], so a real
 /// hardlink/symlink/copy projection is never flagged — only a file Silo can't prove it created.
-pub fn detect_foreign_projections(root: &Path) -> Vec<ForeignFile> {
+pub fn detect_foreign_projections(conn: &Connection, root: &Path) -> Vec<ForeignFile> {
     let archive = root.join(ARCHIVE);
     if !archive.is_dir() {
         return Vec::new();
@@ -719,20 +757,29 @@ pub fn detect_foreign_projections(root: &Path) -> Vec<ForeignFile> {
         };
         let link = e.path();
         let kind = if src.is_dir() { "dir" } else { "zip" };
-        if !is_silo_projection(&link, src, kind) {
-            let file_name = name.to_string_lossy().into_owned();
-            let tech_name = file_name
-                .strip_suffix(".zip")
-                .unwrap_or(&file_name)
-                .to_string();
-            out.push(ForeignFile {
-                tech_name,
-                file_name,
-                kind: kind.to_string(),
-                flat_version: mod_version(&link, kind),
-                managed_version: mod_version(src, kind),
-            });
+        let file_name = name.to_string_lossy().into_owned();
+        // Fast path: provenance match → provably ours, no hash. Else the careful check (which
+        // hashes a copy). Either way, (re)record provenance for a confirmed zip so the next scan
+        // — and any deactivate — is O(1) instead of re-hashing gigabytes.
+        if matches_provenance(conn, &link, &file_name) || is_silo_projection(&link, src, kind) {
+            if kind == "zip" {
+                if let Some((size, mtime)) = file_stats(&link) {
+                    db::record_projection(conn, &file_name, size, mtime);
+                }
+            }
+            continue;
         }
+        let tech_name = file_name
+            .strip_suffix(".zip")
+            .unwrap_or(&file_name)
+            .to_string();
+        out.push(ForeignFile {
+            tech_name,
+            file_name,
+            kind: kind.to_string(),
+            flat_version: mod_version(&link, kind),
+            managed_version: mod_version(src, kind),
+        });
     }
     out
 }
@@ -913,35 +960,99 @@ mod tests {
     fn detect_foreign_flags_only_non_projections() {
         let root = std::env::temp_dir().join(format!("silo_foreign_{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        let conn = db::open(&root.join("silo.db")).unwrap();
         let cat = root.join("archive").join("Vehicles");
         std::fs::create_dir_all(&cat).unwrap();
         let src = cat.join("FS25_Foo.zip");
         std::fs::write(&src, b"the real archived mod bytes").unwrap();
 
         // Nothing in the flat root → nothing flagged.
-        assert!(detect_foreign_projections(&root).is_empty());
+        assert!(detect_foreign_projections(&conn, &root).is_empty());
 
         // A genuine hardlink projection → NOT flagged (it's provably ours).
         let link = root.join("FS25_Foo.zip");
         std::fs::hard_link(&src, &link).unwrap();
         assert!(
-            detect_foreign_projections(&root).is_empty(),
+            detect_foreign_projections(&conn, &root).is_empty(),
             "a real hardlink projection must not be flagged"
         );
         std::fs::remove_file(&link).unwrap();
 
         // A DIFFERENT file at that managed name → flagged as foreign.
         std::fs::write(&link, b"the user's own, different build").unwrap();
-        let found = detect_foreign_projections(&root);
+        let found = detect_foreign_projections(&conn, &root);
         assert_eq!(found.len(), 1);
         assert_eq!(found[0].tech_name, "FS25_Foo");
         assert_eq!(found[0].file_name, "FS25_Foo.zip");
 
         // A loose zip with NO archived counterpart is an ordinary unorganized mod, not foreign.
         std::fs::write(root.join("FS25_Unrelated.zip"), b"loose").unwrap();
-        assert_eq!(detect_foreign_projections(&root).len(), 1);
+        assert_eq!(detect_foreign_projections(&conn, &root).len(), 1);
 
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    // A copy-projection deactivates via the provenance fast-path (no hash) once recorded, and a
+    // file the user swapped in — same name, different bytes — is never removed.
+    #[test]
+    fn deactivate_uses_provenance_and_never_deletes_a_swapped_file() {
+        let base = std::env::temp_dir().join(format!("silo_prov_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).unwrap();
+        let conn = db::open(&base.join("silo.db")).unwrap();
+        let cat = base.join(ARCHIVE).join("Vehicles");
+        std::fs::create_dir_all(&cat).unwrap();
+        let bytes = b"PK\x03\x04 canonical archived build";
+        std::fs::write(cat.join("FS25_Foo.zip"), bytes).unwrap();
+        db::upsert_organized(
+            &conn,
+            &OrganizedRow {
+                tech_name: "FS25_Foo".into(),
+                file_name: "FS25_Foo.zip".into(),
+                kind: "zip".into(),
+                category: "Vehicles".into(),
+                subcategory: None,
+                active: false,
+            },
+        )
+        .unwrap();
+
+        // Activate: set_active copies (temp dir may support hardlinks, but either way it records
+        // provenance) and the flat file exists.
+        let mut want = std::collections::HashSet::new();
+        want.insert("FS25_Foo".to_string());
+        let rep = set_active(&conn, &base, &want);
+        assert_eq!(rep.changed, 1);
+        let flat = base.join("FS25_Foo.zip");
+        assert!(flat.exists());
+        assert!(
+            db::projection_stats(&conn, "FS25_Foo.zip").is_some(),
+            "provenance recorded on activate"
+        );
+        assert!(matches_provenance(&conn, &flat, "FS25_Foo.zip"));
+
+        // Deactivate: provenance matches → removed, provenance forgotten, archive untouched.
+        let rep = set_active(&conn, &base, &std::collections::HashSet::new());
+        assert_eq!(rep.changed, 1);
+        assert!(!flat.exists(), "our own projection is removed");
+        assert!(db::projection_stats(&conn, "FS25_Foo.zip").is_none());
+        assert!(cat.join("FS25_Foo.zip").exists(), "archive kept");
+
+        // Now the user drops in their OWN different build at that name, and marks it active in the
+        // manifest (as if it were projected). A stale/absent provenance record must NOT let it be
+        // deleted — different bytes, so both the fast path and the hash check refuse.
+        std::fs::write(&flat, b"the user's OWN irreplaceable build").unwrap();
+        db::set_organized_active(&conn, "FS25_Foo", true).unwrap();
+        let rep = set_active(&conn, &base, &std::collections::HashSet::new());
+        assert_eq!(rep.skipped, 1, "a swapped-in file is left untouched");
+        assert_eq!(
+            std::fs::read(&flat).unwrap(),
+            b"the user's OWN irreplaceable build",
+            "the user's file must survive"
+        );
+
+        let _ = std::fs::remove_dir_all(&base);
     }
 
     #[test]

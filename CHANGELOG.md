@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Deactivating mods is no longer slow on cloud-synced libraries.** Removing a projected file
+  used to content-hash it first to prove it was Silo's own — gigabytes of hashing on a copy-based
+  library. Silo now records each projection's identity (size + modified-time) when it writes it,
+  so a deactivate confirms ownership instantly and skips the hash. Still safe: a file you swapped
+  in has a different modified-time, so it falls back to the careful check and is never deleted.
+  Foreign-file scans warm this record, so the one-time hash happens once in the background, never
+  again.
+- **Toggling the entire library at once now asks first.** Select-all across a *filtered* view is
+  unchanged, but sweeping the whole unfiltered library (25+ mods) confirms first — on a cloud
+  folder that's a real gigabytes-of-files operation, easy to trigger by accident.
+
 ### Added
 
 - **Cloud-synced mods folders are now detected and handled.** OneDrive, Google Drive, and
