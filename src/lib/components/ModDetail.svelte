@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ModEntry, CurationRow, Conflict, CatalogModDetail } from "../types";
+  import type { ForeignFile } from "../api";
   import { getModIcon, revealInFolder, catalogDetailByTech, openExternal } from "../api";
   import { label as sourceLabel, loadCatalogImage } from "../browse";
   import { resizable } from "../resize";
@@ -33,6 +34,11 @@
     repo: { owner: string; repo: string } | null;
     onRepoChange: (r: { owner: string; repo: string } | null) => void;
     onInstalled: () => void;
+    /** A build sitting in the mods folder that isn't Silo's managed copy (usually a manual update
+     *  the user dropped in). Null when the projected file matches. */
+    foreign: ForeignFile | null;
+    onAdoptForeign: () => void;
+    onRestoreForeign: () => void;
   }
   let {
     mod,
@@ -58,7 +64,17 @@
     repo,
     onRepoChange,
     onInstalled,
+    foreign,
+    onAdoptForeign,
+    onRestoreForeign,
   }: Props = $props();
+
+  // Is the dropped-in build newer than Silo's managed copy? (segment-wise numeric compare)
+  const foreignIsNewer = $derived(
+    !!(foreign?.flatVersion && foreign?.managedVersion
+      ? versionNewer(foreign.flatVersion, foreign.managedVersion)
+      : foreign?.flatVersion && !foreign?.managedVersion),
+  );
 
   // Category override editor — the discoverable way to fix a miscategorized mod.
   // Drafts are synced from the prop by the effect below (which also re-syncs when the
@@ -167,6 +183,28 @@
     <button class="d-x" onclick={onClose} aria-label="Close">✕</button>
   </div>
 
+  {#if foreign}
+    <div class="d-foreign">
+      <div class="d-foreign-msg">
+        <b
+          >{foreignIsNewer
+            ? `A newer build is in your mods folder — v${foreign.flatVersion ?? "?"}.`
+            : `A different build is in your mods folder — v${foreign.flatVersion ?? "?"}.`}</b
+        >
+        Silo manages <b>v{foreign.managedVersion ?? "?"}</b>. This is how ModHub updates arrive —
+        you download the zip into the folder. <b>Adopt</b> it to make it Silo's managed version.
+      </div>
+      <div class="d-foreign-actions">
+        <button class="d-adopt" onclick={onAdoptForeign}>
+          ⬆ Adopt v{foreign.flatVersion ?? ""}
+        </button>
+        <button class="d-restore" onclick={onRestoreForeign}>
+          Keep Silo's v{foreign.managedVersion ?? ""}
+        </button>
+      </div>
+    </div>
+  {/if}
+
   {#if cover}
     <img class="d-cover" src={cover} alt="" />
   {:else if icon}
@@ -205,7 +243,7 @@
 
   {#if catalog}
     <div class="d-cat-info">
-      {#if catalogNewer}
+      {#if catalogNewer && !foreign}
         <div class="d-upd">
           <span>⬆ Update available — catalog has <b>v{catalog.latestVersion}</b>{mod.version ? ` (you have v${mod.version})` : ""}</span>
           {#if catalog.pageUrl}
@@ -456,6 +494,52 @@
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
+  }
+  .d-foreign {
+    margin: 12px 0 0;
+    padding: 11px 12px;
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--primary) 40%, var(--border));
+  }
+  .d-foreign-msg {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  .d-foreign-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .d-adopt {
+    border: 1px solid var(--primary);
+    background: var(--primary);
+    color: var(--on-primary);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 7px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .d-adopt:hover {
+    background: var(--primary-hover);
+  }
+  .d-restore {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .d-restore:hover {
+    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
   }
   .d-uptodate {
     font-size: 12px;

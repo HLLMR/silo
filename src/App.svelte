@@ -658,6 +658,22 @@
     }
   }
 
+  // Resolve a foreign file (a mod-folder file that isn't Silo's projection — typically a newer
+  // build the user dropped in to update). Adopt = promote it to the managed copy; restore = put
+  // Silo's copy back. Shared by the health panel and the mod drawer's "you dropped an update" banner.
+  async function resolveForeign(fileName: string, action: "adopt" | "restore") {
+    busy = action === "adopt" ? "Adopting the dropped build…" : "Restoring Silo's copy…";
+    try {
+      if (action === "adopt") await adoptForeignFile(fileName);
+      else await restoreForeignFile(fileName);
+    } catch (e) {
+      errorMsg = String(e);
+    }
+    busy = null;
+    await runScan(false);
+    foreignFiles = await detectForeignFiles(roots[0]).catch(() => []);
+  }
+
   // Build the organize inputs for every loose (unorganized) zip currently in view.
   function looseInputs(): { inputs: ModInput[]; techNames: string[] } {
     const targets = effectiveMods.filter(isFileable);
@@ -1616,6 +1632,7 @@
 
   {#if detailMod}
     {@const dm = detailMod}
+    {@const fgn = foreignFiles.find((f) => f.techName === dm.techName) ?? null}
     <ModDetail
       mod={dm}
       curation={cur(dm.techName)}
@@ -1623,6 +1640,19 @@
       active={activeSet.has(dm.techName)}
       organized={dm.organized}
       hasSettings={settingsModsSet.has(dm.techName)}
+      foreign={fgn}
+      onAdoptForeign={async () => {
+        if (fgn) {
+          await resolveForeign(fgn.fileName, "adopt");
+          detailMod = null;
+        }
+      }}
+      onRestoreForeign={async () => {
+        if (fgn) {
+          await resolveForeign(fgn.fileName, "restore");
+          detailMod = null;
+        }
+      }}
       {libraryTechNames}
       {conflicts}
       categories={CATEGORIES}
@@ -1681,16 +1711,7 @@
     <HealthPanel
       {health}
       {healthCount}
-      onResolveForeign={async (fileName, action) => {
-        try {
-          if (action === "adopt") await adoptForeignFile(fileName);
-          else await restoreForeignFile(fileName);
-          await runScan(false);
-          foreignFiles = await detectForeignFiles(roots[0]).catch(() => []);
-        } catch (e) {
-          errorMsg = String(e);
-        }
-      }}
+      onResolveForeign={resolveForeign}
       onClose={() => (healthOpen = false)}
     />
   {/if}
