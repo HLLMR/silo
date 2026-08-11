@@ -1198,6 +1198,20 @@
 
   // Bulk activate/deactivate the currently-filtered set (fast loadout building).
   async function setActiveForFiltered(active: boolean) {
+    // How many mods this actually changes (already-correct ones are free).
+    const changing = filtered.filter((m) =>
+      active ? !activeSet.has(m.techName) : activeSet.has(m.techName),
+    );
+    // Toggling the WHOLE library at once moves a lot of files — and on a cloud-synced folder each
+    // one is a copy or delete, not a cheap link. Confirm before a big unfiltered sweep so it's not
+    // an accidental gigabytes-long operation.
+    if (libFilterCount === 0 && changing.length > 25) {
+      const verb = active ? "Activate" : "Deactivate";
+      const tail = cloudSynced
+        ? " Your mods folder is cloud-synced, so each one is copied/removed individually — this can take a while."
+        : "";
+      if (!confirm(`${verb} all ${changing.length} mods in your library?${tail}`)) return;
+    }
     const next = new Set(activeSet);
     for (const m of filtered) {
       if (active) next.add(m.techName);

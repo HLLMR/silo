@@ -2032,10 +2032,15 @@ fn secret_storage_secure() -> bool {
 // (copy-projections force a full content hash), which on a large library is gigabytes of I/O.
 // A synchronous command runs on the main thread and would freeze the window ("Not Responding").
 #[tauri::command]
-async fn detect_foreign_files(root: Option<String>) -> Result<Vec<organize::ForeignFile>, String> {
+async fn detect_foreign_files(
+    app: tauri::AppHandle,
+    root: Option<String>,
+) -> Result<Vec<organize::ForeignFile>, String> {
+    let db = db_path(&app)?;
     let root = primary_root(root)?;
     tauri::async_runtime::spawn_blocking(move || -> Result<Vec<organize::ForeignFile>, String> {
-        Ok(organize::detect_foreign_projections(&root))
+        let conn = db::open(&db)?;
+        Ok(organize::detect_foreign_projections(&conn, &root))
     })
     .await
     .map_err(|e| e.to_string())?
