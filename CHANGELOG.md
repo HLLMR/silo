@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The header bar now has an intentional two-row layout** instead of wrapping ad hoc as the
+  window narrows. The view tabs and app actions (Updates, Rescan, Launch, Settings) stay on the
+  main row; the panel toggles (Savegames, Loadouts, Collections, Multiplayer) sit on a dedicated
+  second row.
+
 ## [0.7.1] - 2026-08-11
 
 ### Changed
