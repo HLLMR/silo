@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Adopt a dropped-in update right from the mod's drawer.** When you update a mod the ModHub
+  way — download the new zip into your mods folder over Silo's managed copy — the drawer now shows
+  a clear banner (“A newer build is in your mods folder — vX … Adopt it”) with **Adopt vX** and
+  **Keep Silo's vY** buttons. Adopting promotes the dropped build into the library (old copy kept
+  in `backups/`) and updates the version. Previously this only surfaced as a red “foreign file”
+  error and an entry buried in the health panel.
 - **"Find in Library" from Browse** — the reverse of the library's "Find in Browse". An installed
   mod's Browse card and detail drawer now offer a jump straight to that mod in your Library
   (filtered to it, drawer open).
