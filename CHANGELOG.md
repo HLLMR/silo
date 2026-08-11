@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **"Find in Library" from Browse** — the reverse of the library's "Find in Browse". An installed
+  mod's Browse card and detail drawer now offer a jump straight to that mod in your Library
+  (filtered to it, drawer open).
+- **Clickable mods behind an open drawer.** The detail drawers are now non-modal: with a drawer
+  open you can click another mod in the list behind it to switch the drawer to that mod, instead
+  of the click just closing it. Close with the ✕ or the Escape key.
+
 ### Fixed
 
 - **Deactivating a loose (unorganized) mod now works.** A mod sitting loose in the mods folder

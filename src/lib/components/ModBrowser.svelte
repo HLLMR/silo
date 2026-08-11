@@ -36,6 +36,8 @@
     onInstalled: (filename: string) => void;
     /** Route the user to the source-connect UI (Settings) from a source card. */
     onNeedAuth?: () => void;
+    /** Jump to an installed mod in the Library (reverse of the library's "Find in Browse"). */
+    onFindInLibrary?: (techName: string) => void;
     /** Pre-seed the catalog search (e.g. from a library row's "Find in Browse").
      *  Applied on mount; Browse remounts on every view switch, so this seeds each entry. */
     seed?: string | null;
@@ -43,7 +45,14 @@
      *  rather than just filtering to it. */
     seedTech?: string | null;
   }
-  let { installed, onInstalled, onNeedAuth, seed = null, seedTech = null }: Props = $props();
+  let {
+    installed,
+    onInstalled,
+    onNeedAuth,
+    onFindInLibrary,
+    seed = null,
+    seedTech = null,
+  }: Props = $props();
 
   // Source connection state, for the interactive cards in the drawer.
   let gh = $state<{ connected: boolean; canWrite: boolean }>({
@@ -413,6 +422,7 @@
           progressEntry={progress[m.id]}
           onUseSource={(s) => useSource(m, s)}
           onOpenDetail={() => openDetail(m)}
+          onFindInLibrary={m.techName ? () => onFindInLibrary?.(m.techName!) : undefined}
         />
       {/each}
     </div>
@@ -445,6 +455,7 @@
       onUseSource={(d, s) => useSource(d, s)}
       onOpenDesc={openDesc}
       {onNeedAuth}
+      {onFindInLibrary}
     />
   {/if}
 

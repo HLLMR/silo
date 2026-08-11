@@ -796,6 +796,16 @@
     switchView("browse");
   }
 
+  // The reverse of openInBrowse: jump from a Browse card to the installed mod in the Library,
+  // filtering to it and opening its drawer.
+  function openInLibrary(techName: string) {
+    const mod = mods.find((m) => m.techName === techName);
+    if (!mod) return;
+    query = mod.title ?? mod.techName; // seed the library search so the tile surfaces behind the drawer
+    switchView("library"); // clears detailMod…
+    detailMod = mod; // …then open this mod's drawer
+  }
+
   function rowMenuItems(mod: ModEntry, ev: MouseEvent): ContextMenuItem[] {
     const c = cur(mod.techName);
     const isActive = activeSet.has(mod.techName);
@@ -1788,6 +1798,7 @@
         installed={libraryTechNames}
         onInstalled={() => runScan(true)}
         onNeedAuth={() => (settingsOpen = true)}
+        onFindInLibrary={openInLibrary}
         seed={browseSeed}
         seedTech={browseSeedTech}
       />

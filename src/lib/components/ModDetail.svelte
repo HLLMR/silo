@@ -116,6 +116,17 @@
     cover = "";
     if (url) loadCatalogImage(url).then((u) => { if (catalog?.imageUrl === url) cover = u; });
   });
+  // The library list stays clickable behind this drawer (clicking another tile switches it), so
+  // Escape is the quick close alongside the ✕.
+  $effect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (showFullDesc) showFullDesc = false; // close the full-description modal first
+      else onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
   // True only when `latest` is *strictly newer* than `current` (segment-wise numeric compare,
   // same rule as the Rust `github::is_newer`). A merely-different — or older — catalog version
   // is NOT an update, so a locally-newer mod no longer reads as "update available".

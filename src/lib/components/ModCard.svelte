@@ -9,6 +9,7 @@
     progressEntry,
     onUseSource,
     onOpenDetail,
+    onFindInLibrary,
   }: {
     m: BrowseMod;
     here: boolean;
@@ -16,6 +17,7 @@
     progressEntry: { done: number; total: number | null } | undefined;
     onUseSource: (s: ModSourceOption) => void;
     onOpenDetail: () => void;
+    onFindInLibrary?: () => void;
   } = $props();
 
   const pct = $derived.by(() => {
@@ -89,28 +91,43 @@
     <!-- One button per source this mod actually lives on, each with that
          source's own version — they drift, and that's worth seeing. -->
     <div class="srcbar">
-      {#each m.sources as s (s.source)}
+      {#if here && onFindInLibrary}
+        <!-- Already installed: the primary action is jumping to it in the Library. -->
         <button
-          class="srcbtn"
-          class:can-install={s.installable}
-          disabled={here || installing}
-          title={here
-            ? "Already in your library"
-            : s.installable
-              ? `Install from ${label(s.source)}`
-              : gatedReason(s.source)}
+          class="srcbtn find-lib"
+          title="Open this mod in your Library"
           onclick={(e) => {
             e.stopPropagation();
-            onUseSource(s);
+            onFindInLibrary?.();
           }}
         >
-          <span class="srcbtn-name">{shortLabel(s.source)}</span>
-          {#if s.version}<span class="srcbtn-ver tnum">{s.version}</span>{/if}
-          <span class="srcbtn-icon">{s.installable ? "⬇" : "↗"}</span>
+          <span class="srcbtn-name">⌕ Find in Library</span>
+          <span class="srcbtn-icon">↗</span>
         </button>
       {:else}
-        <span class="srcbar-none">No sources</span>
-      {/each}
+        {#each m.sources as s (s.source)}
+          <button
+            class="srcbtn"
+            class:can-install={s.installable}
+            disabled={here || installing}
+            title={here
+              ? "Already in your library"
+              : s.installable
+                ? `Install from ${label(s.source)}`
+                : gatedReason(s.source)}
+            onclick={(e) => {
+              e.stopPropagation();
+              onUseSource(s);
+            }}
+          >
+            <span class="srcbtn-name">{shortLabel(s.source)}</span>
+            {#if s.version}<span class="srcbtn-ver tnum">{s.version}</span>{/if}
+            <span class="srcbtn-icon">{s.installable ? "⬇" : "↗"}</span>
+          </button>
+        {:else}
+          <span class="srcbar-none">No sources</span>
+        {/each}
+      {/if}
     </div>
   </div>
 </div>
@@ -294,6 +311,17 @@
   .srcbtn.can-install:hover:not(:disabled) {
     background: var(--primary);
     color: var(--on-primary);
+  }
+  .srcbtn.find-lib {
+    flex: 1 1 auto;
+    justify-content: center;
+    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+    color: var(--primary);
+    font-weight: 600;
+  }
+  .srcbtn.find-lib:hover {
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    border-color: var(--primary);
   }
   .srcbtn:disabled {
     opacity: 0.5;
