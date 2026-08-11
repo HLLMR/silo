@@ -100,7 +100,15 @@ export interface RelinkReport {
   skipped: number;
   /** Bytes reclaimed by deduping copies into shared hardlinks. */
   reclaimedBytes: number;
+  /** The mods folder is cloud-synced (no hardlinks) — Silo uses copies; nothing to optimize. */
+  hardlinksUnsupported: boolean;
   errors: string[];
+}
+
+/** Whether the mods folder supports hardlinks. False on cloud-synced folders (OneDrive /
+ *  Google Drive / Proton Drive), where Silo projects the active set as copies. */
+export function hardlinkSupport(root?: string): Promise<boolean> {
+  return invoke<boolean>("hardlink_support", { root: root ?? null });
 }
 
 /** Repair active copy-projections into hardlinks — reclaims duplicated space and makes future

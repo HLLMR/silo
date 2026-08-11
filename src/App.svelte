@@ -42,6 +42,7 @@
     restoreForeignFile,
     relinkProjections,
     onRelinkProgress,
+    hardlinkSupport,
     type ForeignFile,
   } from "./lib/api";
   import { onOpenUrl, getCurrent } from "@tauri-apps/plugin-deep-link";
@@ -148,6 +149,17 @@
   let editing = $state<{ techName: string; x: number; y: number } | null>(null);
   let activeSet = $state<Set<string>>(new Set());
   let busy = $state<string | null>(null);
+  // Mods folder is on a cloud-sync filesystem that can't do hardlinks → Silo uses copies.
+  let cloudSynced = $state(false);
+  let cloudNoticeOpen = $state(false);
+  function dismissCloudNotice() {
+    cloudNoticeOpen = false;
+    try {
+      localStorage.setItem("silo.cloudNoticeDismissed", "1");
+    } catch {
+      /* private-mode / storage-off — the notice just returns next launch */
+    }
+  }
   // Auto-file newly-appeared mods into the archive on load (kept active). OPT-IN:
   // defaults OFF so a first run never moves the user's files without them choosing to.
   // Enable it via Settings, or use the explicit "Organize" button. Persisted.
@@ -1221,14 +1233,19 @@
       });
       busy = "Optimizing links…";
       const rep = await relinkProjections();
-      if (rep.errors.length) problem = rep.errors.slice(0, 3).join("; ");
-      const gb = rep.reclaimedBytes / 1024 ** 3;
-      const freed =
-        gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(rep.reclaimedBytes / 1024 ** 2)} MB`;
-      done =
-        rep.upgraded > 0
-          ? `Optimized ${rep.upgraded} mod${rep.upgraded === 1 ? "" : "s"} — reclaimed ${freed}`
-          : "Links already optimized — nothing to reclaim";
+      if (rep.hardlinksUnsupported) {
+        cloudSynced = true;
+        done = "Mods folder is cloud-synced — hardlinks aren't available, so there's nothing to optimize";
+      } else {
+        if (rep.errors.length) problem = rep.errors.slice(0, 3).join("; ");
+        const gb = rep.reclaimedBytes / 1024 ** 3;
+        const freed =
+          gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(rep.reclaimedBytes / 1024 ** 2)} MB`;
+        done =
+          rep.upgraded > 0
+            ? `Optimized ${rep.upgraded} mod${rep.upgraded === 1 ? "" : "s"} — reclaimed ${freed}`
+            : "Links already optimized — nothing to reclaim";
+      }
     } catch (e) {
       problem = String(e);
     } finally {
@@ -1341,6 +1358,19 @@
         errorMsg = String(e);
       }
       if (roots.length) runScan();
+      // Detect a cloud-synced mods folder (OneDrive / Google Drive / Proton Drive): those reject
+      // hardlinks, so Silo projects the active set as copies. Warn once so the extra disk use and
+      // slower bulk changes aren't a mystery — and so "Optimize links" can explain itself.
+      if (roots.length) {
+        hardlinkSupport()
+          .then((ok) => {
+            cloudSynced = !ok;
+            if (cloudSynced && localStorage.getItem("silo.cloudNoticeDismissed") !== "1") {
+              cloudNoticeOpen = true;
+            }
+          })
+          .catch(() => {});
+      }
       // A leftover snapshot means a bisection was interrupted — offer to restore.
       try {
         bisectRecovery = await bisectSnapshotGet();
@@ -1496,6 +1526,7 @@
       {autoFileNew}
       {organizedCount}
       {unorganizedCount}
+      {cloudSynced}
       {busy}
       {scanning}
       onSetTheme={setTheme}
@@ -1695,6 +1726,20 @@
 
   {#if errorMsg}
     <div class="error">{errorMsg}</div>
+  {/if}
+
+  {#if cloudNoticeOpen}
+    <div class="cloud-notice">
+      <span class="cn-ico">☁</span>
+      <div class="cn-text">
+        <b>Your mods folder is synced by a cloud service</b> (OneDrive, Google Drive, or Proton
+        Drive), which doesn't support hardlinks. Silo will project your active mods as
+        <b>file copies</b> instead — this works fine, but uses more disk and makes bulk activate /
+        deactivate slower. For the best performance, exclude
+        <span class="tnum">…\My Games\FarmingSimulator2025</span> from your cloud sync.
+      </div>
+      <button class="cn-x" onclick={dismissCloudNotice} title="Dismiss">✕</button>
+    </div>
   {/if}
 
   {#if view === "browse"}
@@ -1957,6 +2002,40 @@
     background: color-mix(in srgb, var(--danger) 12%, var(--surface));
     color: var(--danger);
     font-size: 13px;
+  }
+  .cloud-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 11px 16px 11px 20px;
+    background: color-mix(in srgb, var(--info) 12%, var(--surface));
+    border-bottom: 1px solid color-mix(in srgb, var(--info) 30%, var(--border));
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  .cn-ico {
+    font-size: 16px;
+    line-height: 1.4;
+    color: var(--info);
+    flex: 0 0 auto;
+  }
+  .cn-text {
+    flex: 1 1 auto;
+  }
+  .cn-x {
+    flex: 0 0 auto;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+  }
+  .cn-x:hover {
+    background: color-mix(in srgb, var(--info) 15%, transparent);
+    color: var(--text);
   }
   /* Log-triage panel owns its own padding (LogTriage.svelte), so no inner padding here. */
   .recover-banner {

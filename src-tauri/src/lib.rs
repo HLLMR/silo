@@ -962,6 +962,16 @@ async fn set_active(
     .map_err(|e| e.to_string())?
 }
 
+/// Whether the mods folder supports hardlinks. False on cloud-synced folders (OneDrive / Google
+/// Drive / Proton Drive), where Silo projects the active set as copies instead.
+#[tauri::command]
+async fn hardlink_support(root: Option<String>) -> Result<bool, String> {
+    let root = primary_root(root)?;
+    tauri::async_runtime::spawn_blocking(move || Ok(organize::supports_hardlinks(&root)))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 /// Repair copy-projections into hardlinks (reclaims duplicated space, makes activate/deactivate
 /// O(1)). Emits `relink-progress` `(done, total)` events so the UI can show a bar during the
 /// one-time hash-and-relink of a large library.
@@ -2138,7 +2148,8 @@ pub fn run() {
             detect_foreign_files,
             adopt_foreign_file,
             restore_foreign_file,
-            relink_projections
+            relink_projections,
+            hardlink_support
         ])
         .run(tauri::generate_context!())
         .expect("error while running Silo");
