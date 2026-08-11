@@ -69,133 +69,155 @@
 </script>
 
 <header class="topbar" bind:clientHeight={topbarH}>
-  <div class="brand">
-    <div class="logo">S</div>
-    <div>
-      <h1>
-        Silo{#if appVer}<span class="ver" title="Silo version {appVer}">v{appVer}</span>{/if}
-      </h1>
-      <p class="tagline">Farming Simulator 25 mod library</p>
+  <!-- Main row: identity + view tabs on the left, app actions on the right. -->
+  <div class="topbar-main">
+    <div class="brand">
+      <div class="logo">S</div>
+      <div>
+        <h1>
+          Silo{#if appVer}<span class="ver" title="Silo version {appVer}">v{appVer}</span>{/if}
+        </h1>
+        <p class="tagline">Farming Simulator 25 mod library</p>
+      </div>
     </div>
-  </div>
 
-  <nav class="tabs" aria-label="Views">
-    <button class="tab" class:on={view === "library"} onclick={() => onSwitchView("library")}>
-      Library
-    </button>
-    <button class="tab" class:on={view === "browse"} onclick={() => onSwitchView("browse")}>
-      Browse
-    </button>
-  </nav>
+    <nav class="tabs" aria-label="Views">
+      <button class="tab" class:on={view === "library"} onclick={() => onSwitchView("library")}>
+        Library
+      </button>
+      <button class="tab" class:on={view === "browse"} onclick={() => onSwitchView("browse")}>
+        Browse
+      </button>
+    </nav>
 
-  <div class="topbar-spacer"></div>
+    <div class="topbar-spacer"></div>
 
-  {#if update}
-    <button
-      class="btn update-btn"
-      onclick={onApplyUpdate}
-      disabled={updating}
-      title="Download and install Silo {update.version}, then restart"
-    >
-      {#if updating}
-        {updatePct != null ? `Updating… ${updatePct}%` : "Updating…"}
-      {:else}
-        ⬆ Update to {update.version}
-      {/if}
-    </button>
-  {/if}
-
-  {#if hasSavegames}
-    <button class="btn" class:on={savesOpen} onclick={onToggleSaves} disabled={!!busy}>
-      Savegames
-    </button>
-  {/if}
-
-  <button
-    class="btn loadout-btn"
-    class:on={loadoutsOpen}
-    onclick={onToggleLoadouts}
-    disabled={!!busy}
-  >
-    {#if activeLoadoutName !== null}
-      ● {activeLoadoutName}
-    {:else}
-      Loadouts
+    {#if update}
+      <button
+        class="btn update-btn"
+        onclick={onApplyUpdate}
+        disabled={updating}
+        title="Download and install Silo {update.version}, then restart"
+      >
+        {#if updating}
+          {updatePct != null ? `Updating… ${updatePct}%` : "Updating…"}
+        {:else}
+          ⬆ Update to {update.version}
+        {/if}
+      </button>
     {/if}
-  </button>
 
-  <button
-    class="btn"
-    class:on={collectionsOpen}
-    title="Collections: share a curated set of mods as a link, or open one someone sent you"
-    onclick={onToggleCollections}
-    disabled={!!busy}
-  >
-    Collections
-  </button>
-
-  <button
-    class="btn"
-    class:on={mpOpen}
-    title="Multiplayer: share or verify your mod set so friends can join"
-    onclick={onToggleMp}
-    disabled={!!busy}
-  >
-    Multiplayer
-  </button>
-
-  {#if showOrganize}
-    <button class="btn" onclick={onOrganize} disabled={!!busy || scanning}>
-      Organize {unorganizedCount}
+    {#if showOrganize}
+      <button class="btn" onclick={onOrganize} disabled={!!busy || scanning}>
+        Organize {unorganizedCount}
+      </button>
+    {/if}
+    {#if hasMods}
+      <button
+        class="btn"
+        title="Check the SiloAPI catalog (and any linked GitHub repos) for updates"
+        onclick={onCheckUpdates}
+        disabled={!!busy || updateChecking}
+      >
+        {updateChecking ? "Checking…" : "⟳ Updates"}
+      </button>
+    {/if}
+    <button class="btn" onclick={onRescan} disabled={scanning || !!busy}>
+      {scanning ? "Scanning…" : "Rescan"}
     </button>
-  {/if}
-  {#if hasMods}
+    {#if hasGame}
+      <button
+        class="btn primary launch-btn"
+        title="Launch Farming Simulator 25 with the current active set"
+        onclick={onLaunch}
+        disabled={!!busy}
+      >
+        ▶ Launch{activeCount ? ` (${activeCount})` : ""}
+      </button>
+    {/if}
     <button
-      class="btn"
-      title="Check the SiloAPI catalog (and any linked GitHub repos) for updates"
-      onclick={onCheckUpdates}
-      disabled={!!busy || updateChecking}
-    >
-      {updateChecking ? "Checking…" : "⟳ Updates"}
-    </button>
-  {/if}
-  <button class="btn" onclick={onRescan} disabled={scanning || !!busy}>
-    {scanning ? "Scanning…" : "Rescan"}
-  </button>
-  {#if hasGame}
-    <button
-      class="btn primary launch-btn"
-      title="Launch Farming Simulator 25 with the current active set"
-      onclick={onLaunch}
+      class="btn icon-btn"
+      class:on={settingsOpen}
+      title="Settings"
+      aria-label="Settings"
+      onclick={onToggleSettings}
       disabled={!!busy}
     >
-      ▶ Launch{activeCount ? ` (${activeCount})` : ""}
+      ⚙
     </button>
-  {/if}
-  <button
-    class="btn icon-btn"
-    class:on={settingsOpen}
-    title="Settings"
-    aria-label="Settings"
-    onclick={onToggleSettings}
-    disabled={!!busy}
-  >
-    ⚙
-  </button>
+  </div>
+
+  <!-- Second row: the panel toggles, grouped intentionally rather than wrapping ad hoc. -->
+  <nav class="topbar-nav" aria-label="Panels">
+    {#if hasSavegames}
+      <button class="btn" class:on={savesOpen} onclick={onToggleSaves} disabled={!!busy}>
+        Savegames
+      </button>
+    {/if}
+
+    <button
+      class="btn loadout-btn"
+      class:on={loadoutsOpen}
+      onclick={onToggleLoadouts}
+      disabled={!!busy}
+    >
+      {#if activeLoadoutName !== null}
+        ● {activeLoadoutName}
+      {:else}
+        Loadouts
+      {/if}
+    </button>
+
+    <button
+      class="btn"
+      class:on={collectionsOpen}
+      title="Collections: share a curated set of mods as a link, or open one someone sent you"
+      onclick={onToggleCollections}
+      disabled={!!busy}
+    >
+      Collections
+    </button>
+
+    <button
+      class="btn"
+      class:on={mpOpen}
+      title="Multiplayer: share or verify your mod set so friends can join"
+      onclick={onToggleMp}
+      disabled={!!busy}
+    >
+      Multiplayer
+    </button>
+  </nav>
 </header>
 
 <style>
   .topbar {
     display: flex;
-    align-items: center;
-    gap: 12px 16px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 10px;
     padding: 12px 20px;
     border-bottom: 1px solid var(--border);
     background: var(--surface);
   }
-  /* The spacer pushes actions right on a wide bar, but must not force a blank row when
-     things wrap — collapse it once the bar is narrow enough to wrap. */
+  /* Main row: brand + tabs on the left, app actions pushed right by the spacer. */
+  .topbar-main {
+    display: flex;
+    align-items: center;
+    gap: 12px 16px;
+    flex-wrap: wrap;
+  }
+  /* Second row: the panel toggles, on their own line. A hairline separates the two rows so the
+     split reads as intentional rather than as accidental wrapping. */
+  .topbar-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  /* The spacer pushes actions right on a wide bar, but must not force a blank row when the main
+     row wraps — collapse it once that row is narrow enough to wrap. */
   @media (max-width: 900px) {
     .topbar-spacer {
       display: none;
