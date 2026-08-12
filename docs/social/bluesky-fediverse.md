@@ -102,7 +102,7 @@ Quality over volume — the fediverse rewards it and Fosstodon's culture expects
 **Day 1 — Launch thread (pinned, both platforms).** 4 posts:
 1. "Farming Sim 25 gives you a flat `mods/` folder and a shrug. Silo is the management layer it forgot to ship. Free, open source, no account, no telemetry. 🧵" + 20-30s clip of the library view.
 2. "The headline feature: it reads `log.txt` and **names the mod that actually crashed you** — separating real errors from cosmetic noise. No more disable-half-and-pray." + `◆ diagnose` screenshot naming a culprit.
-3. "It also catches conflicts *before* launch (duplicate active map = instant crash, cross-mod fillType last-wins) and pulls ModHub + GitHub + Nexus into one catalog with the latest version across all three."
+3. "It also catches conflicts *before* launch (duplicate active map = instant crash, cross-mod fillType last-wins) and pulls ModHub + GitHub into one catalog with the latest version across all three."
 4. "And the part I'm proudest of: **provenance.** Silo hashes an installed mod and tells you if it's the real, untampered build — Verified / Modified (with the exact changed files) / Unverified. Windows beta today, macOS/Linux experimental. → silo.hllmr.com · source: github.com/HLLMR/silo"
 
 **Day 2 — "Which mod crashed you?" deep-dive.** A single crash log line most FS25 players recognize, then the `diagnose` output that names it. Ask: "Reply with your worst FS25 crash — bet I can tell you which mod." (genuine engagement, not a growth hack)

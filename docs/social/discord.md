@@ -137,7 +137,7 @@ Keep the gate **light** — a crashing player will bounce off a heavy CAPTCHA ma
 - **Bot backstop:** an all-in-one mod bot (Carl-bot **or** Wick) for auto-mute on spam, anti-raid, message logging to `#bot-logs`, and a `warn/mute/ban` ladder with a public reason.
 - **Human tone:** small server, so moderation is high-touch and forgiving. Documented **3-strike ladder** (warn → timeout → ban) posted in `#mod-team`; piracy and harassment are instant-remove. Every mod action logged.
 - **Piracy stance is load-bearing:** Silo's whole pitch is *legitimacy and provenance*. Zero tolerance for cracked-mod / paid-mod-theft talk protects the brand and mod-author trust. Say this openly in the rules.
-- **Conflict of interest / honesty:** mods disclose they're staff; no astroturfing Silo elsewhere from the community; no vote-brigading Reddit/Nexus/ModHub from here (violates those platforms' rules and our own guardrails). If someone asks the community to go upvote something, a mod shuts it down.
+- **Conflict of interest / honesty:** mods disclose they're staff; no astroturfing Silo elsewhere from the community; no vote-brigading Reddit/ModHub from here (violates those platforms' rules and our own guardrails). If someone asks the community to go upvote something, a mod shuts it down.
 
 ---
 
@@ -219,7 +219,7 @@ Guardrail: never manufacture activity. An empty channel answered honestly beats 
 - First weekly roundup: top feature requests so far, a showcased screenshot, thanks to early helpers. Open the top-voted feature request as a GitHub issue live and link it — proof the loop works.
 - Retro: which channels are dead? Collapse them. Which questions repeat? Add to `#faq`.
 
-**Cross-promo (all week, within platform rules):** every other Silo channel points here — Reddit posts, YouTube video descriptions, the landing page, ModHub/Nexus mod pages' comment replies. The Discord is the funnel's floor.
+**Cross-promo (all week, within platform rules):** every other Silo channel points here — Reddit posts, YouTube video descriptions, the landing page, ModHub mod pages' comment replies. The Discord is the funnel's floor.
 
 ### Claude skills to build
 
@@ -292,7 +292,7 @@ Automations a Claude Code agent ("Cowork") builds so the server runs semi-autono
 
 ### Guardrails (bake in)
 
-- No astroturfing, fake accounts, vote manipulation, or engagement-buying — including no brigading Reddit/Nexus/ModHub *from* this server.
+- No astroturfing, fake accounts, vote manipulation, or engagement-buying — including no brigading Reddit/ModHub *from* this server.
 - Respect Discord ToS + each linked platform's self-promo rules when cross-posting.
 - Bots assist and draft; a human approves anything public and anything that touches GitHub. No mass-DMs — the welcome greeter is the only automated DM and it's a single, non-promotional welcome (with an opt-out).
 - Be transparent this is the dev/community (solo/small dev — don't fake a big team). Disclose AI-assisted drafts where norms expect it.

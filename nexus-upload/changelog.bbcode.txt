@@ -1,0 +1,16 @@
+[b]0.5.0[/b]
+[list]
+[*][b]"Newest" sort in Browse now matches ModHub's real order[/b] (its native grid order, not a refresh timestamp).
+[*][b]Right-click menu on library mods[/b] — Activate/Park, Open details, Find in Browse, category, favorite, hide, mark broken.
+[*][b]Collections is its own toolbar panel[/b], separate from Multiplayer.
+[*][b]Shared-collection links are a real page now[/b] (silo.hllmr.com/c/…) with an "Open in Silo" button + download fallback — not a wall of GitHub JSON.
+[*][b]Manage your collections in-app[/b] — list, copy the share link, open the page, update in place (same link), or delete.
+[/list]
+
+[b]Trust & safety (0.3.1–0.5.0)[/b]
+[list]
+[*]Windows installers are code-signed (verified publisher: David Hellmer).
+[*]Every release ships SHA-256 checksums, a build-provenance attestation, and a CycloneDX SBOM.
+[/list]
+
+[i]Full history: [url=https://github.com/HLLMR/silo/blob/main/CHANGELOG.md]CHANGELOG.md[/url][/i]

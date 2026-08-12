@@ -937,9 +937,7 @@ mod tests {
         assert!(!is_github_host("https://github.com.evil.com/steal"));
         assert!(!is_github_host("https://evil.com/github.com/a.zip"));
         assert!(!is_github_host("https://raw.githubusercontent.example/x"));
-        assert!(!is_github_host(
-            "https://staticdelivery.nexusmods.com/a.png"
-        ));
+        assert!(!is_github_host("https://staticdelivery.example.com/a.png"));
         assert!(!is_github_host("http://github.com@evil.com/x"));
         // Plaintext HTTP must never qualify — a bearer token can't be sent in the clear.
         assert!(!is_github_host(

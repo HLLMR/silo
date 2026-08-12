@@ -18,7 +18,7 @@
 
 A desktop app for your FS25 mod library that stays quick at 700+ mods. Silo reads the
 game log to name the mod that crashed you, flags conflicts before you launch, and shows
-the latest version it can find across ModHub, GitHub and Nexus. Everything it changes on
+the latest version it can find across ModHub and GitHub. Everything it changes on
 disk is reversible. **Free and open source. Windows (tested) · macOS & Linux (experimental).**
 
 <p align="center">
@@ -48,7 +48,7 @@ is the management layer the game left out.
   and names the mod at fault.
 - **Conflict detection** — duplicate active maps (an instant crash), plus colliding
   filltypes, vehicle types and scripts across your active set.
-- **Cross-source catalog** — one record per mod aggregating ModHub + GitHub + Nexus,
+- **Cross-source catalog** — one record per mod aggregating ModHub + GitHub,
   with the latest version found across all of them. See the
   [verified catalog page](https://silo.hllmr.com/trust/) or
   [browse it live](https://silo.hllmr.com/browse/); it's served by the public
@@ -56,13 +56,13 @@ is the management layer the game left out.
 - **Integrity check** — hashes an installed mod and compares it to the trusted build its
   source published: a clean match, or the exact files that changed. Provenance, not
   antivirus — it confirms what a mod is, not whether it means well. It works across
-  ModHub, GitHub and Nexus — a cross-source integrity check that's rare among mod tools.
+  ModHub and GitHub — a cross-source integrity check that's rare among mod tools.
 - **Guided bisection** — when the log can't name the culprit, automates "disable half,
   relaunch" to isolate it, and safely restores your active set afterward.
 - **Loadouts & projection** — curate profiles and project only the active set into the
   game's flat folder at launch, via symlink/junction. Organizing files your zips into a
   reversible local archive; Flatten puts everything back.
-- **Per-source actions** — star a repo on GitHub, endorse on Nexus, rate on ModHub, all
+- **Per-source actions** — star a repo on GitHub, rate on ModHub, all
   through *your own* accounts. Silo just opens the door; your credentials stay yours.
 - **Multiplayer sync**, a **filltype-compatibility bridge generator**, **savegame backup**,
   and a full **control-binding map**.

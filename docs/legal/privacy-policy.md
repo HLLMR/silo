@@ -18,7 +18,7 @@ This policy applies to:
 - The **Silo website** at silo.hllmr.com, including the marketing landing page, the public catalog browser at /browse, and the help docs at /help.
 - The **Silo public read API** at silo-api.hllmr.com.
 
-It does not cover third-party services that Silo links to or interacts with, such as ModHub, GitHub, Nexus Mods, or Cloudflare. Those services have their own privacy policies, which are linked in the "Third-party services" section below.
+It does not cover third-party services that Silo links to or interacts with, such as ModHub, GitHub, or Cloudflare. Those services have their own privacy policies, which are linked in the "Third-party services" section below.
 
 ## The desktop app is local-first
 
@@ -34,7 +34,7 @@ The Silo desktop app is designed so that your information stays on your own comp
 The app stores data **only locally on your machine**:
 
 - **A local SQLite cache**, used to track your mod library, loadouts, scan results, conflict and integrity findings, and similar working data. This lives on your device.
-- **The operating system keychain**, used only to hold any GitHub or Nexus Mods access tokens that **you** choose to connect (see below). Tokens are stored in your OS keychain, not sent to us.
+- **The operating system keychain**, used only to hold any GitHub access tokens that **you** choose to connect (see below). Tokens are stored in your OS keychain, not sent to us.
 
 We do not receive, collect, or have access to this local data. If you uninstall the app or delete this data, it is gone from your machine; there is no copy on our side.
 
@@ -48,10 +48,9 @@ Although the app is local-first, it does connect to the network for specific, pu
 
 - **The Silo public read API (silo-api.hllmr.com).** The app reads the mod catalog from our API for search, update checks, cover images, and integrity/provenance checks. To perform lookups, the app may send **mod technical-names and mod file hashes** so the API can identify a mod and return its catalog record. **No personal data is sent for these lookups.** Mod integrity and provenance hashing is performed **locally** on your machine.
 - **The GitHub API (optional, user-initiated).** If you choose to log in to GitHub, the app uses GitHub's OAuth device flow. This login is used **only** for explicit actions you take, such as starring or watching a repository. The GitHub token is stored in your OS keychain and is **never attached to mod downloads**.
-- **The Nexus Mods API (optional).** The app talks to Nexus **only if you supply your own Nexus API key**. If you do not provide a key, the app does not use the Nexus API on your behalf.
-- **Mod source CDNs (ModHub, GitHub, Nexus).** The app fetches images from these sources and, **when you choose**, downloads a mod from its original source. Silo does not host, mirror, or redistribute mod files; downloads always go to the original source.
+- **Mod source CDNs (ModHub, GitHub).** The app fetches images from these sources and, **when you choose**, downloads a mod from its original source. Silo does not host, mirror, or redistribute mod files; downloads always go to the original source.
 
-Connections to GitHub, Nexus, and mod source CDNs are governed by those services' own privacy policies (linked below). When your app requests content from them, they will necessarily receive your IP address and standard request information as part of delivering that content.
+Connections to GitHub and mod source CDNs are governed by those services' own privacy policies (linked below). When your app requests content from them, they will necessarily receive your IP address and standard request information as part of delivering that content.
 
 ## The website
 
@@ -68,14 +67,13 @@ The public read API serves the mod catalog. To keep the API available and to pre
 - **IP addresses and request metadata**, used to apply **per-IP rate limiting** and standard server logging. This processing is transient and operational; the API has **no user accounts and sets no tracking cookies**.
 - **A content delivery network (Cloudflare).** The API is (or will be) fronted by Cloudflare, which processes traffic for security and caching. Cloudflare therefore also processes IP addresses and request metadata on our behalf. See Cloudflare's privacy policy, linked below.
 
-The catalog itself aggregates **publicly available mod metadata** (such as names, images, descriptions, versions, and ratings) from ModHub, GitHub, and Nexus, deduplicated into one record per mod, with links back to each original source. The catalog does not contain personal data about you.
+The catalog itself aggregates **publicly available mod metadata** (such as names, images, descriptions, versions, and ratings) from ModHub and GitHub, deduplicated into one record per mod, with links back to each original source. The catalog does not contain personal data about you.
 
 ## Third-party services
 
 Silo interacts with the following third parties. Each has its own privacy policy that governs how it handles your information when you use it:
 
 - **GitHub** (optional login and downloads) — https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement
-- **Nexus Mods** (only if you supply your own API key) — https://help.nexusmods.com/article/17-privacy-policy
 - **ModHub / GIANTS Software** (mod source and images) — https://www.giants-software.com/privacy.php
 - **Cloudflare** (CDN in front of the API) — https://www.cloudflare.com/privacypolicy/
 
@@ -121,7 +119,7 @@ Silo's integrity and provenance feature is an **origin and integrity signal, not
 
 ## Trademarks and affiliation
 
-Silo is **not affiliated with, endorsed by, or sponsored by GIANTS Software or the Farming Simulator brand**. "Farming Simulator", "FS25", "ModHub", "GitHub", "Nexus Mods", and individual mod names and artwork are the property of their respective owners. Mod content in the catalog belongs to its respective authors and platforms.
+Silo is **not affiliated with, endorsed by, or sponsored by GIANTS Software or the Farming Simulator brand**. "Farming Simulator", "FS25", "ModHub", "GitHub", and individual mod names and artwork are the property of their respective owners. Mod content in the catalog belongs to its respective authors and platforms.
 
 ## Changes to this policy
 

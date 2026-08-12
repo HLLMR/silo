@@ -48,7 +48,7 @@ A collection is metadata + a mod list + optional savegame binding. Extends the e
       "source": "github",            // preferred source for this mod
       "sourceUrl": "https://github.com/.../releases/tag/v1.0.2.9",
       "manifestHash": "9fea10cd…",   // canonical hash (provenance), when known
-      "installable": true            // false → importer opens the page (ModHub/Nexus)
+      "installable": true            // false → importer opens the page (ModHub)
     }
     // …
   ]
@@ -85,7 +85,7 @@ phase; secret-gist link-sharing covers the MP use case without it.
 1. Paste a gist/repo URL (or, Phase 3, pick from Browse Collections).
 2. Fetch the manifest, resolve each mod against the catalog.
 3. **Preview** (organize-preview pattern): what will install (GitHub-source), what needs a manual
-   "open the page" step (ModHub/Nexus), what's already present, and — via provenance — which
+   "open the page" step (ModHub), what's already present, and — via provenance — which
    resolved mods verify against the collection's declared hashes.
 4. Install the installable set, then create/apply a loadout (bound to the savegame if present).
 5. **MP path:** `mpsync` diffs the host's manifest against the joiner's library and shows the
@@ -119,9 +119,9 @@ competitor can follow — it rides the same cross-source hash DB that is the moa
 ## Caveats to message honestly
 
 - **"Private" = unlisted link, not auth-gated** (v1). Say so.
-- **ModHub/Nexus mods = guided import**, not one-click (their CDNs gate downloads). GitHub-source
+- **ModHub mods = guided import**, not one-click (their CDNs gate downloads). GitHub-source
   collections are the frictionless ones — worth nudging authors toward GitHub releases.
-- **Version drift:** a collection pins versions; a ModHub/Nexus latest-only source may no longer
+- **Version drift:** a collection pins versions; a ModHub latest-only source may no longer
   serve the pinned build → provenance correctly reports "the pinned version is gone" (not a bug).
   GitHub release assets persist, so GitHub-source collections age best.
 - **Writing to a user's GitHub account is trust-sensitive:** creation must be explicit, consented,

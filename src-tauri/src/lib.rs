@@ -1539,7 +1539,7 @@ struct PlanRow {
 
 /// A read-only preview of importing a shared collection: what you already have, what's a
 /// different version, what Silo can install for you (a directly-downloadable source), and
-/// what you'll need to fetch yourself (ModHub/Nexus gate downloads) or that isn't catalogued.
+/// what you'll need to fetch yourself (ModHub gates downloads) or that isn't catalogued.
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ImportPlan {
@@ -1623,7 +1623,7 @@ async fn collection_import_preview(
                     if installable {
                         plan.will_install.push(row(None));
                     } else if hit.is_some() {
-                        // In the catalog, but no direct download (ModHub/Nexus gate it).
+                        // In the catalog, but no direct download (ModHub gates it).
                         plan.open_page.push(row(None));
                     } else {
                         plan.unresolved.push(row(None));
@@ -1673,7 +1673,7 @@ struct ApplyProgress {
 
 /// Import a shared collection: download every directly-installable mod that's missing,
 /// verify each against the version the collection pinned, and save the whole set as a
-/// loadout. Mods that must be fetched from ModHub/Nexus (or aren't catalogued) are recorded
+/// loadout. Mods that must be fetched from ModHub (or aren't catalogued) are recorded
 /// but never faked — the loadout still lists them so it completes once the user grabs them.
 ///
 /// Every download reuses the same guarded path as a Browse install (basename check, stream
@@ -1790,7 +1790,7 @@ async fn collection_apply(
                         }
                     }
                 }
-                // No direct download (ModHub/Nexus gate it) — leave it for the user.
+                // No direct download (ModHub gates it) — leave it for the user.
                 Err(_) => {
                     rows.push(ApplyRow {
                         tech_name: m.tech_name.clone(),

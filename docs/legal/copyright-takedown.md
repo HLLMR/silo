@@ -12,18 +12,18 @@ This Copyright & Takedown Policy ("Policy") explains how HLLMR Ventures LLC ("HL
 
 Silo is a free, open-source desktop application that helps people manage their Farming Simulator 25 ("FS25") mods. As part of Silo, we operate a public catalog, browsable at silo.hllmr.com/browse and served by a public read API at silo-api.hllmr.com.
 
-The catalog aggregates **publicly available mod metadata** — such as names, images, descriptions, versions, and ratings — from third-party platforms including ModHub, GitHub, and Nexus Mods. We deduplicate this information into a single record for each mod and **link back to each original source**.
+The catalog aggregates **publicly available mod metadata** — such as names, images, descriptions, versions, and ratings — from third-party platforms including ModHub and GitHub. We deduplicate this information into a single record for each mod and **link back to each original source**.
 
 Two points are central to this Policy:
 
-- **We do not host, mirror, or redistribute mod files.** When a user chooses to download a mod, the download goes to the original source (ModHub, GitHub, or Nexus). Silo does not store or serve the mod's files.
+- **We do not host, mirror, or redistribute mod files.** When a user chooses to download a mod, the download goes to the original source (ModHub or GitHub). Silo does not store or serve the mod's files.
 - **The catalog consists of aggregated metadata and images drawn from public sources.** The underlying mods, their artwork, and their descriptions remain the property of their respective authors and platforms.
 
 Because of this design, most concerns about the availability of a **mod file** should be directed to the platform that hosts that file. This Policy addresses the **metadata and images** that appear in the Silo catalog itself.
 
 ## 2. Relationship to source-platform processes
 
-This Policy **complements, and does not replace,** the copyright and takedown processes offered by ModHub, GitHub, Nexus Mods, and any other source platform. Because Silo links back to the original source rather than hosting mod files, removing a listing from the Silo catalog does not remove the mod from its source platform. If you want a mod removed at its origin, you must contact the relevant source platform directly and follow its process. We will, on request and in good faith, remove or correct the corresponding catalog record as described below.
+This Policy **complements, and does not replace,** the copyright and takedown processes offered by ModHub, GitHub, and any other source platform. Because Silo links back to the original source rather than hosting mod files, removing a listing from the Silo catalog does not remove the mod from its source platform. If you want a mod removed at its origin, you must contact the relevant source platform directly and follow its process. We will, on request and in good faith, remove or correct the corresponding catalog record as described below.
 
 ## 3. Who may submit a notice
 
@@ -32,7 +32,7 @@ You may submit a takedown notice if you are, or are authorized to act on behalf 
 - a mod whose metadata or images appear in the Silo catalog; or
 - images, text, or other materials that appear in a catalog record.
 
-Platform operators (for example, ModHub, GitHub, or Nexus Mods) and individual mod authors are both welcome to submit notices.
+Platform operators (for example, ModHub or GitHub) and individual mod authors are both welcome to submit notices.
 
 ## 4. How to submit a takedown notice
 
@@ -92,7 +92,7 @@ We handle notices and counter-notices in good faith. Please note that, under app
 
 ## 10. Trademarks and attribution
 
-"Farming Simulator", "FS25", "ModHub", "GitHub", and "Nexus Mods", along with mod names and artwork, are the property of their respective owners. Content in the catalog belongs to its respective authors and platforms. Silo is **not affiliated with, endorsed by, or sponsored by** GIANTS Software or the Farming Simulator brand. References to these names and marks in the catalog are for identification and attribution only.
+"Farming Simulator", "FS25", "ModHub" and "GitHub", along with mod names and artwork, are the property of their respective owners. Content in the catalog belongs to its respective authors and platforms. Silo is **not affiliated with, endorsed by, or sponsored by** GIANTS Software or the Farming Simulator brand. References to these names and marks in the catalog are for identification and attribution only.
 
 ## 11. Changes to this Policy
 

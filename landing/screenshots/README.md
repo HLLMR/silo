@@ -14,7 +14,7 @@ Drop each as a PNG in this folder:
 |------|------|-------|
 | `library.png` | The Library view with a healthy, populated list | Wide window; a category selected in the rail; a few mods visible with icons. The hero of the set. |
 | `triage.png` | Crash & log triage after a run that had errors | The panel that names the culprit mod — the "aha" feature. Use a log with a real named error if possible. |
-| `browse.png` | The Browse tab with the detail drawer open | Show the per-source cards (GitHub stars, Nexus, ModHub rating) — the cross-source story. UniversalAutoload is a good example mod. |
+| `browse.png` | The Browse tab with the detail drawer open | Show the per-source cards (GitHub stars, ModHub rating) — the cross-source story. UniversalAutoload is a good example mod. |
 | `conflicts.png` | Conflict detection flagging a collision | The conflicts panel showing a duplicate map or filltype collision. |
 
 ## How to shoot
@@ -25,7 +25,7 @@ Drop each as a PNG in this folder:
   not an empty first-run state.
 - **Light or dark** is fine, but keep all four the **same theme** for a cohesive strip.
 - Trim OS chrome (window shadow is OK); no personal info in view (usernames, paths,
-  tokens — the GitHub/Nexus panels should show public counts only, not an account token).
+  tokens — the GitHub panels should show public counts only, not an account token).
 - Save as PNG. Optimize if large, but correctness over bytes.
 
 ## After dropping them in

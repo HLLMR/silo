@@ -23,19 +23,19 @@ All product names, brand names, logos, and trademarks referenced by Silo or show
 In particular, and without limitation:
 
 - **"Farming Simulator" and "FS25"** are trademarks of their respective owner (GIANTS Software).
-- **"ModHub"**, **"GitHub"**, and **"Nexus Mods"** are the property of their respective owners.
+- **"ModHub"** and **"GitHub"** are the property of their respective owners.
 - **Mod names and mod artwork** shown in Silo are the property of their respective authors and platforms.
 
 Use of these names and marks does not imply any endorsement of Silo by, or affiliation of Silo with, their owners.
 
 ## Catalog content belongs to its owners
 
-Silo's catalog (browsable at silo.hllmr.com/browse(https://silo.hllmr.com/browse) and served by the public read API at silo-api.hllmr.com(https://silo-api.hllmr.com)) aggregates **publicly available mod metadata** — such as names, images, descriptions, versions, and ratings — from ModHub, GitHub, and Nexus. This metadata is deduplicated into one record per mod, and each record links back to its original source.
+Silo's catalog (browsable at silo.hllmr.com/browse(https://silo.hllmr.com/browse) and served by the public read API at silo-api.hllmr.com(https://silo-api.hllmr.com)) aggregates **publicly available mod metadata** — such as names, images, descriptions, versions, and ratings — from ModHub and GitHub. This metadata is deduplicated into one record per mod, and each record links back to its original source.
 
 Ownership of that content stays with the people and platforms it came from:
 
 - **Mod content — including files, descriptions, images, and other materials — belongs to its respective authors and to the platforms that host it.** HLLMR Ventures LLC claims no ownership of it.
-- **Silo does not host, mirror, or redistribute mod files.** When you download a mod, the download goes to the original source (ModHub, GitHub, or Nexus). Silo links back to that source rather than serving files itself.
+- **Silo does not host, mirror, or redistribute mod files.** When you download a mod, the download goes to the original source (ModHub or GitHub). Silo links back to that source rather than serving files itself.
 - Mod integrity and provenance hashing performed by Silo happens locally on your own machine.
 
 If you are a rights holder and believe your content is represented incorrectly in the catalog, please contact us at **legal@hllmr.com**.
@@ -70,7 +70,7 @@ Provenance answers "**is this the build the source published?**" It does not ans
 
 ## Third-party sources and services
 
-Silo helps you interact with third-party platforms — including ModHub, GitHub, and Nexus — and can fetch images from and, at your direction, download mods from those sources' content delivery networks. Those platforms and the mods they host are outside HLLMR Ventures LLC's control. Your use of them is governed by their own terms and policies, and we are not responsible for their content, availability, or conduct.
+Silo helps you interact with third-party platforms — including ModHub and GitHub — and can fetch images from and, at your direction, download mods from those sources' content delivery networks. Those platforms and the mods they host are outside HLLMR Ventures LLC's control. Your use of them is governed by their own terms and policies, and we are not responsible for their content, availability, or conduct.
 
 ## Limitation of liability
 

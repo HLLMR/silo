@@ -79,7 +79,7 @@
 <li>The <strong>Silo website</strong> at silo.hllmr.com, including the marketing landing page, the public catalog browser at /browse, and the help docs at /help.</li>
 <li>The <strong>Silo public read API</strong> at silo-api.hllmr.com.</li>
 </ul>
-<p>It does not cover third-party services that Silo links to or interacts with, such as ModHub, GitHub, Nexus Mods, or Cloudflare. Those services have their own privacy policies, which are linked in the &quot;Third-party services&quot; section below.</p>
+<p>It does not cover third-party services that Silo links to or interacts with, such as ModHub, GitHub, or Cloudflare. Those services have their own privacy policies, which are linked in the &quot;Third-party services&quot; section below.</p>
 <h2>The desktop app is local-first</h2>
 <p>The Silo desktop app is designed so that your information stays on your own computer. Specifically:</p>
 <ul>
@@ -92,7 +92,7 @@
 <p>The app stores data <strong>only locally on your machine</strong>:</p>
 <ul>
 <li><strong>A local SQLite cache</strong>, used to track your mod library, loadouts, scan results, conflict and integrity findings, and similar working data. This lives on your device.</li>
-<li><strong>The operating system keychain</strong>, used only to hold any GitHub or Nexus Mods access tokens that <strong>you</strong> choose to connect (see below). Tokens are stored in your OS keychain, not sent to us.</li>
+<li><strong>The operating system keychain</strong>, used only to hold any GitHub access tokens that <strong>you</strong> choose to connect (see below). Tokens are stored in your OS keychain, not sent to us.</li>
 </ul>
 <p>We do not receive, collect, or have access to this local data. If you uninstall the app or delete this data, it is gone from your machine; there is no copy on our side.</p>
 <h3>The app modifies files in your own game folder</h3>
@@ -102,10 +102,9 @@
 <ul>
 <li><strong>The Silo public read API (silo-api.hllmr.com).</strong> The app reads the mod catalog from our API for search, update checks, cover images, and integrity/provenance checks. To perform lookups, the app may send <strong>mod technical-names and mod file hashes</strong> so the API can identify a mod and return its catalog record. <strong>No personal data is sent for these lookups.</strong> Mod integrity and provenance hashing is performed <strong>locally</strong> on your machine.</li>
 <li><strong>The GitHub API (optional, user-initiated).</strong> If you choose to log in to GitHub, the app uses GitHub&#39;s OAuth device flow. This login is used <strong>only</strong> for explicit actions you take, such as starring or watching a repository. The GitHub token is stored in your OS keychain and is <strong>never attached to mod downloads</strong>.</li>
-<li><strong>The Nexus Mods API (optional).</strong> The app talks to Nexus <strong>only if you supply your own Nexus API key</strong>. If you do not provide a key, the app does not use the Nexus API on your behalf.</li>
-<li><strong>Mod source CDNs (ModHub, GitHub, Nexus).</strong> The app fetches images from these sources and, <strong>when you choose</strong>, downloads a mod from its original source. Silo does not host, mirror, or redistribute mod files; downloads always go to the original source.</li>
+<li><strong>Mod source CDNs (ModHub, GitHub).</strong> The app fetches images from these sources and, <strong>when you choose</strong>, downloads a mod from its original source. Silo does not host, mirror, or redistribute mod files; downloads always go to the original source.</li>
 </ul>
-<p>Connections to GitHub, Nexus, and mod source CDNs are governed by those services&#39; own privacy policies (linked below). When your app requests content from them, they will necessarily receive your IP address and standard request information as part of delivering that content.</p>
+<p>Connections to GitHub and mod source CDNs are governed by those services&#39; own privacy policies (linked below). When your app requests content from them, they will necessarily receive your IP address and standard request information as part of delivering that content.</p>
 <h2>The website</h2>
 <p>The Silo website is intentionally minimal:</p>
 <ul>
@@ -119,12 +118,11 @@
 <li><strong>IP addresses and request metadata</strong>, used to apply <strong>per-IP rate limiting</strong> and standard server logging. This processing is transient and operational; the API has <strong>no user accounts and sets no tracking cookies</strong>.</li>
 <li><strong>A content delivery network (Cloudflare).</strong> The API is (or will be) fronted by Cloudflare, which processes traffic for security and caching. Cloudflare therefore also processes IP addresses and request metadata on our behalf. See Cloudflare&#39;s privacy policy, linked below.</li>
 </ul>
-<p>The catalog itself aggregates <strong>publicly available mod metadata</strong> (such as names, images, descriptions, versions, and ratings) from ModHub, GitHub, and Nexus, deduplicated into one record per mod, with links back to each original source. The catalog does not contain personal data about you.</p>
+<p>The catalog itself aggregates <strong>publicly available mod metadata</strong> (such as names, images, descriptions, versions, and ratings) from ModHub and GitHub, deduplicated into one record per mod, with links back to each original source. The catalog does not contain personal data about you.</p>
 <h2>Third-party services</h2>
 <p>Silo interacts with the following third parties. Each has its own privacy policy that governs how it handles your information when you use it:</p>
 <ul>
 <li><strong>GitHub</strong> (optional login and downloads) — <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement</a></li>
-<li><strong>Nexus Mods</strong> (only if you supply your own API key) — <a href="https://help.nexusmods.com/article/17-privacy-policy">https://help.nexusmods.com/article/17-privacy-policy</a></li>
 <li><strong>ModHub / GIANTS Software</strong> (mod source and images) — <a href="https://www.giants-software.com/privacy.php">https://www.giants-software.com/privacy.php</a></li>
 <li><strong>Cloudflare</strong> (CDN in front of the API) — <a href="https://www.cloudflare.com/privacypolicy/">https://www.cloudflare.com/privacypolicy/</a></li>
 </ul>
@@ -152,7 +150,7 @@
 <h2>A note on &quot;Verified&quot; / provenance</h2>
 <p>Silo&#39;s integrity and provenance feature is an <strong>origin and integrity signal, not a security guarantee or virus scan</strong>. It confirms whether an installed build matches the source it came from; it does <strong>not</strong> vouch for a mod&#39;s safety or scan it for malware. This is described here because people sometimes assume &quot;Verified&quot; means &quot;safe&quot; — it does not.</p>
 <h2>Trademarks and affiliation</h2>
-<p>Silo is <strong>not affiliated with, endorsed by, or sponsored by GIANTS Software or the Farming Simulator brand</strong>. &quot;Farming Simulator&quot;, &quot;FS25&quot;, &quot;ModHub&quot;, &quot;GitHub&quot;, &quot;Nexus Mods&quot;, and individual mod names and artwork are the property of their respective owners. Mod content in the catalog belongs to its respective authors and platforms.</p>
+<p>Silo is <strong>not affiliated with, endorsed by, or sponsored by GIANTS Software or the Farming Simulator brand</strong>. &quot;Farming Simulator&quot;, &quot;FS25&quot;, &quot;ModHub&quot;, &quot;GitHub&quot;, and individual mod names and artwork are the property of their respective owners. Mod content in the catalog belongs to its respective authors and platforms.</p>
 <h2>Changes to this policy</h2>
 <p>We may update this Privacy Policy from time to time. When we do, we will revise the effective date at the top. Material changes will be reflected in the version published with the Services.</p>
 <h2>Governing law</h2>

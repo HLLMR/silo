@@ -63,7 +63,7 @@ closes the app). A packaged build is `npm run tauri:build`.
 ## 6. Browse (catalog)  _(auto-verified: adapters, /mods shape)_
 - [ ] `[net]` Browse loads the catalog; header shows total; **scroll works** (regression-fixed).
 - [ ] `[net]` Search filters; category dropdown filters; "Load more" pages to the end ("That's all N").
-- [ ] `[net]` Per-source buttons render with versions: GitHub = ⬇ (install), ModHub/Nexus = ↗ (open page). "In library" badge on owned mods.
+- [ ] `[net]` Per-source buttons render with versions: GitHub = ⬇ (install), ModHub = ↗ (open page). "In library" badge on owned mods.
 - [ ] `[net][game]` Install a GitHub mod → progress bar advances (MB), lands in the library on rescan, then loads in-game.
 - [ ] `[net]` Details opens the drawer: cover image, facts, full source list with per-source versions + open-page links.
 
@@ -103,7 +103,7 @@ closes the app). A packaged build is `npm run tauri:build`.
 ---
 
 ## 14. Security & reliability (v0.1.1 hardening)
-- [ ] `[app]` **Token in the OS keychain.** Connect GitHub (Settings) and, if you have a key, Nexus. Then check the OS credential store — Windows: `Credential Manager → Windows Credentials`, look for `com.hllmr.silo`; macOS: Keychain Access, search "Silo". The token should appear there. It should NOT be readable in the app's `silo.db` (it lives in `app_data_dir`).
+- [ ] `[app]` **Token in the OS keychain.** Connect GitHub (Settings). Then check the OS credential store — Windows: `Credential Manager → Windows Credentials`, look for `com.hllmr.silo`; macOS: Keychain Access, search "Silo". The token should appear there. It should NOT be readable in the app's `silo.db` (it lives in `app_data_dir`).
 - [ ] `[app]` **Token persists + still works.** Restart the app: still "Connected as …", and a source action (⭐ Star / 👍 Endorse) still works.
 - [ ] `[app]` **Disconnect clears it.** Disconnect GitHub → the `com.hllmr.silo`/`gh_token` entry is gone from the credential store.
 - [ ] `[net]` **Corrupt-update guard.** (If practical) point an update at a truncated/non-zip file → it errors ("not a valid .zip archive") and does NOT replace the existing mod; a `.zip.bak` is only written when a real overwrite happens.
@@ -157,13 +157,12 @@ top header bar (the drawer/backdrop must start below it).
 **Settings panel — every control:**
 - [ ] `[app]` **Theme** System/Light/Dark switch (both themes legible).
 - [ ] `[app]` **GitHub account**: Connect / **Enable actions** / **Use a Personal Access Token** / Disconnect all render (see §14 for the real connect).
-- [ ] `[app]` **Nexus account**: Connect (API key) / Disconnect render.
 - [ ] `[app]` **Library layout**: **Organize**, **Rebuild categories**, **Restore vanilla**, and the **auto-file toggle** are present. Confirm auto-file is **OFF by default** on a fresh profile.
 
 **Browse tab — every surface:**
 - [ ] `[net]` **Sort** dropdown (Popular / Most downloaded / Top rated / Newest / Name) and **category** dropdown both re-query.
 - [ ] `[net]` A **card** shows title/author/rating/downloads badges + per-source chips; **Details** opens the Browse drawer.
-- [ ] `[net]` **Browse drawer**: facts, the full **Available from** source list, and the **Interact** cards render — **GitHub** (★/⑂/👁/◎ + Star/Watch), **Nexus** (👍 + Endorse), **ModHub** (⭐ + Rate ↗).
+- [ ] `[net]` **Browse drawer**: facts, the full **Available from** source list, and the **Interact** cards render — **GitHub** (★/⑂/👁/◎ + Star/Watch), **ModHub** (⭐ + Rate ↗).
 - [ ] `[net]` **Read more** opens the **description modal** (full body + "Open full mod page"); closes.
 
 **Every remaining modal opens + closes cleanly:**
@@ -174,6 +173,6 @@ top header bar (the drawer/backdrop must start below it).
 - [ ] All `[game]`/`[net]` items pass (or known-limitations noted below).
 - [ ] `npm run tauri:build` produces a launchable packaged app.
 
-**Known limitations to note at release:** ModHub/Nexus are index-only (open-page, no direct
-install — GIANTS/Nexus gate downloads); ghost-keybind cleanup deferred (unverified premise);
+**Known limitations to note at release:** ModHub are index-only (open-page, no direct
+install — GIANTS gate downloads); ghost-keybind cleanup deferred (unverified premise);
 override-conflict detection is fillTypes-only for now.

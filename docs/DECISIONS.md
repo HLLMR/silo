@@ -58,6 +58,6 @@ conflict primitive; six namespace surfaces drive conflict detection; saves carry
 `required` + `fileHash` per mod. See `reference/fs25-modding-notes.md`.
 
 ## 2026-07-14 — Working title "Silo"
-**Context:** need a name comparable-in-ambition to Nexus Mod Manager but without
+**Context:** need a name comparable-in-ambition to the big mod managers but without
 "mod manager" in it. **Decision:** working title **Silo** (a silo = organized,
 sealed, retrievable farm storage). Revisit before any public release.
