@@ -44,12 +44,12 @@ changed files if you have one).
 > "Here's the part I haven't seen anywhere else. Silo hashes your installed mod and checks it against
 > the real build its source published. Verified means byte-for-byte identical. Modified tells you
 > exactly which files differ. It's provenance, not antivirus — it proves *what* a mod is, and it
-> works across ModHub, GitHub, and Nexus."
+> works across ModHub and GitHub."
 
 ### 2:00–2:30 · One catalog, every source + updates  *(V7, V8)*
-`[SHOW]` **Browse**; search a mod; the merged ModHub/GitHub/Nexus record with the latest version. Then
+`[SHOW]` **Browse**; search a mod; the merged ModHub/GitHub record with the latest version. Then
 quick: drop a new zip in → the mod drawer's **Adopt** banner.
-> "A mod might live on ModHub, get newer builds on GitHub, and mirror on Nexus. Silo folds them into
+> "A mod might live on ModHub, get newer builds on GitHub. Silo folds them into
 > one record so you see the actual latest — not whichever site updated last. And when you drop a new
 > version in to update, Silo spots it and offers to adopt it in a click."
 

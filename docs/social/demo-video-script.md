@@ -78,16 +78,16 @@ A follow-along beat sheet for a **narrated screen-share** on your own machine (y
     against the real build its source published. Verified means byte-for-byte the same. Modified
     tells you exactly which files differ."
   - "It's provenance, not antivirus — it proves *what* a mod is, it doesn't guess intent. And it
-    works across ModHub, GitHub, and Nexus."
+    works across ModHub and GitHub."
 
 ### 6 · One catalog, every source — and easy updates (6:30–7:45)
-- **DO:** Open **Browse**. Search a mod. Show it pulling ModHub/GitHub/Nexus into one record with the
+- **DO:** Open **Browse**. Search a mod. Show it pulling ModHub/GitHub into one record with the
   latest version. If it's a GitHub mod, show the in-app install with the progress bar. Then show the
   **update-by-drop** flow: with a mod out of date, drop the newer `.zip` into your folder, open the
   mod, and hit the drawer's **⬆ Adopt** banner.
 - **SAY:**
-  - "A mod might live on ModHub, get newer builds on GitHub, and a mirror on Nexus. Silo pulls them
-    into one record so you actually see the latest version across all three — not whichever site
+  - "A mod might live on ModHub, get newer builds on GitHub. Silo pulls them
+    into one record so you actually see the latest version across both — not whichever site
     updated last."
   - "ModHub won't let anyone download for you, so you grab the zip and drop it in — and Silo notices
     it's a newer build and offers to adopt it in one click. That's the whole update, done."

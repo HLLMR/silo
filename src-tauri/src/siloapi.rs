@@ -139,13 +139,11 @@ pub struct ModSource {
     #[serde(default)]
     pub download_url: Option<String>,
     // Raw per-source popularity signals — a source only fills what it natively reports
-    // (Nexus: downloads+endorsements, GitHub: downloads+stars, ModHub: rating+count).
+    // (GitHub: downloads+stars, ModHub: rating+count).
     #[serde(default)]
     pub downloads: Option<i64>,
     #[serde(default)]
     pub rating: Option<f64>,
-    #[serde(default)]
-    pub endorsements: Option<i64>,
     #[serde(default)]
     pub stars: Option<i64>,
 }

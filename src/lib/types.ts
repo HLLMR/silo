@@ -232,7 +232,7 @@ export interface PollResult {
 // ── SiloAPI (mod browser) ──
 
 /** One place a mod can be got from. The API decides `installable` — ModHub's CDN
- *  blocks direct downloads and Nexus gates them, so those open their site instead. */
+ *  blocks direct downloads, so those open their site instead. */
 export interface ModSourceOption {
   source: string;
   sourceUrl: string;
@@ -243,7 +243,6 @@ export interface ModSourceOption {
   // only fills what it natively reports; null until the server backfill lands.
   downloads?: number | null;
   rating?: number | null;
-  endorsements?: number | null;
   stars?: number | null;
 }
 
@@ -388,7 +387,7 @@ export interface ImportPlan {
   author: string | null;
   /** Silo can download these directly (a GitHub-style installable source). */
   willInstall: ImportPlanRow[];
-  /** In the catalog but download-gated (ModHub/Nexus) — get them from their page. */
+  /** In the catalog but download-gated (ModHub) — get them from their page. */
   openPage: ImportPlanRow[];
   /** Already in your library at a matching (or unpinned) version. */
   alreadyPresent: ImportPlanRow[];

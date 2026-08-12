@@ -2,9 +2,8 @@
   import type { CatalogModDetail, ModSourceOption } from "../types";
   import { resizable } from "../resize";
   import GithubCard from "./GithubCard.svelte";
-  import NexusCard from "./NexusCard.svelte";
   import ModHubCard from "./ModHubCard.svelte";
-  import { label, gatedReason, fmtCount, parseRepo, parseNexusId, canExpand, loadCatalogImage } from "../browse";
+  import { label, gatedReason, fmtCount, parseRepo, canExpand, loadCatalogImage } from "../browse";
 
   let {
     detail,
@@ -142,9 +141,8 @@
         </ul>
       {/if}
 
-      {#if d.sources.some((s) => (s.source === "github" && parseRepo(s.sourceUrl)) || (s.source === "nexus" && parseNexusId(s.sourceUrl)) || s.source === "modhub")}
+      {#if d.sources.some((s) => (s.source === "github" && parseRepo(s.sourceUrl)) || s.source === "modhub")}
         {@const ghSrcs = d.sources.filter((s) => s.source === "github" && parseRepo(s.sourceUrl))}
-        {@const nxSrcs = d.sources.filter((s) => s.source === "nexus" && parseNexusId(s.sourceUrl))}
         {@const mhSrcs = d.sources.filter((s) => s.source === "modhub")}
         <div class="drawer-sec">Interact</div>
         <div class="src-cards">
@@ -157,16 +155,6 @@
                 connected={gh.connected}
                 canWrite={gh.canWrite}
                 onConnect={() => onNeedAuth?.()}
-              />
-            {/if}
-          {/each}
-          {#each nxSrcs as s (s.sourceUrl)}
-            {#if parseNexusId(s.sourceUrl) != null}
-              <NexusCard
-                version={s.version}
-                sourceUrl={s.sourceUrl}
-                downloads={s.downloads}
-                endorsements={s.endorsements}
               />
             {/if}
           {/each}

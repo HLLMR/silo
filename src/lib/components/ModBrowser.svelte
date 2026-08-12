@@ -163,8 +163,7 @@
   } | null>(null);
 
   /** Open the description modal with the best body the catalog has: the ingested full text
-   *  if present, else the short summary. (Silo makes no live Nexus call — the index provides
-   *  Nexus metadata; the deep-link still gets the user the full page.) */
+   *  if present, else the short summary. */
   function openDesc(d: CatalogModDetail) {
     const summary = d.description ?? "";
     if (d.descriptionFull) {
