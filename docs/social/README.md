@@ -9,6 +9,18 @@ and the automations that let a small dev run a real presence without burning out
 bound by the same guardrails: **no astroturfing, no fake accounts, no vote-buying, no spam**;
 respect each platform's rules; automation drafts and schedules for a human, it never impersonates.
 
+## Video assets (start here for anything video)
+
+The feed for almost every channel above. **[`VIDEO_PLAN.md`](./VIDEO_PLAN.md)** is the reference — a
+four-tier ladder cut from one footage vault:
+
+| | Video | Script |
+|---|---|---|
+| **A** | 20–45s vertical hook (crash diagnosis) | [video-showcase-script.md](./video-showcase-script.md#tier-a--the-hook-2045s-vertical) |
+| **B** | ~3-min showcase (scripted VO) — the "what is this" link | [video-showcase-script.md](./video-showcase-script.md) |
+| **C** | 10–12-min narrated walkthrough | [demo-video-script.md](./demo-video-script.md) |
+| **D** | Talking-head deep-dive series (in-game) | [video-deep-dives.md](./video-deep-dives.md) |
+
 ## Platform plans
 
 | Platform | In one line | Plan |

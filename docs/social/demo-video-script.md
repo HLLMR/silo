@@ -1,7 +1,11 @@
-# Silo — full-length demo video walkthrough
+# Silo — full-length demo video walkthrough (Tier C)
 
 A follow-along beat sheet for a **narrated screen-share** on your own machine (your real
-~728-mod library is the best demo material there is). Target length **~10–12 minutes**.
+~730-mod library is the best demo material there is). Target length **~10–12 minutes**.
+
+> This is **Tier C** in the video ladder — see [`VIDEO_PLAN.md`](./VIDEO_PLAN.md) for how it fits
+> with the 30s hook (A), the 3-min showcase (B), and the talking-head deep-dives (D), plus the shared
+> footage vault. Reflects the current **v0.7.x** feature set.
 
 **Golden rules**
 - Talk like you're showing a friend, not reading ad copy. The `SAY` bullets are *points*, not a
@@ -48,12 +52,16 @@ A follow-along beat sheet for a **narrated screen-share** on your own machine (y
     crash-safe, it snapshots your active set so you never lose your setup."
 
 ### 3 · How it keeps [N] mods sane (2:30–4:00)
-- **DO:** Toggle a mod **active/parked** (the dot). Show the **Organize** preview if you have loose
-  mods. Point at the archived library vs the flat game folder.
+- **DO:** In the tile view, flip a mod's **green active switch** (active mods get a bright-green
+  border; toggle to list view too if you like). Show the **Organize** dry-run preview if you have
+  loose mods. Point at the archived library vs the flat game folder.
 - **SAY:**
   - "Everything you own lives here, filed by category. The game only ever sees the set you mark
-    active — Silo projects it in with links, so there's no copying and nothing's duplicated."
-  - "And it's reversible by design: one button puts everything back to a plain vanilla mods folder."
+    active — the green switch — and Silo projects it in with links, so there's no copying and nothing's
+    duplicated."
+  - "Drop a new mod straight into the folder and it shows up loose; park it and Silo files it into the
+    library for you. It's reversible by design — one button puts everything back to a plain vanilla
+    mods folder."
 
 ### 4 · Catch the crash *before* it happens — conflicts (4:00–5:00)
 - **DO:** Open **conflicts**. Show a real one from your set (duplicate map, or a filltype/script
@@ -72,18 +80,29 @@ A follow-along beat sheet for a **narrated screen-share** on your own machine (y
   - "It's provenance, not antivirus — it proves *what* a mod is, it doesn't guess intent. And it
     works across ModHub, GitHub, and Nexus."
 
-### 6 · One catalog, every source (6:30–7:30)
+### 6 · One catalog, every source — and easy updates (6:30–7:45)
 - **DO:** Open **Browse**. Search a mod. Show it pulling ModHub/GitHub/Nexus into one record with the
-  latest version. If it's a GitHub mod, show the in-app install with the progress bar.
+  latest version. If it's a GitHub mod, show the in-app install with the progress bar. Then show the
+  **update-by-drop** flow: with a mod out of date, drop the newer `.zip` into your folder, open the
+  mod, and hit the drawer's **⬆ Adopt** banner.
 - **SAY:**
   - "A mod might live on ModHub, get newer builds on GitHub, and a mirror on Nexus. Silo pulls them
     into one record so you actually see the latest version across all three — not whichever site
     updated last."
+  - "ModHub won't let anyone download for you, so you grab the zip and drop it in — and Silo notices
+    it's a newer build and offers to adopt it in one click. That's the whole update, done."
+- **(optional, quick):** the **↑ Needs update** filter narrows the library to just what's outdated.
 
-### 7 · A setup per playthrough — loadouts (7:30–8:15)
-- **DO:** Show **Loadouts** — save the current set, switch to another, show the active set change.
-- **SAY:** "I keep different mod sets for different saves — a realism run, a chill run. One click to
-  swap the whole set."
+### 7 · A setup per playthrough — loadouts & collections (7:45–8:45)
+- **DO:** Show **Loadouts** — save the current set, switch to another, show the active set change. Then
+  **Collections**: publish the current set as a **link** (secret gist), copy it, and open a shared
+  link to show the import **preview + heads-up** (which mods you'd still need).
+- **SAY:**
+  - "I keep different mod sets for different saves — a realism run, a chill run. One click to swap the
+    whole set. That's a loadout: it lives on my machine."
+  - "A collection is the same idea, but as a shareable link — 'here's my exact co-op pack' or 'the
+    mods this server runs.' Open someone's link and Silo previews what's in it and tells you what
+    you'd need to grab first. It shares the list, never the mod files."
 
 ### 8 · "…and it also does" — rapid fire (8:15–9:45)
 Keep each to ~15–20s. Don't dwell — this is the "there's a lot here" montage.
@@ -94,6 +113,8 @@ Keep each to ~15–20s. Don't dwell — this is the "there's a lot here" montage
   a map's stubborn filltype, no vehicle edits."
 - **Bindings map:** "Your whole control map in one place, with inputs bound to more than one action
   flagged."
+- **Library health:** "One panel for library-wide trouble — missing dependencies, mods the game
+  silently ignores, and files you swapped in yourself that Silo flags so it never touches them."
 
 ### 9 · Why you can trust it (9:45–10:45)
 - **DO:** Nothing fancy — just talk. Maybe show the `/trust` page or the "no telemetry" line.
@@ -102,6 +123,10 @@ Keep each to ~15–20s. Don't dwell — this is the "there's a lot here" montage
     catalog searches and update checks send only what they need, nothing about your library."
   - "And it's careful with your files. It never deletes something it can't prove it created — if you
     swapped your own build in somewhere, Silo leaves it alone."
+  - **(if your Documents is cloud-synced, be upfront):** "One honest note — if your Documents folder
+    is on OneDrive, Google Drive, or Proton, those block the links Silo prefers, so it falls back to
+    copies. Everything still works and nothing's lost; it just uses more disk. Silo detects it and
+    tells you."
   - **(own the AI part):** "Yeah, I built this with a lot of AI help. The architecture, the security
     calls, the testing, the releases — those are mine, human-reviewed. The source is right there;
     don't take my word for it, read it."
