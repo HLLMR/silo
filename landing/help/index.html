@@ -286,7 +286,7 @@
 
 <section id="browsing-installing"><h2 id="browsing-installing-h">Browsing &amp; installing mods</h2>
 
-<p>The <strong>Browse</strong> tab is where you find new mods without leaving Silo. It reads the SiloAPI catalog, a single index that merges the same mod across <strong>GitHub</strong>, <strong>ModHub</strong>, and <strong>Nexus Mods</strong>, so you see one card per mod instead of three scattered listings. The header shows how many mods and sources the catalog currently holds.</p>
+<p>The <strong>Browse</strong> tab is where you find new mods without leaving Silo. It reads the SiloAPI catalog, a single index that merges the same mod across <strong>GitHub</strong> and <strong>ModHub</strong>, so you see one card per mod instead of scattered listings. The header shows how many mods and sources the catalog currently holds.</p>
 
 <h3>Finding a mod</h3>
 <ul>
@@ -298,15 +298,15 @@
 <p>Any mod you already have shows an <strong>In library</strong> badge, so you can tell at a glance what is new.</p>
 
 <h3>Source buttons and versions</h3>
-<p>Each card carries one button per source the mod lives on — <code>GH</code>, <code>MH</code>, <code>Nexus</code> — each labelled with <em>that source's own version</em>, because those versions drift apart. A download arrow (⬇) means Silo can install it for you; an up-right arrow (↗) means the button opens the source's page instead.</p>
+<p>Each card carries one button per source the mod lives on — <code>GH</code>, <code>MH</code> — each labelled with <em>that source's own version</em>, because those versions drift apart. A download arrow (⬇) means Silo can install it for you; an up-right arrow (↗) means the button opens the source's page instead.</p>
 
 <h3>Installing from GitHub, in-app</h3>
 <p>GitHub release mods are directly installable. Click the GitHub button (or <strong>Install ⬇</strong> in the detail drawer) and Silo downloads the <code>.zip</code> straight into your mods folder, showing a live progress bar with the megabytes transferred. When it finishes you'll see <em>Installed …</em> and the library rescans automatically. You do not need to connect a GitHub account just to install — connecting is only for Star/Watch actions.</p>
 
 <blockquote class="note">Installing only adds a new <code>.zip</code> to your mods folder; it never edits or removes anything you already have. To undo an install, remove that mod from your library like any other.</blockquote>
 
-<h3>ModHub and Nexus are index-only</h3>
-<p>Silo can list ModHub and Nexus mods but cannot download them for you — those CDNs require the download to go through their own website. Their buttons read <strong>Open page ↗</strong> and take you to the source. Grab the <code>.zip</code> there, drop it in your mods folder, and Silo files a new mod automatically on the next scan. If you're <em>updating</em> a mod you already manage — dropping the newer <code>.zip</code> over Silo's copy — Silo notices the newer build and offers to adopt it; see <a href="#updates">Applying an update</a>.</p>
+<h3>ModHub is index-only</h3>
+<p>Silo can list ModHub mods but cannot download them for you — its CDN requires the download to go through the ModHub website. The button reads <strong>Open page ↗</strong> and takes you to the source. Grab the <code>.zip</code> there, drop it in your mods folder, and Silo files a new mod automatically on the next scan. If you're <em>updating</em> a mod you already manage — dropping the newer <code>.zip</code> over Silo's copy — Silo notices the newer build and offers to adopt it; see <a href="#updates">Applying an update</a>.</p>
 
 <h3>The detail drawer</h3>
 <p>Click <strong>anywhere on a card</strong> to open a side drawer with the cover image, author, version, category, tech name, rating and downloads, and the full <em>Available from</em> source list. For a GitHub source it also shows live repo stats (stars, forks, watchers, issues) and, once you connect GitHub, Star and Watch buttons. Use <em>Read more →</em> to expand the full description.</p>
@@ -327,7 +327,7 @@
 <p>Two things happen behind the scenes:</p>
 
 <ol>
-<li>One request sends your whole library to the SiloAPI catalog, which answers with the latest version per mod across GitHub, ModHub, and Nexus.</li>
+<li>One request sends your whole library to the SiloAPI catalog, which answers with the latest version per mod across GitHub and ModHub.</li>
 <li>Any mods you have personally linked to a GitHub repo are then checked directly, and that result takes precedence for those mods — your chosen source wins.</li>
 </ol>
 
@@ -343,10 +343,10 @@
 
 <p>Where a downloadable asset exists, click <strong>Install</strong> in the Updates panel (or <strong>Download &amp; install</strong> in the drawer). Silo downloads the new archive, verifies it is a valid, complete <code>.zip</code>, backs up your current file, and only then writes the new version in place. Afterward it rescans so your library reflects the new version.</p>
 
-<blockquote class="note">Safety: Silo will not overwrite your file until the download is validated and a backup is made. If the write fails partway, it restores the original from that backup, so you're never left with a broken mod. Mods indexed as open-page only (typical for ModHub and Nexus) have no direct-download asset — for those, update by drop-in, below.</blockquote>
+<blockquote class="note">Safety: Silo will not overwrite your file until the download is validated and a backup is made. If the write fails partway, it restores the original from that backup, so you're never left with a broken mod. Mods indexed as open-page only (typical for ModHub) have no direct-download asset — for those, update by drop-in, below.</blockquote>
 
-<h3>Updating a ModHub or Nexus mod (drop-in)</h3>
-<p>ModHub and Nexus don't allow direct download, so you update those the manual way: on the source page, download the new <code>.zip</code> and save it into your <code>mods/</code> folder, replacing the file that's there. Silo sees that the file no longer matches its managed copy and, rather than silently trusting or discarding it, surfaces it as something to reconcile.</p>
+<h3>Updating a ModHub mod (drop-in)</h3>
+<p>ModHub doesn't allow direct download, so you update those the manual way: on the mod's page, download the new <code>.zip</code> and save it into your <code>mods/</code> folder, replacing the file that's there. Silo sees that the file no longer matches its managed copy and, rather than silently trusting or discarding it, surfaces it as something to reconcile.</p>
 <p>Open that mod and the drawer leads with a banner: <em>"A newer build is in your mods folder — v1.0.3.0. Silo manages v1.0.2.0."</em> with two buttons:</p>
 <ul>
 <li><strong>⬆ Adopt v1.0.3.0</strong> — promotes the build you dropped in to be Silo's managed version. The old version is tucked into <code>backups/</code>, and if the mod is active the new build is re-projected. The library now shows the new version; you're done.</li>
@@ -616,8 +616,6 @@
 <h3>Connecting GitHub</h3>
 <p>Under <strong>GitHub account</strong>, press <strong>Connect GitHub</strong>. A browser opens to <strong>github.com/login/device</strong>; enter the code Silo shows and authorize. Connecting gives faster update checks (5,000 requests/hour) and access to private repos, and it enables in-app GitHub installs from the Browse tab. By default the connection is read-only; use <strong>Enable actions</strong> to grant the <code>public_repo</code> scope so <em>Star</em> and <em>Watch</em> land on your account. You can <strong>Disconnect</strong> anytime, or use a Personal Access Token instead via the token option.</p>
 
-<h3>Nexus Mods</h3>
-<p>Silo does <strong>not</strong> ask for a Nexus account or API key. Nexus mods appear in the Browse catalog as an <strong>index only</strong>: Silo links back to each mod's Nexus page (<strong>Open page ↗</strong>) so you download from Nexus directly. There's nothing to connect and no key stored, and adult / age-restricted content is excluded from the index. This keeps Silo within Nexus's API terms while still letting you find and open their mods from one place.</p>
 
 <p>The panel footer shows your installed Silo version.</p>
 </section>
@@ -651,7 +649,7 @@
 <p>The <strong>Integrity</strong> check in a mod's detail drawer compares your file against the trusted build SiloAPI hashed from its source. <strong>Unverified</strong> means there's no trusted build to compare against yet — usually because that mod isn't in the catalog. It is not a warning about the mod. Folder mods can't be verified at all (there's no archive to hash). This is a provenance check, not a virus scan.</p>
 
 <h3>Connecting a GitHub account</h3>
-<p>Connecting GitHub is optional and lives in <strong>Settings → GitHub account → Connect GitHub</strong>: a browser opens to <code>github.com/login/device</code>; type in the code shown. This raises update-check limits to 5,000/hr, enables in-app installs and Star/Watch on mod pages, and lets you publish <a href="#collections">collections</a>. The token stays on your machine, and a <strong>Disconnect</strong> button removes it at any time. There is no Nexus account to connect — Nexus is <a href="#settings-accounts">index-only</a>.</p>
+<p>Connecting GitHub is optional and lives in <strong>Settings → GitHub account → Connect GitHub</strong>: a browser opens to <code>github.com/login/device</code>; type in the code shown. This raises update-check limits to 5,000/hr, enables in-app installs and Star/Watch on mod pages, and lets you publish <a href="#collections">collections</a>. The token stays on your machine, and a <strong>Disconnect</strong> button removes it at any time.</p>
 </section>
     </main>
   </div>

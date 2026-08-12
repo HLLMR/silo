@@ -18,9 +18,9 @@ at launch (via symlink/junction, with a copy fallback). See [docs/](docs/):
 
 Beyond the MVP management layer above:
 
-- **Browse tab** — the SiloAPI canonical catalog (GitHub + ModHub + Nexus), search,
+- **Browse tab** — the SiloAPI canonical catalog (GitHub + ModHub), search,
   category filter, pagination, per-source buttons w/ versions, in-app GitHub install
-  with a streaming progress bar, detail drawer. ModHub/Nexus are index-only
+  with a streaming progress bar, detail drawer. ModHub is index-only
   (open-page; their CDNs gate direct download).
 - **Catalog-routed updates** — "⟳ Updates" checks the whole library against the
   catalog's latest-across-sources (fixes the GitHub-vs-ModHub false-"outdated" bug);

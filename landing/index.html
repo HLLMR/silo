@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Silo — the Farming Simulator 25 mod manager</title>
 <script src="/nav.js"></script>
-<meta name="description" content="Silo organizes your Farming Simulator 25 mods, names the mod that crashed you, catches conflicts, and pulls ModHub, GitHub and Nexus into one catalog with the latest version across all three. Free and open source." />
+<meta name="description" content="Silo organizes your Farming Simulator 25 mods, names the mod that crashed you, catches conflicts, and pulls ModHub and GitHub into one catalog with the latest version across both. Free and open source." />
 <meta property="og:title" content="Silo — the FS25 mod manager that should have shipped with the game" />
-<meta property="og:description" content="Organize 700+ mods, name the mod that crashed you, catch conflicts, and see the latest version across ModHub, GitHub and Nexus. Free, open source, no telemetry." />
+<meta property="og:description" content="Organize 700+ mods, name the mod that crashed you, catch conflicts, and see the latest version across ModHub and GitHub. Free, open source, no telemetry." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://silo.hllmr.com/" />
 <meta property="og:site_name" content="Silo" />
@@ -18,7 +18,7 @@
 <meta property="og:image:alt" content="Silo — the Farming Simulator 25 mod manager. Free and open source." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Silo — the FS25 mod manager that should have shipped with the game" />
-<meta name="twitter:description" content="Organize hundreds of mods, name the mod that crashed you, catch conflicts, and track the latest version across ModHub, GitHub and Nexus. Free, open source, no telemetry." />
+<meta name="twitter:description" content="Organize hundreds of mods, name the mod that crashed you, catch conflicts, and track the latest version across ModHub and GitHub. Free, open source, no telemetry." />
 <meta name="twitter:image" content="https://silo.hllmr.com/og.png" />
 <link rel="canonical" href="https://silo.hllmr.com/" />
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
@@ -325,7 +325,7 @@
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Mod Manager",
       "operatingSystem": "Windows, macOS, Linux",
-      "description": "Silo is a free, open-source mod manager for Farming Simulator 25. It organizes your mods, reads the game log to name the mod that crashed you, detects conflicts, aggregates ModHub, GitHub and Nexus into one canonical cross-source catalog, and verifies an installed mod against the trusted build its source published. Its changes to your mod folder are designed to be reversible.",
+      "description": "Silo is a free, open-source mod manager for Farming Simulator 25. It organizes your mods, reads the game log to name the mod that crashed you, detects conflicts, aggregates ModHub and GitHub into one canonical cross-source catalog, and verifies an installed mod against the trusted build its source published. Its changes to your mod folder are designed to be reversible.",
       "downloadUrl": "https://github.com/HLLMR/silo/releases",
       "softwareVersion": "beta",
       "releaseNotes": "https://github.com/HLLMR/silo/releases",
@@ -337,7 +337,7 @@
       "featureList": [
         "Crash and log triage — names the mod at fault from log.txt",
         "Conflict detection across maps, filltypes, vehicle types and scripts",
-        "Cross-source catalog aggregating ModHub, GitHub and Nexus",
+        "Cross-source catalog aggregating ModHub and GitHub",
         "Mod integrity verification against canonical hashed builds (provenance, not antivirus)",
         "Guided bisection to isolate a bad mod",
         "Loadouts projected into the game folder via links; zips filed into a reversible local archive",
@@ -355,10 +355,10 @@
       "@type": "FAQPage",
       "mainEntity": [
         { "@type": "Question", "name": "Is Silo free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — Silo is free and open source. There's no account to create, no paid tier, and no telemetry. The desktop app's every line is on GitHub to audit, fork or build yourself; the catalog it talks to is a separate hosted service." } },
-        { "@type": "Question", "name": "What does Silo actually do?", "acceptedAnswer": { "@type": "Answer", "text": "It manages your Farming Simulator 25 mods. Silo organizes the library and reads log.txt to name the mod that crashed you. It flags conflicts such as duplicate maps and colliding filltypes, vehicle types or scripts. And it pulls ModHub, GitHub and Nexus into one catalog that shows the latest version found across all three." } },
+        { "@type": "Question", "name": "What does Silo actually do?", "acceptedAnswer": { "@type": "Answer", "text": "It manages your Farming Simulator 25 mods. Silo organizes the library and reads log.txt to name the mod that crashed you. It flags conflicts such as duplicate maps and colliding filltypes, vehicle types or scripts. And it pulls ModHub and GitHub into one catalog that shows the latest version found across both." } },
         { "@type": "Question", "name": "Does Silo move or modify my mod files?", "acceptedAnswer": { "@type": "Answer", "text": "It moves them, but reversibly. Silo files your ZIPs into a local archive, then links only your active set into the game's mods folder at launch. Every move is recorded so it can be undone, and it backs up before it overwrites anything or edits a savegame." } },
         { "@type": "Question", "name": "Which platforms does Silo support?", "acceptedAnswer": { "@type": "Answer", "text": "Windows is the tested, supported platform today. macOS (Intel and Apple Silicon) and Linux builds exist but are experimental and largely untested — we're actively seeking testers on those platforms. It's one native app with per-OS game discovery and no runtime to install." } },
-        { "@type": "Question", "name": "Does Silo work with ModHub, GitHub and Nexus?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Silo keeps one record per mod that pulls all three together, so you see the latest version found across them. You can act on each through your own accounts: star on GitHub, endorse on Nexus, rate on ModHub. Silo just opens the door; your credentials stay on your machine." } },
+        { "@type": "Question", "name": "Does Silo work with ModHub and GitHub?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Silo keeps one record per mod that pulls both together, so you see the latest version found across them. You can act on each through your own accounts: star on GitHub, rate on ModHub. Silo just opens the door; your credentials stay on your machine." } },
         { "@type": "Question", "name": "Does Silo collect any data about me?", "acceptedAnswer": { "@type": "Answer", "text": "No telemetry, no account, no analytics. Catalog search sends your search terms, and update and integrity checks send the mod identifiers and versions needed to answer — nothing more. Silo never uploads your saves, mod archives, notes or personal files; your library and actions stay on your machine and in your own source accounts." } }
       ]
     }
@@ -374,7 +374,7 @@
     <div class="hero-copy">
       <p class="eyebrow reveal">Farming Simulator 25 · mod manager · free &amp; open source</p>
       <h1 class="reveal d1">The mod manager FS25 <em>should have shipped with.</em></h1>
-      <p class="lede reveal d2">Organize hundreds of mods, and Silo reads the game log to name the mod that actually crashed you, catches conflicts before you launch, verifies a mod is the real build, and pulls ModHub, GitHub and Nexus into one catalog. Its changes to your mod folder are designed to be reversible.</p>
+      <p class="lede reveal d2">Organize hundreds of mods, and Silo reads the game log to name the mod that actually crashed you, catches conflicts before you launch, verifies a mod is the real build, and pulls ModHub and GitHub into one catalog. Its changes to your mod folder are designed to be reversible.</p>
       <div class="cta-row reveal d2">
         <a class="btn btn-primary" href="#download">Download the beta</a>
         <a class="btn btn-ghost" href="https://github.com/HLLMR/silo">View the source →</a>
@@ -405,7 +405,7 @@
       <div class="prob"><span class="mk">01</span><span><b>Mystery crashes.</b><p>The log scrolls a wall of red and names nothing. You disable mods at random and pray.</p></span></div>
       <div class="prob"><span class="mk">02</span><span><b>Silent conflicts.</b><p>Two mods claim the same map, filltype or vehicle type. One quietly wins, or your save corrupts.</p></span></div>
       <div class="prob"><span class="mk">03</span><span><b>Version roulette.</b><p>ModHub says outdated, GitHub shipped days ago, and you can't tell which number is real.</p></span></div>
-      <div class="prob"><span class="mk">04</span><span><b>Scattered sources.</b><p>A mod lives on ModHub, its dev on GitHub, a mirror on Nexus. No one place tells the whole story.</p></span></div>
+      <div class="prob"><span class="mk">04</span><span><b>Scattered sources.</b><p>A mod lives on ModHub, its dev on GitHub. No one place tells the whole story.</p></span></div>
     </div>
   </div>
 </section>
@@ -431,12 +431,12 @@
       <div class="card">
         <div class="glyph">⌗</div>
         <h3>Cross-source catalog</h3>
-        <p>One record per mod that pulls ModHub, GitHub and Nexus together, so you see the latest version found across them instead of whichever source happened to update last.</p>
+        <p>One record per mod that pulls ModHub and GitHub together, so you see the latest version found across them instead of whichever source happened to update last.</p>
       </div>
       <div class="card">
         <div class="glyph">✓</div>
         <h3>Integrity check</h3>
-        <p>Silo hashes an installed mod and checks it against the trusted build its source published — a clean match, or the exact files that were changed. Provenance, not antivirus: it confirms what a mod is, it doesn't guess intent. It works across ModHub, GitHub and Nexus — a cross-source integrity check that's rare among mod tools.</p>
+        <p>Silo hashes an installed mod and checks it against the trusted build its source published — a clean match, or the exact files that were changed. Provenance, not antivirus: it confirms what a mod is, it doesn't guess intent. It works across ModHub and GitHub — a cross-source integrity check that's rare among mod tools.</p>
       </div>
       <div class="card">
         <div class="glyph">⑃</div>
@@ -457,7 +457,7 @@
         <div class="glyph">☰</div>
         <div>
           <h3>Act on every source, from one drawer</h3>
-          <p>Star the repo on GitHub, endorse it on Nexus, jump to the ModHub page to rate it, all through <em>your own</em> accounts. Silo just opens the door. Your credentials and data stay yours.</p>
+          <p>Star the repo on GitHub, jump to the ModHub page to rate it, all through <em>your own</em> accounts. Silo just opens the door. Your credentials and data stay yours.</p>
         </div>
         <a class="btn btn-ghost" href="#download">Try it</a>
       </div>
@@ -473,7 +473,7 @@
       <p>Real screens — click any to enlarge.</p>
     </div>
     <div class="screens">
-      <figure class="shot"><button type="button" onclick="openShot('screenshots/browse.png','One catalog — ModHub, GitHub and Nexus')"><img src="screenshots/browse.png" alt="Silo's cross-source catalog: thousands of mods with cover art, ratings and per-source versions." loading="lazy"></button><figcaption>One catalog · every source</figcaption></figure>
+      <figure class="shot"><button type="button" onclick="openShot('screenshots/browse.png','One catalog — ModHub and GitHub')"><img src="screenshots/browse.png" alt="Silo's cross-source catalog: thousands of mods with cover art, ratings and per-source versions." loading="lazy"></button><figcaption>One catalog · every source</figcaption></figure>
       <figure class="shot"><button type="button" onclick="openShot('screenshots/verified.png','Verify a mod is the real, untampered build')"><img src="screenshots/verified.png" alt="Integrity check showing a mod Verified byte-for-byte against the published build." loading="lazy"></button><figcaption>Verify it's the real build</figcaption></figure>
       <figure class="shot"><button type="button" onclick="openShot('screenshots/conflicts.png','Conflicts caught before you launch')"><img src="screenshots/conflicts.png" alt="Conflict detection naming colliding script mods before launch." loading="lazy"></button><figcaption>Conflicts caught before launch</figcaption></figure>
       <figure class="shot"><button type="button" onclick="openShot('screenshots/triage.png','Crash triage names the mod at fault')"><img src="screenshots/triage.png" alt="Crash and log triage separating real errors from cosmetic warnings and naming the culprit." loading="lazy"></button><figcaption>Crash triage names the culprit</figcaption></figure>
@@ -534,7 +534,7 @@
       </details>
       <details>
         <summary>What does Silo actually do?</summary>
-        <p>It manages your Farming Simulator 25 mods. Silo organizes the library and reads <code>log.txt</code> to name the mod that crashed you. It flags conflicts such as duplicate maps and colliding filltypes, vehicle types or scripts. And it pulls ModHub, GitHub and Nexus into one catalog that shows the latest version found across all three.</p>
+        <p>It manages your Farming Simulator 25 mods. Silo organizes the library and reads <code>log.txt</code> to name the mod that crashed you. It flags conflicts such as duplicate maps and colliding filltypes, vehicle types or scripts. And it pulls ModHub and GitHub into one catalog that shows the latest version found across both.</p>
       </details>
       <details>
         <summary>Does Silo move or modify my mod files?</summary>
@@ -545,8 +545,8 @@
         <p><strong>Windows is the tested, supported platform today.</strong> macOS (Intel &amp; Apple Silicon) and Linux builds exist but are <strong>experimental and largely untested</strong> — we're actively seeking testers on those platforms. It's one native app with per-OS game discovery and no runtime to install.</p>
       </details>
       <details>
-        <summary>Does Silo work with ModHub, GitHub and Nexus?</summary>
-        <p>Yes. Silo keeps one record per mod that pulls all three together, so you see the latest version found across them. You can act on each through <em>your own</em> accounts: star on GitHub, endorse on Nexus, rate on ModHub. Silo just opens the door; your credentials stay on your machine.</p>
+        <summary>Does Silo work with ModHub and GitHub?</summary>
+        <p>Yes. Silo keeps one record per mod that pulls both together, so you see the latest version found across them. You can act on each through <em>your own</em> accounts: star on GitHub, rate on ModHub. Silo just opens the door; your credentials stay on your machine.</p>
       </details>
       <details>
         <summary>Does Silo collect any data about me?</summary>

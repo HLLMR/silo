@@ -37,7 +37,6 @@ import type {
   CatalogModDetail,
   CategoryCount,
   LogReport,
-  // (Nexus status/stats types removed with the API-key flow)
   BisectStep,
   BindingReport,
   MpModRef,
@@ -318,9 +317,6 @@ export function ghStar(owner: string, repo: string, on: boolean): Promise<boolea
 export function ghWatch(owner: string, repo: string, on: boolean): Promise<boolean> {
   return invoke<boolean>("gh_watch", { owner, repo, on });
 }
-
-// Nexus is index-only: the catalog (silo-api) provides its metadata and Silo links back to
-// the mod page for downloads. No live Nexus API calls, no personal API keys — per Nexus's AUP.
 
 /** Download a release .zip and install it in place (backs up the old file). */
 export function downloadUpdate(path: string, assetUrl: string): Promise<void> {

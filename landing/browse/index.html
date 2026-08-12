@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Browse the FS25 mod catalog — Silo</title>
 <script src="/nav.js"></script>
-<meta name="description" content="Browse the Farming Simulator 25 mod catalog Silo has aggregated from ModHub, GitHub and Nexus — search, filter, and see which builds are integrity-verified. No account, no download, no tracking. Every mod links back to its original source." />
+<meta name="description" content="Browse the Farming Simulator 25 mod catalog Silo has aggregated from ModHub and GitHub — search, filter, and see which builds are integrity-verified. No account, no download, no tracking. Every mod links back to its original source." />
 <meta property="og:title" content="Browse the FS25 mod catalog — Silo" />
-<meta property="og:description" content="Search thousands of Farming Simulator 25 mods aggregated from ModHub, GitHub and Nexus. No account, no tracking — every mod links back to its source." />
+<meta property="og:description" content="Search thousands of Farming Simulator 25 mods aggregated from ModHub and GitHub. No account, no tracking — every mod links back to its source." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://silo.hllmr.com/browse/" />
 <meta property="og:site_name" content="Silo" />
@@ -184,7 +184,6 @@
   }
   .src-chip.modhub { color: #b8791c; border-color: color-mix(in srgb, #e3b23c 40%, var(--border)); }
   .src-chip.github { color: var(--text); }
-  .src-chip.nexus { color: #c56a2c; border-color: color-mix(in srgb, #d2691e 35%, var(--border)); }
   .card .ver { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
   .card .rating { color: var(--gold-700); font-size: 12px; font-weight: 700; }
 
@@ -249,7 +248,7 @@
       <h2>Browse the FS25 mod catalog.</h2>
       <p>
         <span class="count" id="statLine">Loading the catalog…</span>
-        aggregated from ModHub, GitHub and Nexus into one searchable record each.
+        aggregated from ModHub and GitHub into one searchable record each.
         Every mod links back to its original source — Silo indexes, it doesn't host.
       </p>
     </div>
@@ -317,7 +316,7 @@
     return (p || "https://silo-api.hllmr.com").replace(/\/+$/, "");
   })();
 
-  var SRC_LABEL = { modhub: "ModHub", github: "GitHub", nexus: "Nexus", kingmods: "KingMods", silo: "Silo" };
+  var SRC_LABEL = { modhub: "ModHub", github: "GitHub", kingmods: "KingMods", silo: "Silo" };
 
   // ── State ──
   var state = { q: "", category: "", sort: "popular", tags: [], availableBy: null, offset: 0, limit: 30, total: 0, loading: false };

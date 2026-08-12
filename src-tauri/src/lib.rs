@@ -429,12 +429,6 @@ async fn gh_watch(
     .map_err(|e| e.to_string())?
 }
 
-// ── Nexus source card (keyless reads + endorse via the user's own API key) ──
-
-// Nexus is index-only (per its AUP): the silo-api catalog provides Nexus metadata and Silo
-// links back to the mod page. No live Nexus API calls and no personal API keys live in the
-// app anymore — the previous key-based connect/endorse commands were removed for compliance.
-
 #[tauri::command]
 async fn download_update(
     _app: tauri::AppHandle,

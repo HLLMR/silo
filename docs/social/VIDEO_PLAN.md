@@ -46,7 +46,7 @@ from this set — you should almost never re-shoot.
 | V4 | **Organize dry-run** | The read-only preview ("12 into Vehicles, 3 into Maps") before anything moves. |
 | V5 | **Conflicts** | A real one from your set — duplicate active map (instant-crash) or a filltype/script collision. |
 | V6 | **Provenance / integrity** | A mod's drawer → integrity check → **✓ Verified** (and a **Modified** with changed files if you have one). |
-| V7 | **Browse one catalog** | Search a mod; show ModHub/GitHub/Nexus folded into one record with the latest version; a GitHub in-app install with the progress bar. |
+| V7 | **Browse one catalog** | Search a mod; show ModHub/GitHub folded into one record with the latest version; a GitHub in-app install with the progress bar. |
 | V8 | **Update by drop → Adopt** | Drop a newer ModHub `.zip` into the folder; open the mod; the drawer's "newer build — Adopt vX" banner; adopt; version updates. |
 | V9 | **Loadouts** | Save the current set; switch to another; watch the active set change. |
 | V10 | **Collections** | Publish the active set as a link (secret gist); open a shared link and show the preview + "heads-up" (what you'd need to install). |
@@ -67,7 +67,7 @@ The old [`demo-video-script.md`](./demo-video-script.md) was written ~2026-07-31
 - **Collections** (V10) — share a mod-set as a *link* (secret gist or public repo), with an import
   preview that tells you what you'd need. The "here's my co-op pack / the server's list" story.
   Missing entirely from the old script.
-- **Update by drop → Adopt** (V8) — the real ModHub/Nexus update flow: drop the new zip, Silo says
+- **Update by drop → Adopt** (V8) — the real ModHub update flow: drop the new zip, Silo says
   "newer build — Adopt," done. Very demo-able; add to the "keeps mods current" beat.
 - **Tile UI + green active switch** (V3) — the old script says "click the dot." Visuals changed;
   re-shoot those beats.
