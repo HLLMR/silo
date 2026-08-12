@@ -124,7 +124,7 @@ pub struct BrowsePage {
 }
 
 /// One place a mod can be got from, as the API reports it. The API decides
-/// `installable` (ModHub's CDN 403s hotlinked GETs; Nexus gates downloads), so the
+/// `installable` (ModHub's CDN 403s hotlinked GETs), so the
 /// client never re-derives that policy — it just renders a button per source.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -358,7 +358,7 @@ pub fn manifest(base: &str, id: &str, version: &str) -> Result<Option<CanonicalM
 /// source with no url here is one the user must fetch from its own site.
 /// A resolved installable download plus the identity we can hold it to: `expected_sha256` is
 /// the catalog's canonical whole-zip hash for the exact version being fetched, when it has one
-/// (GitHub-source, provenance P1). `None` means "not hashed yet" (ModHub/Nexus/unhashed) — we
+/// (GitHub-source, provenance P1). `None` means "not hashed yet" (ModHub/unhashed) — we
 /// can't prove identity, only that it's a valid archive.
 pub struct ResolvedDownload {
     pub url: String,
@@ -571,7 +571,6 @@ pub(crate) fn is_catalog_image_host(url: &str) -> bool {
         .to_ascii_lowercase();
     let host = host.split(':').next().unwrap_or("");
     host.ends_with(".giants-software.com")
-        || host.ends_with(".nexusmods.com")
         || host.ends_with(".githubusercontent.com")
 }
 

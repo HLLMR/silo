@@ -40,7 +40,7 @@
   <text x="90" y="378" font-family="Georgia, 'DejaVu Serif', serif" font-weight="700" font-size="66" fill="#ffffff">FS25 <tspan fill="#f2d26b" font-style="italic">should</tspan> have shipped with.</text>
 
   <!-- subhead -->
-  <text x="92" y="448" font-family="'DejaVu Sans', sans-serif" font-size="26" fill="#d7e0c8">Name the mod that crashed you. One catalog: ModHub, GitHub, Nexus.</text>
+  <text x="92" y="448" font-family="'DejaVu Sans', sans-serif" font-size="26" fill="#d7e0c8">Name the mod that crashed you. One catalog: ModHub, GitHub.</text>
 
   <!-- footer strip -->
   <text x="92" y="556" font-family="'DejaVu Sans Mono', monospace" font-size="24" fill="#9cc06e">silo.hllmr.com</text>

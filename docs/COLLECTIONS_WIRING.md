@@ -71,7 +71,7 @@ struct Collection {
 struct CollectionMod {
     tech_name: String,
     version: Option<String>,
-    source: Option<String>,         // "github" | "modhub" | "nexus" — preferred
+    source: Option<String>,         // "github" | "modhub" — preferred
     source_url: Option<String>,     // page/release URL for the open-page branch
     manifest_hash: Option<String>,  // canonical provenance hash, when known
     installable: Option<bool>,      // false → importer opens the page
@@ -175,7 +175,7 @@ All `spawn_blocking`, `secrets::get(&conn,"gh_token")` for the token, registered
      `ALTER TABLE loadout ADD COLUMN savegame_folder TEXT`, ignore-dup pattern `db.rs:138`).
      Optionally `set_active` to project it.
    - Open-page mods are saved into the loadout by techName, flagged "not installed —
-     get from ModHub/Nexus."
+     get from ModHub."
    - **MP path:** the joiner can additionally run `mpsync::diff` (manifest vs. local
      hashed set) for the four-bucket fix-list — `mp_verify_file` shape unchanged; the
      collection's per-mod `version`+`hash` *are* `ManifestEntry` fields.
@@ -232,13 +232,12 @@ All `spawn_blocking`, `secrets::get(&conn,"gh_token")` for the token, registered
 6. **Savegame binding persistence** — recommend a nullable `savegame_folder` column
    on `loadout` (additive migration) over a separate table.
 7. **`dir`/dev mods in an export** — recommend warn-and-omit for a shareable artifact.
-8. **Version drift on ModHub/Nexus pins** — confirm the preview shows "pinned
+8. **Version drift on ModHub pins** — confirm the preview shows "pinned
    version no longer served → open page for latest" as correct behavior, not an error.
 
 ## Coverage / expectations
 
 - Provenance verifies most rows by ModHub build (P3 live, ~6,300 versions,
-  popular-first; **96% of real installs are ModHub-latest**). GitHub P1 (~128/141);
-  Nexus provenance still deferred (page-link flow, files not downloadable).
+  popular-first; **96% of real installs are ModHub-latest**). GitHub P1 (~128/141).
 - `mpsync` loads whole zips into RAM for MD5 — fine now, a noted scaling edge for
   big-map collections (streaming is a deferred improvement).

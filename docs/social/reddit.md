@@ -76,7 +76,7 @@ Reddit's site-wide guidance and most subs enforce a version of the **9:1 rule** 
 2. **Help-first participation (the ratio fuel)** — answering load-order, install, update, and "will these mods work together" questions with genuinely useful, tool-agnostic advice. Silo mentioned only when asked or clearly relevant.
 3. **Build-in-public / dev log** — honest changelog highlights, "here's what shipped in v0.2.x," roadmap, "what should I build next" polls. Feeds r/farmingsimulator lightly and r/rust/r/sveltejs occasionally.
 4. **Provenance & trust** — the moat, framed as player-protective: "how do you know a downloaded mod wasn't tampered with?" This differentiates Silo and fits r/opensource + privacy angles.
-5. **Respect-the-authors** — spotlight mod authors, clarify Silo never rehosts or cracks CDN gates (ModHub/Nexus stay index-only), and that everything is reversible. Defuses the #1 objection modders will raise.
+5. **Respect-the-authors** — spotlight mod authors, clarify Silo never rehosts or cracks CDN gates (ModHub stay index-only), and that everything is reversible. Defuses the #1 objection modders will raise.
 
 ---
 
@@ -99,7 +99,7 @@ Golden rule: **participation is the floor, promotion is the exception.** When un
 - Title options (test the hook, not the product):
   - "I got tired of guessing which mod crashed my game, so I built a tool that reads the log and names it. Free & open source."
   - "Your game crashed on load. Silo reads log.txt and tells you exactly which mod did it. (Free, no account, no telemetry.)"
-- Body: short first-person origin story → the 3 things it does that hurt most (names the crash culprit, catches conflicts *before* launch, one catalog across ModHub/GitHub/Nexus with the latest version) → honest beta/Windows-first disclosure → "I'm the solo dev, AMA in the comments" → repo + download link. Include a GIF/screenshot of the `◆ diagnose` panel naming a culprit mod. Reply to *every* comment for the first 24–48h.
+- Body: short first-person origin story → the 3 things it does that hurt most (names the crash culprit, catches conflicts *before* launch, one catalog across ModHub/GitHub with the latest version) → honest beta/Windows-first disclosure → "I'm the solo dev, AMA in the comments" → repo + download link. Include a GIF/screenshot of the `◆ diagnose` panel naming a culprit mod. Reply to *every* comment for the first 24–48h.
 
 **Day 2–3 — The signature how-to (works as a standalone value post even if nobody installs):**
 - "How to actually find which mod crashed you (with or without my tool)" — teach reading `log.txt`, the disable-half bisection method by hand, common instant-crash causes (duplicate active map). Then: "or Silo does all this in two clicks." This post gives value first, converts second, and is deeply on-brand and rule-safe.
@@ -117,7 +117,7 @@ Golden rule: **participation is the floor, promotion is the exception.** When un
 ### Handling the modding community respectfully
 
 Mod authors are the load-bearing wall of FS. Get this right or the sub turns on you:
-- **Never rehost, repackage, or bypass CDN gates.** Say so explicitly. Silo's ModHub/Nexus entries are index-only, open-the-page. Lead with this in any thread where an author is present.
+- **Never rehost, repackage, or bypass CDN gates.** Say so explicitly. Silo's ModHub entries are index-only, open-the-page. Lead with this in any thread where an author is present.
 - **Everything is reversible** — hardlink projection, undoable writes. Say it whenever someone worries Silo "messes with my files."
 - **Credit and spotlight authors**, don't compete with them. Silo is plumbing, not a mod site.
 - **Invite authors in:** provenance verifies *their* builds against tampering — that protects their reputation. Frame it as a feature *for* authors (users can prove they're running your real build, not a virus-laced reupload).

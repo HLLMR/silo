@@ -62,7 +62,7 @@ Each series = one hashtag + one recurring sound/intro frame so viewers can binge
 ### Content pillars
 
 1. **Pain → Fix (flagship, ~50%)** — POV clip opens on the exact frustration (black loading screen, cryptic `log.txt`, "no mods will load"), then Silo resolves it in one motion. Every video is a self-contained rescue.
-2. **Feature-in-15 (~20%)** — one crisp capability, screen-recorded, no fluff: conflict catch before launch, "latest version across ModHub+GitHub+Nexus," provenance Verified/Modified badge, the sugar-beet filltype bridge, guided bisection.
+2. **Feature-in-15 (~20%)** — one crisp capability, screen-recorded, no fluff: conflict catch before launch, "latest version across ModHub+GitHub," provenance Verified/Modified badge, the sugar-beet filltype bridge, guided bisection.
 3. **Dev-in-public / behind the build (~15%)** — honest solo-dev energy: "someone reported this crash, here's me fixing it live," roadmap teases, "why I don't take your data." Builds the trust the provenance feature trades on.
 4. **Community / reactive (~15%)** — duet/stitch a "my game won't launch" FS post with the fix, reply-to-comment videos, "you asked if it works on a 900-mod save — let's find out."
 
@@ -91,7 +91,7 @@ Pure screen. Two mods fighting over the same map → Silo flags the instant-cras
 **Day 4 — "Is that mod actually the real mod?"**
 The provenance angle: install a mod, Silo shows Verified vs Modified with the exact changed files. "Not antivirus — proof. Nobody else can do this." The moat clip.
 
-**Day 5 — "One search. ModHub, GitHub, and Nexus. Latest version, everywhere."**
+**Day 5 — "One search. ModHub and GitHub. Latest version, everywhere."**
 The catalog + updates loop. Kills the "am I even on the newest version" anxiety.
 
 **Day 6 — Reactive/duet.** Stitch a real "my FS25 won't load help" post from a Facebook group screenshot or Reddit thread (blur names) → "here, 30 seconds" → the diagnose flow.

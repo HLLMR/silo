@@ -35,7 +35,7 @@ This audience is also the hardest to win and the easiest to alienate:
   - "Additional info" note that it's community-built and open source; link the GitHub and Discord.
 - **Buttons/CTA:** primary Page button = "Download" → `silo.hllmr.com`. Add Discord as a secondary link.
 - **Pinned post:** the 45–60s "what is Silo" demo video (see launch content) with a plain caption and the download link in the **first comment** (Facebook throttles reach on posts with outbound links in the body — pin the video, drop the link in comment #1, and reference "link in the comments").
-- **Featured / Photos highlights:** 4–5 labeled screenshots — (1) crash attribution, (2) conflict warning, (3) one catalog across ModHub/GitHub/Nexus, (4) "verified real build" badge, (5) the undo/reversible view. Each with a one-line human caption.
+- **Featured / Photos highlights:** 4–5 labeled screenshots — (1) crash attribution, (2) conflict warning, (3) one catalog across ModHub/GitHub, (4) "verified real build" badge, (5) the undo/reversible view. Each with a one-line human caption.
 
 **2. Personal presence for group engagement**
 - Group posting/commenting is done from a **real, transparent personal profile** (the dev's, or a clearly-labeled "Dave @ Silo" identity that is a real person, not a fake persona). Groups distrust posts from Pages; a real human answering a troubleshooting thread is trusted, a Page shilling is not.
@@ -69,7 +69,7 @@ Maintain a living spreadsheet of FS25 Facebook groups with columns: name, member
 
 1. **"Which mod crashed you?" (the hero pillar).** Real before/after: a crash log wall of text → Silo naming the culprit in one line. This is the single most shareable thing we have here.
 2. **Troubleshooting help (value-first).** Short how-tos: reading a log, spotting a conflict, why load order matters, safe places to get mods. Silo appears as *a* tool, not the whole point.
-3. **Keep-it-current & keep-it-safe.** "Your mod has an update across ModHub/GitHub/Nexus," and the provenance angle — how to know a downloaded mod is the real, untampered build (huge trust topic in this crowd).
+3. **Keep-it-current & keep-it-safe.** "Your mod has an update across ModHub/GitHub," and the provenance angle — how to know a downloaded mod is the real, untampered build (huge trust topic in this crowd).
 4. **Release & changelog news** (translated to plain English — "what this means for you," not raw commit notes).
 5. **Community & trust.** Reposting user wins ("Silo found the mod nuking my save — thank you"), answering FAQs, being visibly a real, responsive human. Open-source/no-telemetry reassurance woven in.
 
@@ -87,7 +87,7 @@ Maintain a living spreadsheet of FS25 Facebook groups with columns: name, member
 - **Day 2 — First group value posts:** answer 3 real "my game crashes" threads in Tier B groups with actual help; mention Silo only if it fits and rules allow.
 - **Day 3 — "How to read your FS25 log" mini-guide (Page + shareable):** genuinely useful even without Silo; Silo shown as the shortcut at the end. This is the post that gets shared into groups *by other people*, which is the goal.
 - **Day 4 — Provenance/trust post:** *"How do you know a mod you downloaded is the REAL one and not tampered with? Here's the problem — and how Silo verifies it."* Speaks directly to the malware-scare this crowd knows.
-- **Day 5 — "One catalog" post:** short clip showing the same mod's latest version across ModHub, GitHub, and Nexus in one place.
+- **Day 5 — "One catalog" post:** short clip showing the same mod's latest version across ModHub and GitHub in one place.
 - **Day 6 — FAQ/AMA post:** *"You asked, here are answers"* — is it free (yes), does it touch my save (reversible, nothing destructive), does it phone home (no telemetry), Mac/Linux (experimental).
 - **Day 7 — Soft Discord invite:** *"If you want faster help, early builds, and to tell me what to build next, the Discord's here."* Framed as *better support*, not "come boost my server."
 

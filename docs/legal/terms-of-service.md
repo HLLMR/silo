@@ -32,14 +32,13 @@ We designed the Services to collect as little as possible about you. This Sectio
 
 ### 3.1 The App
 
-The App has no telemetry, no analytics, no advertising, and no user account. It stores data only locally on your computer — a local SQLite cache, plus your operating system's keychain for any GitHub or Nexus access tokens you choose to connect.
+The App has no telemetry, no analytics, no advertising, and no user account. It stores data only locally on your computer — a local SQLite cache, plus your operating system's keychain for any GitHub access tokens you choose to connect.
 
 The App communicates only with the following, and only as described:
 
 - **The API (silo-api.hllmr.com)** — to read the mod catalog. For lookups, the App sends mod technical names and file hashes. It does not send personal data.
 - **The GitHub API** — optional and user-initiated. If you choose to sign in using GitHub's device-flow login, the resulting token is used only for explicit actions you take, such as starring or watching a repository. The token is never attached to mod downloads.
-- **The Nexus API** — only if you supply your own Nexus API key.
-- **Mod source content delivery networks** (ModHub, GitHub, Nexus) — to fetch images and, when you choose to, to download a mod.
+- **Mod source content delivery networks** (ModHub, GitHub) — to fetch images and, when you choose to, to download a mod.
 
 Mod integrity and provenance hashing is performed locally on your computer.
 
@@ -53,7 +52,7 @@ To prevent abuse, the API applies per-IP rate limiting and keeps standard server
 
 ## 4. The Catalog
 
-The catalog aggregates publicly available mod metadata — such as names, images, descriptions, versions, and ratings — from ModHub, GitHub, and Nexus. This information is deduplicated into a single record per mod, and each record links back to its original source.
+The catalog aggregates publicly available mod metadata — such as names, images, descriptions, versions, and ratings — from ModHub and GitHub. This information is deduplicated into a single record per mod, and each record links back to its original source.
 
 **Silo does not host, mirror, or redistribute mod files.** The catalog is an index of publicly available data with links back to the original sources. When you download a mod, the download comes from the original source, not from us.
 
@@ -82,13 +81,13 @@ You are solely responsible for the mods you choose to install and use. Mods are 
 
 ## 7. Third-Party Sources and Services
 
-The Services link to and interoperate with third-party platforms, including ModHub, GitHub, and Nexus, and with mod content delivered from their content delivery networks. Your use of those platforms and any content obtained from them is governed by their own terms of service and privacy policies, not by these Terms. We are not responsible for third-party platforms, their content, their availability, or their practices.
+The Services link to and interoperate with third-party platforms, including ModHub and GitHub, and with mod content delivered from their content delivery networks. Your use of those platforms and any content obtained from them is governed by their own terms of service and privacy policies, not by these Terms. We are not responsible for third-party platforms, their content, their availability, or their practices.
 
-If you connect a GitHub or Nexus account or key to the App, you are responsible for complying with that platform's terms and for the security of your own credentials.
+If you connect a GitHub account to the App, you are responsible for complying with that platform's terms and for the security of your own credentials.
 
 ## 8. Intellectual Property and Trademarks
 
-Silo is not affiliated with, endorsed by, or sponsored by GIANTS Software or the Farming Simulator brand. "Farming Simulator," "FS25," "ModHub," "GitHub," "Nexus Mods," and all mod names and artwork are the property of their respective owners. All references to these names are for identification and descriptive purposes only.
+Silo is not affiliated with, endorsed by, or sponsored by GIANTS Software or the Farming Simulator brand. "Farming Simulator," "FS25," "ModHub," "GitHub," and all mod names and artwork are the property of their respective owners. All references to these names are for identification and descriptive purposes only.
 
 The App's software source code is made available under the MIT License, as described in Section 2. Except as expressly stated in that license, these Terms do not grant you any right, title, or interest in HLLMR's name, logos, or branding.
 

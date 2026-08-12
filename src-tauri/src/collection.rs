@@ -58,7 +58,7 @@ pub struct CollectionMod {
     pub tech_name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
-    /// Preferred source: `"github" | "modhub" | "nexus"`.
+    /// Preferred source: `"github" | "modhub"`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source: Option<String>,
     /// Page/release URL — used for the open-page branch when a source can't be installed directly.

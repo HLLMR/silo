@@ -139,7 +139,7 @@ identity-check the bytes: when the catalog has a canonical hash for the mod (Git
 download whose bytes don't match is refused. Verify: **the `.part` temp disappears after every
 failure**, **no bad archive ever enters the library**, and the **wrong-valid-mod** case is
 **rejected** for a hashed (GitHub) mod (swap the asset → "doesn't match the catalog's known
-build"). For an *unhashed* source (ModHub/Nexus/not-yet-hashed) identity can't be proven — only
+build"). For an *unhashed* source (ModHub/not-yet-hashed) identity can't be proven — only
 archive validity — so confirm that path degrades to the validity check, not a false rejection.
 
 ### D. User-ownership conflicts — the most important regression
@@ -158,7 +158,7 @@ Forensic-diff after each — the user's file must survive every branch.
 ### E. Degraded network
 
 - No internet at startup · SiloAPI unreachable · SiloAPI returns malformed JSON · catalog image
-  host down · GitHub down · Nexus down · requests time out · rapid repeated searches · app closed
+  host down · GitHub down · requests time out · rapid repeated searches · app closed
   mid-request.
 
 The **library and diagnostics must stay usable.** Network failure degrades *features*, never

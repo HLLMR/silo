@@ -36,9 +36,9 @@ YouTube is Silo's **demo stage and evergreen search shelf**. Silo's whole pitch 
 - Create as a **Brand Account** (not a personal Google identity) so it can be co-managed later without exposing a personal inbox.
 - **Avatar:** the Silo grain-silo mark on the "Golden Hour" green (`--green-600 #4a7330`). Same file as every other platform.
 - **Banner:** tagline "The FS25 mod manager that should have shipped with the game." + `silo.hllmr.com` + "Free · Open source · No telemetry." Safe-area-aware (readable on mobile crop).
-- **Channel description** (SEO-loaded, first 2 lines matter most): "Silo is a free, open-source mod manager for Farming Simulator 25. It names the mod that crashed you, catches conflicts before launch, verifies a mod is the real untampered build, and pulls ModHub + GitHub + Nexus into one catalog. Windows-first, macOS/Linux experimental. No account, no telemetry." Then links: Download, GitHub, Discord, landing.
+- **Channel description** (SEO-loaded, first 2 lines matter most): "Silo is a free, open-source mod manager for Farming Simulator 25. It names the mod that crashed you, catches conflicts before launch, verifies a mod is the real untampered build, and pulls ModHub + GitHub into one catalog. Windows-first, macOS/Linux experimental. No account, no telemetry." Then links: Download, GitHub, Discord, landing.
 - **Links:** `silo.hllmr.com`, `github.com/HLLMR/silo`, Discord invite, `silo.hllmr.com/browse`.
-- **Channel keywords/tags:** farming simulator 25, fs25, mods, mod manager, fs25 mods, mod conflict, game crash, modhub, nexus mods.
+- **Channel keywords/tags:** farming simulator 25, fs25, mods, mod manager, fs25 mods, mod conflict, game crash, modhub.
 - **Featured/trailer:** set the 60-90s hero demo as the **channel trailer for non-subscribers** and the featured video for returning viewers.
 - **Handles verification:** claim the same handle on `youtube.com/@SiloModManager`; add the channel URL to the landing page footer and GitHub README.
 - **Sections on the channel homepage** (see STRUCTURE).
@@ -53,7 +53,7 @@ Organize the homepage into **shelves/playlists** so a first-time visitor instant
 - **Channel trailer:** `Silo in 90 seconds` (the hero demo) — shown to non-subscribers.
 - **Playlist: "Start here"** — hero demo + the three tutorial Shorts. This is the onboarding funnel.
 - **Playlist: "Fix my game (troubleshooting)"** — "Which mod crashed me?", "Catch a conflict before launch", guided bisection, MP sync verify. Pure SEO-magnet how-tos.
-- **Playlist: "One catalog"** — browse/search across ModHub+GitHub+Nexus, update-all, provenance/verify a mod. Feature tours.
+- **Playlist: "One catalog"** — browse/search across ModHub+GitHub, update-all, provenance/verify a mod. Feature tours.
 - **Playlist: "Devlog"** — the running behind-the-scenes/changelog series.
 - **Playlist: "Shorts"** — auto-populated vertical clips.
 - **Pinned comment convention:** every video's pinned comment = one-line download link + "free & open source, I'm the solo dev, ask me anything." (This is our honesty + support surface pre-Community-tab.)
@@ -94,7 +94,7 @@ Organize the homepage into **shelves/playlists** so a first-time visitor instant
 **Day 3 — Long-form "Fix": `FS25 keeps crashing? Find the exact mod in 30 seconds`**
 - The SEO workhorse. Real crash, real `log.txt`, diagnose → name → (if log can't name it) guided bisection. Title/desc packed with the phrases players search.
 
-**Day 4 — Tutorial Short: "One catalog for ModHub + GitHub + Nexus."**
+**Day 4 — Tutorial Short: "One catalog for ModHub + GitHub."**
 - Hook: "Stop checking three sites for one mod update." Search once, see newest-across-sources, update-all.
 
 **Day 5 — Devlog #1: `Why I built Silo (and what "verified" actually means)`**

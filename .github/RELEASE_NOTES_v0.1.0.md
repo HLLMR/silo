@@ -2,8 +2,8 @@
 
 **Silo is the mod manager Farming Simulator 25 should have shipped with** — a
 fast, native desktop app that organizes your FS25 mod library, tells you which
-mod crashed you, catches conflicts before they bite, and pulls ModHub, GitHub,
-and Nexus into one honest catalog — without ever touching your saves
+mod crashed you, catches conflicts before they bite, and pulls ModHub and GitHub
+into one honest catalog — without ever touching your saves
 destructively. Free, open source, Windows · macOS · Linux.
 
 ## Highlights
@@ -16,11 +16,11 @@ destructively. Free, open source, Windows · macOS · Linux.
   instant crash), plus colliding fill types, vehicle types, and scripts across
   your active set — with severity and the mods involved.
 - **One honest catalog across every source.** Browse a single canonical record
-  per mod aggregating ModHub + GitHub + Nexus, with the real latest version
+  per mod aggregating ModHub + GitHub, with the real latest version
   across all of them. Search, filter, and sort by popularity, downloads, or
   rating — no more false "outdated" flags from mismatched sources.
-- **Act through your own accounts.** Star or watch a repo on GitHub, endorse on
-  Nexus, or deep-link to ModHub to rate — Silo brokers the action and keeps none
+- **Act through your own accounts.** Star or watch a repo on GitHub, or deep-link
+  to ModHub to rate — Silo brokers the action and keeps none
   of your credentials.
 - **Loadouts, projected safely.** Curate profiles and project only the active set
   into the game's flat `mods/` folder at launch via symlink/junction — never by
@@ -42,9 +42,8 @@ filltype-compatibility bridge generator, and savegame backup.
 ## Beta — known limits
 
 - **Auto-update isn't in yet** — grab new releases from this page for now.
-- **ModHub and Nexus are index + deep-link** — Silo shows their versions and
-  opens the page (their CDNs gate direct downloads). In-app install works for
-  GitHub-hosted mods.
+- **ModHub is index + deep-link** — Silo shows its version and opens the page
+  (its CDN gates direct downloads). In-app install works for GitHub-hosted mods.
 - **Catalog coverage is still filling in** — the cross-source catalog is growing;
   some mods may not be indexed yet.
 

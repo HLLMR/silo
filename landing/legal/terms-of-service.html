@@ -86,13 +86,12 @@
 <h2>3. Data Practices</h2>
 <p>We designed the Services to collect as little as possible about you. This Section describes what each part of the Services does. It is provided as part of these Terms for transparency; any separate privacy notice we publish also applies.</p>
 <h3>3.1 The App</h3>
-<p>The App has no telemetry, no analytics, no advertising, and no user account. It stores data only locally on your computer — a local SQLite cache, plus your operating system&#39;s keychain for any GitHub or Nexus access tokens you choose to connect.</p>
+<p>The App has no telemetry, no analytics, no advertising, and no user account. It stores data only locally on your computer — a local SQLite cache, plus your operating system&#39;s keychain for any GitHub access tokens you choose to connect.</p>
 <p>The App communicates only with the following, and only as described:</p>
 <ul>
 <li><strong>The API (silo-api.hllmr.com)</strong> — to read the mod catalog. For lookups, the App sends mod technical names and file hashes. It does not send personal data.</li>
 <li><strong>The GitHub API</strong> — optional and user-initiated. If you choose to sign in using GitHub&#39;s device-flow login, the resulting token is used only for explicit actions you take, such as starring or watching a repository. The token is never attached to mod downloads.</li>
-<li><strong>The Nexus API</strong> — only if you supply your own Nexus API key.</li>
-<li><strong>Mod source content delivery networks</strong> (ModHub, GitHub, Nexus) — to fetch images and, when you choose to, to download a mod.</li>
+<li><strong>Mod source content delivery networks</strong> (ModHub, GitHub) — to fetch images and, when you choose to, to download a mod.</li>
 </ul>
 <p>Mod integrity and provenance hashing is performed locally on your computer.</p>
 <h3>3.2 The Website</h3>
@@ -100,7 +99,7 @@
 <h3>3.3 The API</h3>
 <p>To prevent abuse, the API applies per-IP rate limiting and keeps standard server logs. As a result, it processes IP addresses and request metadata on a transient basis. The API is (or will be) fronted by a content delivery network (Cloudflare), which also processes traffic for security and caching. The API has no accounts and sets no tracking cookies.</p>
 <h2>4. The Catalog</h2>
-<p>The catalog aggregates publicly available mod metadata — such as names, images, descriptions, versions, and ratings — from ModHub, GitHub, and Nexus. This information is deduplicated into a single record per mod, and each record links back to its original source.</p>
+<p>The catalog aggregates publicly available mod metadata — such as names, images, descriptions, versions, and ratings — from ModHub and GitHub. This information is deduplicated into a single record per mod, and each record links back to its original source.</p>
 <p><strong>Silo does not host, mirror, or redistribute mod files.</strong> The catalog is an index of publicly available data with links back to the original sources. When you download a mod, the download comes from the original source, not from us.</p>
 <p>Catalog content — including mod names, artwork, descriptions, and other metadata — belongs to its respective authors and platforms. We make no claim of ownership over it and provide it only as an index and reference.</p>
 <h2>5. Acceptable Use</h2>
@@ -119,10 +118,10 @@
 <p>You are solely responsible for the mods you choose to install and use. Mods are created and distributed by third parties, and we do not create, host, review, endorse, or guarantee them.</p>
 <p><strong>Provenance and any &quot;Verified&quot; status the App displays is an integrity and origin signal — not a security guarantee and not a virus scan.</strong> It confirms whether a given build matches the source it claims to come from. It does not vouch for the safety, quality, or behavior of a mod, and it is not a substitute for your own judgment or your own security tools.</p>
 <h2>7. Third-Party Sources and Services</h2>
-<p>The Services link to and interoperate with third-party platforms, including ModHub, GitHub, and Nexus, and with mod content delivered from their content delivery networks. Your use of those platforms and any content obtained from them is governed by their own terms of service and privacy policies, not by these Terms. We are not responsible for third-party platforms, their content, their availability, or their practices.</p>
-<p>If you connect a GitHub or Nexus account or key to the App, you are responsible for complying with that platform&#39;s terms and for the security of your own credentials.</p>
+<p>The Services link to and interoperate with third-party platforms, including ModHub and GitHub, and with mod content delivered from their content delivery networks. Your use of those platforms and any content obtained from them is governed by their own terms of service and privacy policies, not by these Terms. We are not responsible for third-party platforms, their content, their availability, or their practices.</p>
+<p>If you connect a GitHub account to the App, you are responsible for complying with that platform&#39;s terms and for the security of your own credentials.</p>
 <h2>8. Intellectual Property and Trademarks</h2>
-<p>Silo is not affiliated with, endorsed by, or sponsored by GIANTS Software or the Farming Simulator brand. &quot;Farming Simulator,&quot; &quot;FS25,&quot; &quot;ModHub,&quot; &quot;GitHub,&quot; &quot;Nexus Mods,&quot; and all mod names and artwork are the property of their respective owners. All references to these names are for identification and descriptive purposes only.</p>
+<p>Silo is not affiliated with, endorsed by, or sponsored by GIANTS Software or the Farming Simulator brand. &quot;Farming Simulator,&quot; &quot;FS25,&quot; &quot;ModHub&quot; &quot;GitHub,&quot; and all mod names and artwork are the property of their respective owners. All references to these names are for identification and descriptive purposes only.</p>
 <p>The App&#39;s software source code is made available under the MIT License, as described in Section 2. Except as expressly stated in that license, these Terms do not grant you any right, title, or interest in HLLMR&#39;s name, logos, or branding.</p>
 <h2>9. Disclaimer of Warranties</h2>
 <p>THE SERVICES ARE PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE,&quot; WITHOUT WARRANTY OF ANY KIND, TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW. TO THAT EXTENT, HLLMR DISCLAIMS ALL WARRANTIES, WHETHER EXPRESS, IMPLIED, OR STATUTORY, INCLUDING BUT NOT LIMITED TO ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT.</p>

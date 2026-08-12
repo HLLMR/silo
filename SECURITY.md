@@ -37,14 +37,13 @@ stay anonymous).
 - Silo's outbound network calls. Silo talks to:
   - **`silo-api.hllmr.com`** — the SiloAPI catalog backend, for cross-source mod
     metadata.
-  - **GitHub, Nexus, and ModHub** — reached **through the user's own accounts
-    and credentials** (e.g. an OAuth token to star a GitHub repo, or endorse on
-    Nexus). Silo brokers the action; it does not hold or proxy your credentials
-    on any server of ours.
+  - **GitHub and ModHub** — reached **through the user's own accounts
+    and credentials** (e.g. an OAuth token to star a GitHub repo). Silo brokers
+    the action; it does not hold or proxy your credentials on any server of ours.
 
 **Generally out of scope:**
 
-- Vulnerabilities in FS25 itself, GIANTS software, GitHub, Nexus, or ModHub —
+- Vulnerabilities in FS25 itself, GIANTS software, GitHub or ModHub —
   report those to the respective vendor. (A flaw in how *Silo* interacts with
   them is in scope.)
 - Issues that require a machine already compromised by a local attacker, or that
@@ -58,7 +57,7 @@ stay anonymous).
 Silo has **no analytics, no telemetry, and no account system** — there is
 nothing to sign up for and nothing phones home about your usage. Its only
 outbound traffic is the catalog lookups to `silo-api.hllmr.com` and the
-per-source actions you explicitly trigger through your own GitHub / Nexus /
+per-source actions you explicitly trigger through your own GitHub /
 ModHub credentials. This is intentional and part of the app's trust model; a
 change that quietly adds tracking or exfiltrates data would itself be treated as
 a security issue.

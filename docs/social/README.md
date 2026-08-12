@@ -46,7 +46,7 @@ Silo's launch problem is not awareness of a category — every FS25 player alrea
 
 **The three proof pillars** (every piece of content should ladder to one):
 1. **"Which mod crashed you?"** — reads `log.txt`, names the culprit, filters cosmetic noise. The hook. Emotionally the strongest; lead with it almost everywhere.
-2. **Catch conflicts before launch + one catalog across ModHub/GitHub/Nexus** — the daily-utility story.
+2. **Catch conflicts before launch + one catalog across ModHub/GitHub** — the daily-utility story.
 3. **Provenance / "is this the real build?"** — the moat and the credibility/trust story. Lead with this for OSS/gamedev/mod-author audiences.
 
 **Always-on trust facts:** free, open source, no account, no telemetry, everything it changes on disk is reversible. These defuse "why should I trust a random exe near my game files" — repeat them, don't bury them.

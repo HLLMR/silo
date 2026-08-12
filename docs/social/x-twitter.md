@@ -43,7 +43,7 @@ Recommendation: register **`@SiloForFS`** as the product account and, optionally
 - **Location:** "Windows-first · macOS/Linux experimental" (playful use of the field) or leave real region.
 - **Link:** `silo.hllmr.com`
 - **Avatar:** the Silo mark on the "Golden Hour" green (`#4a7330`) — identical to app/site so brand == product.
-- **Header image:** one clean hero — the diagnose panel with a real culprit named, or the three-source catalog (ModHub + GitHub + Nexus) with a "latest version" badge. Include the tagline "the mod manager that should have shipped with the game."
+- **Header image:** one clean hero — the diagnose panel with a real culprit named, or the three-source catalog (ModHub + GitHub) with a "latest version" badge. Include the tagline "the mod manager that should have shipped with the game."
 - **Verification/pro:** optional; a paid checkmark helps thread reach but is not required for launch.
 
 **Pinned post:** the **launch thread** (below) at launch; after ~2 weeks, swap to the best-performing evergreen — likely the 45-second demo clip ("watch Silo name the mod that crashed a save") or the current release post. Re-pin each major release thread.
@@ -77,7 +77,7 @@ Recommendation: register **`@SiloForFS`** as the product account and, optionally
 
 **Day 0 — Launch thread (pinned).** 6–7 posts:
 1. **Hook:** "Your FS25 crashed. The log is 40,000 lines. It never names the mod. Silo does. 🧵 Free & open source, no account, no telemetry." + 15s clip of diagnose naming the culprit.
-2. The catalog: ModHub + GitHub + Nexus in one search, latest version across all three — screenshot.
+2. The catalog: ModHub + GitHub in one search, latest version across all three — screenshot.
 3. Conflict detection before launch (duplicate active map = instant crash caught) — screenshot.
 4. Provenance: "Verified / Modified / Unverified — Silo hashes your installed mod against the real build. Not antivirus. Proof." — screenshot with the changed-files list.
 5. "Everything it does on disk is reversible. It projects your active set at launch via junctions; your originals never move." — the trust beat.

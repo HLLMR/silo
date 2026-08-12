@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-08-12
+
+### Removed
+
+- **Nexus Mods integration has been removed entirely.** Silo's catalog now aggregates **ModHub and
+  GitHub** only. Nexus support flagged our SiloAPI index model as an Acceptable-Use-Policy violation
+  on a second review — after approving the same approach on the first — so rather than keep
+  rebuilding toward a moving compliance target for a minor Farming Simulator source, we pulled Nexus
+  out completely: the app's Browse and per-source UI, the SiloAPI catalog ingest, the website, and
+  the docs. No Silo feature depended on it.
+
 ## [0.7.2] - 2026-08-11
 
 ### Added
@@ -126,12 +137,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Browse caches each view, so going back to one is instant.** Revisiting a filter/sort combo
   you've already loaded no longer re-polls the catalog — results (and everything you'd paged in)
   come straight from an in-session cache.
-- **Nexus Mods is now strictly index-only, per Nexus's Acceptable Use Policy.** Removed the
-  "connect your Nexus account" flow, the personal-API-key storage, and mod endorsing, along with
-  every live Nexus API call the app made. Nexus metadata now comes from the catalog, and Silo
-  links back to the mod page for the download — it never queries Nexus directly or handles a key.
-  (Per-user features like endorsing will return later via the sanctioned OAuth2 flow.)
-
 ## [0.6.0] - 2026-08-06
 
 ### Fixed
@@ -148,7 +153,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   combine), plus an **"available by year"** filter for period-correct playthroughs (only machines
   that existed by that year). A mod's tags also show in its detail drawer.
 - **The library detail drawer now shows catalog info** — a mod's summary (clamped, with **Read
-  more** for the full text), where it's **available** (ModHub / GitHub / Nexus, with links), and
+  more** for the full text), where it's **available** (ModHub / GitHub, with links), and
   whether it's **outdated** (⬆ update available vs. ✓ up to date). No more hopping to Browse to
   find out if a library mod has a newer version.
 - **An "updates" filter in the stat bar.** After running ⟳ Updates, a gold **N updates** chip
@@ -244,7 +249,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   are uploaded, only the list — each mod pinned to a version and a content hash). Anyone you send it
   to can paste that link — gist *or* `github.com/owner/repo` — into "Open a shared link" to preview
   exactly what they already have, what's a different version,
-  what Silo can install for them, and what they'll need to grab from ModHub/Nexus — plus a heads-up
+  what Silo can install for them, and what they'll need to grab from ModHub — plus a heads-up
   for any dependency gaps or mod conflicts among the mods they already have — then import it:
   Silo downloads the installable mods, verifies each against the shared build (verified / modified),
   and saves the whole set as a loadout to apply. Sharing needs a one-time "Enable collection sharing"
@@ -293,7 +298,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - **Warn when credential storage isn't encrypted.** On a machine with no OS keychain, connecting
-  a GitHub/Nexus account falls back to storing the token in the local database. Settings now
+  a GitHub account falls back to storing the token in the local database. Settings now
   probes keychain availability and shows a clear warning above the account sections so it's never
   a silent fallback — the user decides before connecting. (#20)
 
@@ -446,14 +451,14 @@ First public beta.
   "sugar beet" fix), with no vehicle edits. Output is per-user and reversible.
 - **Savegame backup** — copies saves to a backup folder before edits.
 - **Cross-source catalog (Browse)** — one canonical record per mod aggregating
-  ModHub + GitHub + Nexus (backed by SiloAPI), with search, category filter,
+  ModHub + GitHub (backed by SiloAPI), with search, category filter,
   sort (popular / downloads / rating / newest / name), and pagination past the
-  result cap. In-app GitHub install with a streaming progress bar; ModHub/Nexus
+  result cap. In-app GitHub install with a streaming progress bar; ModHub
   are index + open-page.
 - **Catalog-routed update checking** — checks the whole library against the
   catalog's real latest-across-sources, fixing the GitHub-vs-ModHub false
   "outdated" reports; per-mod update status also shown in the detail drawer.
-- **Per-source interaction** — star/watch a repo on GitHub, endorse on Nexus, and
+- **Per-source interaction** — star/watch a repo on GitHub and
   deep-link to the ModHub page to rate — all through *your own* accounts. Silo
   brokers the action and holds none of your credentials.
 - **Cross-platform** — Windows, macOS, and Linux, with per-OS projection and
