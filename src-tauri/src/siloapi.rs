@@ -570,8 +570,7 @@ pub(crate) fn is_catalog_image_host(url: &str) -> bool {
         .unwrap_or("")
         .to_ascii_lowercase();
     let host = host.split(':').next().unwrap_or("");
-    host.ends_with(".giants-software.com")
-        || host.ends_with(".githubusercontent.com")
+    host.ends_with(".giants-software.com") || host.ends_with(".githubusercontent.com")
 }
 
 /// Fetch a catalog mod image in Rust and return it as a `data:` URL the webview can render
